@@ -16,6 +16,7 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 
+#include "beeper.h"
 #include "console.h"
 #include "host.h"
 #include "keys.h"
@@ -263,7 +264,7 @@ int main(int argc, char **argv) {
     mkdir(options.data.c_str(), 0755);
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
         return 1;
     }
@@ -277,6 +278,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     SDL_SetRenderVSync(renderer, 1);
+    beeper_init();
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -387,6 +389,7 @@ int main(int argc, char **argv) {
 
     watch_stop();
     runtime_deinit();
+    beeper_deinit();
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();

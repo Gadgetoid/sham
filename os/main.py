@@ -1,6 +1,6 @@
 import host
 import lcd
-from system import gfx, icons, keys, store, ui
+from system import gfx, icons, keys, prefs, sound, store, ui
 from system.shell import Shell
 
 shell = Shell()

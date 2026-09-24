@@ -15,6 +15,7 @@
 #include "extmod/vfs.h"
 #include "extmod/vfs_posix.h"
 
+#include "beeper.h"
 #include "console.h"
 #include "keys.h"
 #include "lcd.h"
@@ -156,6 +157,7 @@ static bool start_fiber(void) {
     idle = false;
     abort_steps = 0;
     keys_clear();
+    beeper_stop();
     lcd_reset_clip();
     lcd_clear(0);
     mco_desc desc = mco_desc_init(fiber_entry, FIBER_STACK_SIZE);

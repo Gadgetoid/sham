@@ -1,4 +1,4 @@
-from system import store, ui
+from system import sound, store, ui
 
 TITLE = "Tel"
 ICON = "telephone_handset"
@@ -55,8 +55,16 @@ def launch():
         if person:
             ui.confirm("Delete {}?".format(person["name"]), lambda: (people.remove(person), save()))
 
+    def dial(person=None, index=None):
+        person = person or listing.selected
+        if person and person.get("phone"):
+            digits = "".join(c for c in person["phone"] if c in "0123456789*#")
+            sound.dtmf(digits)
+            ui.alert("Hold the handset to the speaker.\n{}".format(person["phone"]), title="Dialling")
+
+    listing.on_select = dial
     listing.on_change = show
     show(listing.selected, 0)
     return ui.Screen("Tel", ui.Split(listing, detail, ratio=0.42),
                      status=lambda: "{}/{}".format(listing.index + 1 if people else 0, len(people)),
-                     menu=[("New entry", add), ("Delete", delete)])
+                     menu=[("Dial", dial), ("New entry", add), ("Delete", delete)])

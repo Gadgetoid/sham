@@ -20,6 +20,7 @@ SRC_APP = \
 	src/keys.c \
 	src/lcd.c \
 	src/watch.c \
+	src/beeper.c \
 	src/mod_host.c \
 	src/mod_lcd.c
 

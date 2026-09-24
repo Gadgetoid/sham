@@ -3,6 +3,7 @@
 #include "py/runtime.h"
 #include "py/objstr.h"
 
+#include "beeper.h"
 #include "host.h"
 #include "keys.h"
 #include "lcd.h"
@@ -68,6 +69,26 @@ static mp_obj_t host_backlight(size_t n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_backlight_obj, 0, 1, host_backlight);
 
+static mp_obj_t host_beep(size_t n_args, const mp_obj_t *args) {
+    float frequency = mp_obj_get_float(args[0]);
+    uint32_t duration = (uint32_t)mp_obj_get_int(args[1]);
+    float second = n_args > 2 ? mp_obj_get_float(args[2]) : 0.0f;
+    beeper_tone(frequency, second, duration);
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_beep_obj, 2, 3, host_beep);
+
+static mp_obj_t host_beep_stop(void) {
+    beeper_stop();
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_beep_stop_obj, host_beep_stop);
+
+static mp_obj_t host_beeping(void) {
+    return mp_obj_new_bool(beeper_busy());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_beeping_obj, host_beeping);
+
 static mp_obj_t host_reload(void) {
     runtime_request_reload();
     return mp_const_none;
@@ -84,6 +105,9 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_held),      MP_ROM_PTR(&host_held_obj) },
     { MP_ROM_QSTR(MP_QSTR_resume),    MP_ROM_PTR(&host_resume_obj) },
     { MP_ROM_QSTR(MP_QSTR_backlight), MP_ROM_PTR(&host_backlight_obj) },
+    { MP_ROM_QSTR(MP_QSTR_beep),      MP_ROM_PTR(&host_beep_obj) },
+    { MP_ROM_QSTR(MP_QSTR_beep_stop), MP_ROM_PTR(&host_beep_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_beeping),   MP_ROM_PTR(&host_beeping_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_KEY_BACKSPACE), MP_ROM_INT(HOST_KEY_BACKSPACE) },

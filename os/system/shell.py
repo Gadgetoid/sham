@@ -3,7 +3,7 @@ import sys
 
 import host
 import lcd
-from system import keys, timefmt, ui
+from system import keys, sound, timefmt, ui
 
 HOTKEYS = {
     keys.TEL: "tel",
@@ -170,6 +170,7 @@ class Shell:
 
     def handle(self, key):
         code = key.code
+        sound.click()
         if code == keys.MAIN:
             self.go_home()
         elif code in HOTKEYS:
