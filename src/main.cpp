@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <utility>
 #include <vector>
@@ -42,6 +43,7 @@ struct Options {
     int width = 1040;
     int height = 820;
     bool watch = true;
+    bool dead_columns = false;
 };
 
 static void usage() {
@@ -52,6 +54,7 @@ static void usage() {
         "  --main=PATH         entry point within root (default /main.py)\n"
         "  --size=WxH          window size (default 1040x820)\n"
         "  --no-watch          do not reload when files in root change\n"
+        "  --dead-columns      simulate failed LCD column drivers\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
@@ -81,6 +84,7 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (const char *v = value("--exec=")) options.exec.push_back(v);
         else if (const char *v = value("--size=")) sscanf(v, "%dx%d", &options.width, &options.height);
         else if (arg == "--no-watch") options.watch = false;
+        else if (arg == "--dead-columns") options.dead_columns = true;
         else {
             usage();
             return false;
@@ -354,6 +358,9 @@ int main(int argc, char **argv) {
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
+    srand((unsigned)SDL_GetTicks() ^ (unsigned)time(nullptr));
+    if (options.dead_columns) lcd_set_dead_columns(true);
+
     host_config_t config = { options.root.c_str(), options.data.c_str(), options.main.c_str() };
     if (!runtime_init(&config)) return 1;
     if (options.watch) watch_start(options.root.c_str());
@@ -379,6 +386,7 @@ int main(int argc, char **argv) {
                 if ((mod & SDL_KMOD_GUI) && key == SDLK_R) { runtime_request_reload(); continue; }
                 if ((mod & SDL_KMOD_GUI) && key == SDLK_L) { console_focus(); continue; }
                 if ((mod & SDL_KMOD_GUI) && key == SDLK_B) { lcd_set_backlight(!lcd_get_backlight()); continue; }
+                if ((mod & SDL_KMOD_GUI) && key == SDLK_D) { lcd_set_dead_columns(!lcd_get_dead_columns()); continue; }
                 if ((mod & SDL_KMOD_CTRL) && key == SDLK_C) {
                     if (device_focused || runtime_repl_busy()) runtime_interrupt();
                     else console_cancel();
@@ -428,6 +436,9 @@ int main(int argc, char **argv) {
         ImGui::SameLine();
         bool backlight = lcd_get_backlight();
         if (ImGui::Checkbox("Backlight", &backlight)) lcd_set_backlight(backlight);
+        ImGui::SameLine();
+        bool dead = lcd_get_dead_columns();
+        if (ImGui::Checkbox("Dead columns", &dead)) lcd_set_dead_columns(dead);
         ImGui::SameLine();
         ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
         ImGui::SameLine(ImGui::GetContentRegionMax().x - 150);

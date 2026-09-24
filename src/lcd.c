@@ -190,7 +190,31 @@ static float *vignette_x = NULL, *vignette_y = NULL;
 static float *grain = NULL;
 static int cell = 0, output_w = 0, output_h = 0;
 static bool backlight = true;
+
+enum { COLUMN_OK, COLUMN_OFF, COLUMN_ON, COLUMN_WEAK };
+static uint8_t column_fault[LCD_WIDTH];
+static bool dead_columns = false;
 static bool force_compose = true;
+
+static void fault_cluster(uint8_t fault, int max_width) {
+    int width = 1 + rand() % max_width;
+    int start = rand() % (LCD_WIDTH - width);
+    for (int x = start; x < start + width; x++) column_fault[x] = fault;
+}
+
+void lcd_set_dead_columns(bool on) {
+    dead_columns = on;
+    memset(column_fault, COLUMN_OK, sizeof column_fault);
+    if (on) {
+        int off_clusters = 2 + rand() % 2;
+        for (int i = 0; i < off_clusters; i++) fault_cluster(COLUMN_OFF, 3);
+        fault_cluster(COLUMN_WEAK, 2);
+        if (rand() % 3 == 0) fault_cluster(COLUMN_ON, 1);
+    }
+    force_compose = true;
+}
+
+bool lcd_get_dead_columns(void) { return dead_columns; }
 
 void lcd_set_backlight(bool on) { backlight = on; force_compose = true; }
 bool lcd_get_backlight(void) { return backlight; }
@@ -293,6 +317,12 @@ static bool settle_pixels(void) {
     bool changed = false;
     for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         float target = lcd_framebuffer[i] / 3.0f;
+        switch (column_fault[i % LCD_WIDTH]) {
+            case COLUMN_OFF:  target = 0.0f; break;
+            case COLUMN_ON:   target = 1.0f; break;
+            case COLUMN_WEAK: target *= 0.35f; break;
+            default: break;
+        }
         float delta = target - shown[i];
         if (delta == 0.0f) continue;
         changed = true;

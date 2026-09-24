@@ -41,6 +41,7 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Cmd-R | Reload |
 | Cmd-L | Focus the REPL, Esc to return to the device |
 | Cmd-B | Backlight |
+| Cmd-D | Dead LCD columns, re-rolled each time |
 
 ## Layout
 
