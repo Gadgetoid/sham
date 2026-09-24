@@ -485,7 +485,8 @@ class TextView(View):
 
 
 class TextEdit(View):
-    def __init__(self, text="", on_change=None, on_submit=None, multiline=True, type=small, placeholder=""):
+    def __init__(self, text="", on_change=None, on_submit=None, multiline=True, type=small, placeholder="",
+                 wrap=True, line_numbers=False, auto_indent=False):
         super().__init__()
         self.value = text
         self.cursor = len(text)
@@ -494,6 +495,9 @@ class TextEdit(View):
         self.multiline = multiline
         self.type = type
         self.placeholder = placeholder
+        self.wrap = wrap and multiline
+        self.gutter = small.measure("000") + 4 if line_numbers else 0
+        self.auto_indent = auto_indent
         self.top = 0
         self.scroll_x = 0
         self.goal_x = None
@@ -514,8 +518,14 @@ class TextEdit(View):
     @property
     def spans(self):
         if self._spans is None:
-            if self.multiline:
-                self._spans = gfx.wrap_spans(self.value, self.type, self.w - 6)
+            if self.wrap:
+                self._spans = gfx.wrap_spans(self.value, self.type, self.w - 6 - self.gutter)
+            elif self.multiline:
+                self._spans = []
+                start = 0
+                for line in self.value.split("\n"):
+                    self._spans.append((start, start + len(line)))
+                    start += len(line) + 1
             else:
                 self._spans = [(0, len(self.value))]
         return self._spans
@@ -554,6 +564,29 @@ class TextEdit(View):
         if self.on_change:
             self.on_change(self.value)
 
+    @property
+    def line_index(self):
+        return self.line_of(self.cursor)
+
+    @property
+    def column(self):
+        return self.cursor - self.spans[self.line_index][0]
+
+    def go_to_line(self, line):
+        line = max(0, min(line, len(self.spans) - 1))
+        self.cursor = self.spans[line][0]
+        self.top = max(0, line - self.rows // 2)
+        self.reveal()
+        invalidate()
+
+    def indentation(self):
+        start = self.spans[self.line_index][0]
+        line = self.value[start:self.cursor]
+        indent = len(line) - len(line.lstrip(" "))
+        if line.rstrip().endswith(":"):
+            indent += 4
+        return indent
+
     def insert(self, text):
         self.value = self.value[:self.cursor] + text + self.value[self.cursor:]
         self.cursor += len(text)
@@ -577,8 +610,13 @@ class TextEdit(View):
         elif code == keys.BACKSPACE:
             if self.cursor == 0:
                 return True
-            self.value = self.value[:self.cursor - 1] + self.value[self.cursor:]
-            self.cursor -= 1
+            start = self.spans[self.line_index][0]
+            before = self.value[start:self.cursor]
+            remove = 1
+            if self.auto_indent and before and not before.strip(" "):
+                remove = (len(before) - 1) % 4 + 1
+            self.value = self.value[:self.cursor - remove] + self.value[self.cursor:]
+            self.cursor -= remove
             self.edited()
         elif code == keys.DELETE:
             self.value = self.value[:self.cursor] + self.value[self.cursor + 1:]
@@ -602,7 +640,7 @@ class TextEdit(View):
             self.cursor = self.cursor_at(line, 10000)
         elif code == keys.ENTER:
             if self.multiline:
-                self.insert("\n")
+                self.insert("\n" + " " * (self.indentation() if self.auto_indent else 0))
             elif self.on_submit:
                 self.on_submit(self.value)
             else:
@@ -623,12 +661,13 @@ class TextEdit(View):
             self.top = line
         elif line >= self.top + self.rows:
             self.top = line - self.rows + 1
-        if not self.multiline:
+        if not self.wrap:
             x = self.x_of(self.cursor)
-            if x - self.scroll_x > self.w - 4:
-                self.scroll_x = x - self.w + 4
+            visible = self.w - 6 - self.gutter
+            if x - self.scroll_x > visible:
+                self.scroll_x = x - visible + visible // 3
             elif x < self.scroll_x:
-                self.scroll_x = max(0, x - self.w // 2)
+                self.scroll_x = max(0, x - visible // 3)
 
     def tick(self, now):
         if self.focused and now - self.blink_at >= BLINK_MS:
@@ -638,7 +677,7 @@ class TextEdit(View):
 
     def draw(self):
         line_h = self.type.line_height
-        offset = 1 - self.scroll_x
+        offset = 1 + self.gutter - self.scroll_x
         if not self.value and self.placeholder:
             self.text(self.placeholder, offset + 1, 1, MID, self.type)
         spans = self.spans
@@ -652,6 +691,15 @@ class TextEdit(View):
             row = self.line_of(self.cursor) - self.top
             if 0 <= row < self.rows:
                 self.fill(offset + self.x_of(self.cursor), row * line_h, 1, line_h, INK)
+        if self.gutter:
+            self.fill(0, 0, self.gutter, self.h, CLEAR)
+            self.fill(self.gutter - 2, 0, 1, self.h, LIGHT)
+            for row in range(self.rows):
+                line = self.top + row
+                if line >= len(spans):
+                    break
+                number = str(line + 1)
+                self.text(number, self.gutter - 4 - small.measure(number), row * line_h + 1, MID)
         if self.multiline:
             gfx.scrollbar(self.x + self.w - 3, self.y, self.h, len(spans), self.rows, self.top)
 

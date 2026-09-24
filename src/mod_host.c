@@ -89,6 +89,22 @@ static mp_obj_t host_beeping(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_beeping_obj, host_beeping);
 
+void host_capture_start(void);
+const char *host_capture_stop(size_t *len);
+
+static mp_obj_t host_capture_start_fn(void) {
+    host_capture_start();
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_capture_start_obj, host_capture_start_fn);
+
+static mp_obj_t host_capture_stop_fn(void) {
+    size_t len;
+    const char *text = host_capture_stop(&len);
+    return mp_obj_new_str(text, len);
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_capture_stop_obj, host_capture_stop_fn);
+
 static mp_obj_t host_reload(void) {
     runtime_request_reload();
     return mp_const_none;
@@ -108,6 +124,8 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_beep),      MP_ROM_PTR(&host_beep_obj) },
     { MP_ROM_QSTR(MP_QSTR_beep_stop), MP_ROM_PTR(&host_beep_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_beeping),   MP_ROM_PTR(&host_beeping_obj) },
+    { MP_ROM_QSTR(MP_QSTR_capture_start), MP_ROM_PTR(&host_capture_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_capture_stop),  MP_ROM_PTR(&host_capture_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_KEY_BACKSPACE), MP_ROM_INT(HOST_KEY_BACKSPACE) },

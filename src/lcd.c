@@ -194,8 +194,8 @@ uint32_t *lcd_compose_pixels(void) { return output; }
 int lcd_compose_width(void) { return output_w; }
 int lcd_compose_height(void) { return output_h; }
 
-#define GRAIN_FINE   0.09f
-#define GRAIN_COARSE 0.06f
+#define GRAIN_FINE   0.11f
+#define GRAIN_COARSE 0.08f
 
 static float hash_noise(int x, int y) {
     uint32_t h = (uint32_t)x * 0x8da6b343u ^ (uint32_t)y * 0xd8163841u;
@@ -243,9 +243,8 @@ void lcd_compose_setup(int new_cell) {
     for (int y = 0; y < output_h; y++) {
         for (int x = 0; x < output_w; x++) {
             float fine = hash_noise(x, y) - 0.5f;
-            float mottle = value_noise(x / (cell * 3.7f), y / (cell * 3.7f), 11) * 0.5f
-                         + value_noise(x / (cell * 9.3f), y / (cell * 9.3f), 23) * 0.3f
-                         + value_noise(x / (cell * 21.1f), y / (cell * 21.1f), 37) * 0.2f;
+            float mottle = value_noise(x / (output_w * 0.32f), y / (output_w * 0.32f), 11) * 0.65f
+                         + value_noise(x / (output_w * 0.13f), y / (output_w * 0.13f), 23) * 0.35f;
             grain[(size_t)y * output_w + x] = 1.0f + fine * GRAIN_FINE + (mottle - 0.5f) * GRAIN_COARSE;
         }
     }

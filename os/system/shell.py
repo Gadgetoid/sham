@@ -9,7 +9,7 @@ HOTKEYS = {
     keys.TEL: "tel",
     keys.CAL: "schedule",
     keys.MEMO: "memo",
-    keys.PROGRAMS: "guide",
+    keys.PROGRAMS: "programs",
 }
 
 FOLDER_ICONS = {

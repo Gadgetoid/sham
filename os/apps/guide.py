@@ -6,7 +6,7 @@ CATEGORY = "System"
 ORDER = 90
 
 TEXT = """KEYS
-F1 MAIN, F2 Tel, F3 Schedule, F4 Memo, F5 Guide, F6 backlight. Tab is MENU. Esc goes back. Arrows move, Enter picks. Ctrl-C interrupts the running app.
+F1 MAIN, F2 Tel, F3 Schedule, F4 Memo, F5 Programs, F6 backlight. Tab is MENU. Esc goes back. Arrows move, Enter picks. Ctrl-C interrupts the running app.
 
 GAMES
 Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags. Breakout: hold arrows to move, Enter serves and pauses. Blocks: Up or X rotates, Z rotates back, Down soft drops, Space hard drops, C holds, P pauses.
@@ -43,6 +43,9 @@ keys.held(keys.LEFT) or keys.held("c") is True while a key is down, for smooth m
 
 ICONS
 icons.draw("notepad", x, y) or "weather:sun". icons.names("emoji") lists a set. Outline is INK, fill is CLEAR unless you say otherwise.
+
+PROGRAMS
+Programs in /data/programs run from the Programs app without a restart. A program runs top to bottom, or defines launch() returning a Screen. ui, gfx, icons, keys, sound, store, dates, lcd and host are ready to use. Errors offer to open the editor at the failing line.
 
 REPL
 The REPL shares main.py's globals. Try shell.stack, ui.alert("hi") or lcd.invert(0, 0, 239, 80)."""

@@ -33,7 +33,7 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Key | Device |
 |-----|--------|
 | F1 | MAIN |
-| F2 / F3 / F4 / F5 | Tel / Schedule / Memo / Guide |
+| F2 / F3 / F4 / F5 | Tel / Schedule / Memo / Programs |
 | F6 | Backlight |
 | Tab | MENU |
 | Esc | Back |
