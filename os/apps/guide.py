@@ -2,6 +2,7 @@ from system import ui
 
 TITLE = "Guide"
 ICON = "speech_tutorial"
+CATEGORY = "System"
 ORDER = 90
 
 TEXT = """KEYS

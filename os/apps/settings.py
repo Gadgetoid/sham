@@ -6,6 +6,7 @@ from system import ui
 
 TITLE = "Settings"
 ICON = "options_wrench"
+CATEGORY = "System"
 ORDER = 80
 
 

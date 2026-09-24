@@ -14,6 +14,7 @@ HOTKEYS = {
 
 FOLDER_ICONS = {
     "Games": "controller:gamepad",
+    "System": "options_mechanics",
 }
 
 
