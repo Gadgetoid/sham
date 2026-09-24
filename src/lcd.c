@@ -183,6 +183,7 @@ static float glow_grid[GRID_W * GRID_H];
 static float glow_scratch[GRID_W * GRID_H];
 static uint32_t *output = NULL;
 static float *vignette_x = NULL, *vignette_y = NULL;
+static float *grain = NULL;
 static int cell = 0, output_w = 0, output_h = 0;
 static bool backlight = true;
 static bool force_compose = true;
@@ -193,6 +194,30 @@ uint32_t *lcd_compose_pixels(void) { return output; }
 int lcd_compose_width(void) { return output_w; }
 int lcd_compose_height(void) { return output_h; }
 
+#define GRAIN_FINE   0.09f
+#define GRAIN_COARSE 0.06f
+
+static float hash_noise(int x, int y) {
+    uint32_t h = (uint32_t)x * 0x8da6b343u ^ (uint32_t)y * 0xd8163841u;
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16;
+    return (h & 0xffff) / 65535.0f;
+}
+
+static float value_noise(float x, float y, int seed) {
+    int ix = (int)floorf(x), iy = (int)floorf(y);
+    float tx = x - ix, ty = y - iy;
+    tx = tx * tx * (3 - 2 * tx);
+    ty = ty * ty * (3 - 2 * ty);
+    int ox = ix + seed * 1013, oy = iy + seed * 7919;
+    float top = hash_noise(ox, oy) * (1 - tx) + hash_noise(ox + 1, oy) * tx;
+    float bottom = hash_noise(ox, oy + 1) * (1 - tx) + hash_noise(ox + 1, oy + 1) * tx;
+    return top * (1 - ty) + bottom * ty;
+}
+
 void lcd_compose_setup(int new_cell) {
     if (new_cell < 2) new_cell = 2;
     if (new_cell == cell) return;
@@ -202,6 +227,7 @@ void lcd_compose_setup(int new_cell) {
     free(output);
     free(vignette_x);
     free(vignette_y);
+    free(grain);
     output = malloc((size_t)output_w * output_h * sizeof(uint32_t));
     vignette_x = malloc((size_t)output_w * sizeof(float));
     vignette_y = malloc((size_t)output_h * sizeof(float));
@@ -212,6 +238,16 @@ void lcd_compose_setup(int new_cell) {
     for (int y = 0; y < output_h; y++) {
         float v = (y + 0.5f) / output_h * 2.0f - 1.0f;
         vignette_y[y] = 1.0f - 0.10f * v * v;
+    }
+    grain = malloc((size_t)output_w * output_h * sizeof(float));
+    for (int y = 0; y < output_h; y++) {
+        for (int x = 0; x < output_w; x++) {
+            float fine = hash_noise(x, y) - 0.5f;
+            float mottle = value_noise(x / (cell * 3.7f), y / (cell * 3.7f), 11) * 0.5f
+                         + value_noise(x / (cell * 9.3f), y / (cell * 9.3f), 23) * 0.3f
+                         + value_noise(x / (cell * 21.1f), y / (cell * 21.1f), 37) * 0.2f;
+            grain[(size_t)y * output_w + x] = 1.0f + fine * GRAIN_FINE + (mottle - 0.5f) * GRAIN_COARSE;
+        }
     }
     force_compose = true;
 }
@@ -311,7 +347,7 @@ bool lcd_compose(void) {
                 shadow = ink_grid[shadow_grid_y * GRID_W + shadow_x / cell];
             }
 
-            float light = vignette_x[x] * vignette_y[y];
+            float light = vignette_x[x] * vignette_y[y] * grain[(size_t)y * output_w + x];
             if (electrode) light *= 0.965f;
             light *= 1.0f - shadow * panel->shadow;
 
