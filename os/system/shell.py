@@ -3,7 +3,7 @@ import sys
 
 import host
 import lcd
-from system import keys, sound, timefmt, ui
+from system import alarms, keys, sound, timefmt, ui
 
 HOTKEYS = {
     keys.TEL: "tel",
@@ -215,6 +215,7 @@ class Shell:
             try:
                 for key in keys.poll():
                     self.handle(key)
+                alarms.check()
                 self.top().tick(host.ticks_ms())
                 minute = host.localtime()[4]
                 if minute != self.minute:

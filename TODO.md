@@ -20,7 +20,7 @@ Period-accurate app ideas, grouped by what they need.
 
 - [x] **Beeper:** an SDL square-wave "piezo". It unlocks an alarm clock, key clicks and a stopwatch or timer that beeps.
 - [x] **Tone dialer:** Tel dials numbers as DTMF tones through the beeper, as the real Wizards did.
-- [ ] **Background alarms:** a scheduler that fires while another app is open, like EPOC's alarm server.
+- [x] **Background alarms:** a scheduler that fires while another app is open, like EPOC's alarm server.
 
 ## Bigger
 
