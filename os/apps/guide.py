@@ -7,6 +7,9 @@ ORDER = 90
 TEXT = """KEYS
 F1 MAIN, F2 Tel, F3 Clock, F4 Memo, F5 Guide, F6 backlight. Tab is MENU. Esc goes back. Arrows move, Enter picks. Ctrl-C interrupts the running app.
 
+GAMES
+Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags.
+
 WRITING AN APP
 Drop a file in /apps. Give it TITLE, ICON and ORDER, and a launch() that returns a ui.Screen. Save it and the device restarts straight back into it.
 
