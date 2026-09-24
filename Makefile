@@ -77,9 +77,12 @@ run: $(PROG)
 screenshot: $(PROG)
 	./$(PROG) --screenshot=$(BUILD)/screenshot.bmp
 
+check: $(PROG)
+	python3 tools/check.py --smoke
+
 clean:
 	rm -rf $(BUILD) $(PROG)
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot clean rebuild
+.PHONY: embed embed-clean run screenshot check clean rebuild

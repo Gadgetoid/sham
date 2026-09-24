@@ -13,6 +13,7 @@ brew install sdl3
 make embed     # once, and after any mpconfigport.h change
 make
 make run
+make check     # syntax, View shadowing, icons, Crates solvability, launch every app
 ```
 
 ## Run

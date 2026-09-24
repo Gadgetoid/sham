@@ -14,7 +14,7 @@ Period-accurate app ideas, grouped by what they need.
 - [ ] **Secret memos:** password-locked notes with a simple cipher, like the Wizard's "Secret" mode.
 - [ ] **Biorhythm:** three sine curves in three grey levels. Late-90s organiser software exactly.
 - [ ] **Char Map:** a browser for all 19 icon sets and the Sins glyphs, handy for app authors.
-- [ ] **More games:** Reversi, Mastermind, Hangman, Sokoban, and Solitaire using the card icons in `boardgames`.
+- [x] **More games:** Reversi, Mastermind, Hangman, Sokoban, and Solitaire using the card icons in `boardgames`.
 
 ## Needs a small host addition
 

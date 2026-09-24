@@ -9,7 +9,7 @@ TEXT = """KEYS
 F1 MAIN, F2 Tel, F3 Schedule, F4 Memo, F5 Programs, F6 backlight. Tab is MENU. Esc goes back. Arrows move, Enter picks. Ctrl-C interrupts the running app.
 
 GAMES
-Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags. Breakout: hold arrows to move, Enter serves and pauses. Blocks: Up or X rotates, Z rotates back, Down soft drops, Space hard drops, C holds, P pauses.
+Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags. Breakout: hold arrows to move, Enter serves and pauses. Blocks: Up or X rotates, Z rotates back, Down soft drops, Space hard drops, C holds, P pauses. Reversi: arrows and Enter, you are black. Codebreaker: 1-6 or arrows set pegs, Enter guesses. Hangman: type letters. Crates: arrows push, U undoes, R restarts, N/P change level. Solitaire: Enter picks up and drops, Up/Down picks how many cards, Space sends a card home.
 
 WRITING AN APP
 Drop a file in /apps. Give it TITLE, ICON and ORDER, and a launch() that returns a ui.Screen. CATEGORY = "Games" files it in a launcher folder. Save it and the device restarts straight back into it.
