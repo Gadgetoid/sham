@@ -229,16 +229,6 @@ class Blocks(ui.View):
         for cx, cy in SHAPES[name]:
             self.block(x + cx * CELL, y + cy * CELL)
 
-    def banner(self, *lines):
-        width = max(small.measure(line) for line in lines) + 10
-        height = len(lines) * small.line_height + 6
-        x = (self.w - width) // 2
-        y = (self.h - height) // 2
-        self.fill(x, y, width, height, CLEAR)
-        self.rect(x, y, width, height, INK)
-        for index, line in enumerate(lines):
-            self.text(line, x + (width - small.measure(line)) // 2, y + 3 + index * small.line_height)
-
     def draw(self):
         board_w = COLUMNS * CELL
         self.rect(self.board_x - 2, self.board_y - 2, board_w + 4, ROWS * CELL + 4, INK)

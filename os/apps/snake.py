@@ -106,16 +106,6 @@ class Snake(ui.View):
         x, y = position
         self.fill(self.left + x * CELL, self.top + y * CELL, CELL - 1, CELL - 1, colour)
 
-    def banner(self, *lines):
-        width = max(small.measure(line) for line in lines) + 10
-        height = len(lines) * small.line_height + 6
-        x = (self.w - width) // 2
-        y = (self.h - height) // 2
-        self.fill(x, y, width, height, CLEAR)
-        self.rect(x, y, width, height, INK)
-        for index, line in enumerate(lines):
-            self.text(line, x + (width - small.measure(line)) // 2, y + 3 + index * small.line_height)
-
     def draw(self):
         self.rect(self.left - 1, self.top - 1, self.columns * CELL + 1, self.rows * CELL + 1, MID)
         fx, fy = self.food

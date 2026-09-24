@@ -106,6 +106,22 @@ class View:
     def invert(self, x, y, w, h):
         lcd.invert(self.x + x, self.y + y, w, h)
 
+    def sprite(self, rows, x, y, colour=INK):
+        for dy, row in enumerate(rows):
+            for dx, char in enumerate(row):
+                if char == "#":
+                    self.pixel(x + dx, y + dy, colour)
+
+    def banner(self, *lines, bottom=False):
+        width = max(small.measure(line) for line in lines) + 10
+        height = len(lines) * small.line_height + 6
+        x = (self.w - width) // 2
+        y = self.h - height - 10 if bottom else (self.h - height) // 2
+        self.fill(x, y, width, height, CLEAR)
+        self.rect(x, y, width, height, INK)
+        for index, line in enumerate(lines):
+            self.text(line, x + (width - small.measure(line)) // 2, y + 3 + index * small.line_height)
+
 
 class Label(View):
     focusable = False

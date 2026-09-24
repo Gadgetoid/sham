@@ -167,16 +167,6 @@ class Breakout(ui.View):
             self.advance(dt)
         self.refresh()
 
-    def banner(self, *lines):
-        width = max(small.measure(line) for line in lines) + 10
-        height = len(lines) * small.line_height + 6
-        x = (self.w - width) // 2
-        y = self.h - height - 10
-        self.fill(x, y, width, height, CLEAR)
-        self.rect(x, y, width, height, INK)
-        for index, line in enumerate(lines):
-            self.text(line, x + (width - small.measure(line)) // 2, y + 3 + index * small.line_height)
-
     def draw(self):
         for x, y, row in self.bricks:
             self.fill(x, y, BRICK_W, BRICK_H, ROW_COLOURS[row])
@@ -185,11 +175,11 @@ class Breakout(ui.View):
         self.fill(paddle_x + 2, self.paddle_y + 2, PADDLE_W - 4, 1, MID)
         self.fill(int(self.ball_x), int(self.ball_y), BALL, BALL, INK)
         if self.state == "ready":
-            self.banner("Enter to serve, arrows move", "Best {}".format(self.best))
+            self.banner("Enter to serve, arrows move", "Best {}".format(self.best), bottom=True)
         elif self.state == "paused":
-            self.banner("Paused")
+            self.banner("Paused", bottom=True)
         elif self.state == "over":
-            self.banner("Game over, {} points".format(self.score), "Enter: again  Esc: quit")
+            self.banner("Game over, {} points".format(self.score), "Enter: again  Esc: quit", bottom=True)
 
 
 def launch():

@@ -151,12 +151,6 @@ class Mines(ui.View):
             self.last_second = now // 1000
             self.refresh()
 
-    def sprite(self, rows, x, y, colour):
-        for dy, row in enumerate(rows):
-            for dx, char in enumerate(row):
-                if char == "#":
-                    self.pixel(x + dx, y + dy, colour)
-
     def draw_cell(self, cx, cy):
         at = self.index(cx, cy)
         x = self.left + cx * CELL
