@@ -40,6 +40,14 @@ static mp_obj_t host_epoch(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_epoch_obj, host_epoch);
 
+static mp_obj_t host_utc_offset(void) {
+    time_t now = time(NULL);
+    struct tm local;
+    localtime_r(&now, &local);
+    return mp_obj_new_int((mp_int_t)local.tm_gmtoff);
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_utc_offset_obj, host_utc_offset);
+
 static mp_obj_t host_key(void) {
     host_key_t key;
     if (!keys_pop(&key)) return mp_const_none;
@@ -117,6 +125,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ticks_ms),  MP_ROM_PTR(&host_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&host_localtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_epoch),     MP_ROM_PTR(&host_epoch_obj) },
+    { MP_ROM_QSTR(MP_QSTR_utc_offset), MP_ROM_PTR(&host_utc_offset_obj) },
     { MP_ROM_QSTR(MP_QSTR_key),       MP_ROM_PTR(&host_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_held),      MP_ROM_PTR(&host_held_obj) },
     { MP_ROM_QSTR(MP_QSTR_resume),    MP_ROM_PTR(&host_resume_obj) },

@@ -8,7 +8,7 @@ Period-accurate app ideas, grouped by what they need.
 - [ ] **To Do:** priority and done checkboxes. The icon sets already have `checkbox_done_todo` and friends.
 - [ ] **Anniversary:** birthdays with "in 12 days" countdowns. It's on the ZQ-770's own main menu ("Birthday").
 - [ ] **Conversion:** units and currency with editable rates, like the Wizard's Conversion app.
-- [ ] **World Clock:** a dotted pixel world map with a day/night shadow and city times, like Psion's World app.
+- [x] **World Clock:** a dotted pixel world map with a day/night shadow and city times, like Psion's World app.
   - Convert the vector map in `badgeware/tufty2350/firmware/assets/world.geo.json` (per-country polygons in degrees, 215KB) to a 1-bit or 2-bit bitmap offline, sized for the panel. statsbadge's `badge_app/worldmap.py` has the equirectangular projection, the aspect correction and night-side drawing to borrow.
 - [ ] **Data:** a card-file database with fields you define yourself, like Psion Data. It's mostly the existing Form plus List.
 - [ ] **Secret memos:** password-locked notes with a simple cipher, like the Wizard's "Secret" mode.

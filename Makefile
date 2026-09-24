@@ -77,6 +77,11 @@ run: $(PROG)
 screenshot: $(PROG)
 	./$(PROG) --screenshot=$(BUILD)/screenshot.bmp
 
+WORLD_GEOJSON ?= ../../badgeware/tufty2350/firmware/assets/world.geo.json
+
+worldmap:
+	python3 tools/make_worldmap.py $(WORLD_GEOJSON) os/assets/worldmap.bin
+
 check: $(PROG)
 	python3 tools/check.py --smoke
 
@@ -85,4 +90,4 @@ clean:
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot check clean rebuild
+.PHONY: embed embed-clean run screenshot worldmap check clean rebuild
