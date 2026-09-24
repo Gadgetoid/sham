@@ -20,9 +20,11 @@ make run
 ```
 ./pocket                      # boots os/main.py, data in ./data
 ./pocket --root=DIR --data=DIR
-./pocket --keys="{F2}{DOWN}" --screenshot=shot.bmp --frames=120
+./pocket --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
 ./pocket --exec="ui.alert('hi')"
 ```
+
+Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{WAIT}` skips a step.
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
@@ -31,7 +33,7 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Key | Device |
 |-----|--------|
 | F1 | MAIN |
-| F2 / F3 / F4 / F5 | Tel / Clock / Memo / Guide |
+| F2 / F3 / F4 / F5 | Tel / Schedule / Memo / Guide |
 | F6 | Backlight |
 | Tab | MENU |
 | Esc | Back |

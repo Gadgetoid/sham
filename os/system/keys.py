@@ -22,7 +22,7 @@ def F(number):
 MENU = TAB
 MAIN = F(1)
 TEL = F(2)
-CLOCK = F(3)
+CAL = F(3)
 MEMO = F(4)
 PROGRAMS = F(5)
 LIGHT = F(6)

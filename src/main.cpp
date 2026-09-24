@@ -25,6 +25,7 @@
 #include "watch.h"
 
 static uint64_t start_ticks = 0;
+static SDL_WindowID main_window_id = 0;
 
 extern "C" uint32_t host_ticks_ms(void) {
     return (uint32_t)(SDL_GetTicks() - start_ticks);
@@ -110,6 +111,51 @@ static uint32_t special_key(SDL_Keycode key) {
     return 0;
 }
 
+static SDL_Keycode sdl_key(uint32_t code) {
+    static const std::pair<uint32_t, SDL_Keycode> table[] = {
+        { HOST_KEY_UP, SDLK_UP }, { HOST_KEY_DOWN, SDLK_DOWN }, { HOST_KEY_LEFT, SDLK_LEFT }, { HOST_KEY_RIGHT, SDLK_RIGHT },
+        { HOST_KEY_HOME, SDLK_HOME }, { HOST_KEY_END, SDLK_END }, { HOST_KEY_PGUP, SDLK_PAGEUP },
+        { HOST_KEY_PGDN, SDLK_PAGEDOWN }, { HOST_KEY_ENTER, SDLK_RETURN }, { HOST_KEY_ESC, SDLK_ESCAPE },
+        { HOST_KEY_BACKSPACE, SDLK_BACKSPACE }, { HOST_KEY_DELETE, SDLK_DELETE }, { HOST_KEY_TAB, SDLK_TAB },
+    };
+    for (auto &entry : table) {
+        if (entry.first == code) return entry.second;
+    }
+    if (code >= HOST_KEY_F1 && code < HOST_KEY_F1 + 12) return SDLK_F1 + (code - HOST_KEY_F1);
+    return 0;
+}
+
+static void push_sdl_key(SDL_Keycode key, bool down) {
+    SDL_Event event = {};
+    event.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    event.key.key = key;
+    event.key.scancode = SDL_GetScancodeFromKey(key, nullptr);
+    event.key.down = down;
+    event.key.windowID = main_window_id;
+    SDL_PushEvent(&event);
+}
+
+static void push_click(float x, float y) {
+    SDL_Event event = {};
+    event.type = SDL_EVENT_MOUSE_MOTION;
+    event.motion.x = x;
+    event.motion.y = y;
+    event.motion.windowID = main_window_id;
+    SDL_PushEvent(&event);
+    event = {};
+    event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.down = true;
+    event.button.clicks = 1;
+    event.button.x = x;
+    event.button.y = y;
+    event.button.windowID = main_window_id;
+    SDL_PushEvent(&event);
+    event.type = SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.down = false;
+    SDL_PushEvent(&event);
+}
+
 static uint32_t held_code(SDL_Keycode key) {
     if (uint32_t code = special_key(key)) return code;
     if (key >= SDLK_SPACE && key <= SDLK_Z) return (uint32_t)key;
@@ -136,7 +182,7 @@ static void push_text(const char *text) {
     }
 }
 
-enum KeyAction { PRESS, HOLD, RELEASE };
+enum KeyAction { PRESS, HOLD, RELEASE, CLICK };
 
 struct KeyScript {
     struct Step {
@@ -147,6 +193,8 @@ struct KeyScript {
     size_t next = 0;
     int start_frame = 60;
     int interval = 4;
+    float click_x = 0;
+    float click_y = 0;
 
     static uint32_t named(const std::string &name) {
         static const std::pair<const char *, uint32_t> names[] = {
@@ -179,6 +227,10 @@ struct KeyScript {
                 action = name[0] == '+' ? HOLD : RELEASE;
                 name = name.substr(1);
             }
+            if (name == "CLICK") {
+                steps.push_back({ 1, CLICK });
+                continue;
+            }
             steps.push_back({ name == "WAIT" ? 0 : named(name), action });
         }
     }
@@ -187,6 +239,16 @@ struct KeyScript {
         if (next >= steps.size() || frame < start_frame || (frame - start_frame) % interval) return;
         Step current = steps[next++];
         if (!current.code) return;
+        if (current.action == CLICK) {
+            push_click(click_x, click_y);
+            return;
+        }
+        SDL_Keycode key = sdl_key(current.code);
+        if (key && current.action == PRESS) {
+            push_sdl_key(key, true);
+            push_sdl_key(key, false);
+            return;
+        }
         if (current.action == PRESS) keys_push(current.code, 0);
         else if (current.action == HOLD) { keys_set_held(current.code, true); keys_push(current.code, 0); }
         else keys_set_held(current.code, false);
@@ -278,6 +340,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     SDL_SetRenderVSync(renderer, 1);
+    main_window_id = SDL_GetWindowID(window);
     beeper_init();
 
     IMGUI_CHECKVERSION();
@@ -306,7 +369,9 @@ int main(int argc, char **argv) {
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            ImGui_ImplSDL3_ProcessEvent(&event);
+            bool device_tab = device_focused && (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) &&
+                              event.key.key == SDLK_TAB;
+            if (!device_tab) ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT) running = false;
             if (event.type == SDL_EVENT_KEY_DOWN) {
                 SDL_Keycode key = event.key.key;
@@ -340,6 +405,8 @@ int main(int argc, char **argv) {
             console_notice("change detected");
             runtime_request_reload();
         }
+        script.click_x = io.DisplaySize.x * 0.5f;
+        script.click_y = io.DisplaySize.y * 0.25f;
         script.step(frame);
         runtime_step();
 

@@ -7,7 +7,7 @@ from system import alarms, keys, sound, timefmt, ui
 
 HOTKEYS = {
     keys.TEL: "tel",
-    keys.CLOCK: "clock",
+    keys.CAL: "schedule",
     keys.MEMO: "memo",
     keys.PROGRAMS: "guide",
 }

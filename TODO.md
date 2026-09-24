@@ -4,7 +4,7 @@ Period-accurate app ideas, grouped by what they need.
 
 ## Built from what's already there
 
-- [ ] **Schedule / Agenda:** a day view with time slots, plus a week strip in the header, like the Wizard's Schedule.
+- [x] **Schedule / Agenda:** a day view with time slots, plus a week strip in the header, like the Wizard's Schedule.
 - [ ] **To Do:** priority and done checkboxes. The icon sets already have `checkbox_done_todo` and friends.
 - [ ] **Anniversary:** birthdays with "in 12 days" countdowns. It's on the ZQ-770's own main menu ("Birthday").
 - [ ] **Conversion:** units and currency with editable rates, like the Wizard's Conversion app.
