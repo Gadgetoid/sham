@@ -158,6 +158,7 @@ typedef struct {
     colour_t ink;
     float contrast;
     float shadow;
+    float soft_shadow;
     float bloom;
 } panel_t;
 
@@ -165,7 +166,8 @@ static const panel_t panel_lit = {
     .glass = { 104, 214, 190 },
     .ink = { 16, 44, 54 },
     .contrast = 0.92f,
-    .shadow = 0.16f,
+    .shadow = 0.22f,
+    .soft_shadow = 0.20f,
     .bloom = 0.30f,
 };
 
@@ -173,7 +175,8 @@ static const panel_t panel_unlit = {
     .glass = { 148, 160, 126 },
     .ink = { 30, 38, 32 },
     .contrast = 0.90f,
-    .shadow = 0.32f,
+    .shadow = 0.38f,
+    .soft_shadow = 0.30f,
     .bloom = 0.0f,
 };
 
@@ -181,6 +184,7 @@ static float shown[LCD_WIDTH * LCD_HEIGHT];
 static float ink_grid[GRID_W * GRID_H];
 static float glow_grid[GRID_W * GRID_H];
 static float glow_scratch[GRID_W * GRID_H];
+static float soft_grid[GRID_W * GRID_H];
 static uint32_t *output = NULL;
 static float *vignette_x = NULL, *vignette_y = NULL;
 static float *grain = NULL;
@@ -194,6 +198,10 @@ uint32_t *lcd_compose_pixels(void) { return output; }
 int lcd_compose_width(void) { return output_w; }
 int lcd_compose_height(void) { return output_h; }
 
+#define BEZEL_TOP    0.42f
+#define BEZEL_LEFT   0.30f
+#define BEZEL_RIGHT  0.10f
+#define BEZEL_BOTTOM 0.08f
 #define GRAIN_FINE   0.11f
 #define GRAIN_COARSE 0.08f
 
@@ -233,11 +241,17 @@ void lcd_compose_setup(int new_cell) {
     vignette_y = malloc((size_t)output_h * sizeof(float));
     for (int x = 0; x < output_w; x++) {
         float u = (x + 0.5f) / output_w * 2.0f - 1.0f;
-        vignette_x[x] = 1.0f - 0.07f * u * u * u * u;
+        float from_left = (float)x / cell, from_right = (float)(output_w - 1 - x) / cell;
+        vignette_x[x] = (1.0f - 0.07f * u * u * u * u)
+                      * (1.0f - BEZEL_LEFT * expf(-from_left / 1.1f))
+                      * (1.0f - BEZEL_RIGHT * expf(-from_right / 0.7f));
     }
     for (int y = 0; y < output_h; y++) {
         float v = (y + 0.5f) / output_h * 2.0f - 1.0f;
-        vignette_y[y] = 1.0f - 0.10f * v * v;
+        float from_top = (float)y / cell, from_bottom = (float)(output_h - 1 - y) / cell;
+        vignette_y[y] = (1.0f - 0.10f * v * v)
+                      * (1.0f - BEZEL_TOP * expf(-from_top / 1.5f))
+                      * (1.0f - BEZEL_BOTTOM * expf(-from_bottom / 0.7f));
     }
     grain = malloc((size_t)output_w * output_h * sizeof(float));
     for (int y = 0; y < output_h; y++) {
@@ -306,7 +320,8 @@ bool lcd_compose(void) {
 
     const panel_t *panel = backlight ? &panel_lit : &panel_unlit;
     int gap = cell >= 4 ? max_int(1, cell / 7) : 1;
-    int shadow_offset = max_int(1, cell / 4);
+    int shadow_offset = max_int(1, cell / 3);
+    float soft_offset = 0.75f;
 
     memset(ink_grid, 0, sizeof ink_grid);
     for (int y = 0; y < LCD_HEIGHT; y++) {
@@ -320,6 +335,8 @@ bool lcd_compose(void) {
         box_blur(glow_grid, glow_scratch, 2);
         box_blur(glow_grid, glow_scratch, 2);
     }
+    memcpy(soft_grid, ink_grid, sizeof soft_grid);
+    box_blur(soft_grid, glow_scratch, 1);
 
     for (int y = 0; y < output_h; y++) {
         int grid_y = y / cell, sub_y = y % cell;
@@ -327,6 +344,11 @@ bool lcd_compose(void) {
         int shadow_grid_y = shadow_y >= 0 ? shadow_y / cell : -1;
         int shadow_sub_y = shadow_y >= 0 ? shadow_y % cell : 0;
         bool row_in_panel = grid_y >= LCD_MARGIN && grid_y < LCD_MARGIN + LCD_HEIGHT;
+
+        float soft_v = (y + 0.5f) / cell - 0.5f - soft_offset;
+        int soft_y0 = max_int(0, min_int(GRID_H - 1, (int)floorf(soft_v)));
+        int soft_y1 = min_int(GRID_H - 1, soft_y0 + 1);
+        float soft_fy = fminf(1.0f, fmaxf(0.0f, soft_v - soft_y0));
 
         float glow_v = (y + 0.5f) / cell - 0.5f;
         int glow_y0 = max_int(0, min_int(GRID_H - 1, (int)floorf(glow_v)));
@@ -349,6 +371,14 @@ bool lcd_compose(void) {
             float light = vignette_x[x] * vignette_y[y] * grain[(size_t)y * output_w + x];
             if (electrode) light *= 0.965f;
             light *= 1.0f - shadow * panel->shadow;
+
+            float soft_u = (x + 0.5f) / cell - 0.5f - soft_offset;
+            int soft_x0 = max_int(0, min_int(GRID_W - 1, (int)floorf(soft_u)));
+            int soft_x1 = min_int(GRID_W - 1, soft_x0 + 1);
+            float soft_fx = fminf(1.0f, fmaxf(0.0f, soft_u - soft_x0));
+            float soft_top = soft_grid[soft_y0 * GRID_W + soft_x0] * (1 - soft_fx) + soft_grid[soft_y0 * GRID_W + soft_x1] * soft_fx;
+            float soft_bottom = soft_grid[soft_y1 * GRID_W + soft_x0] * (1 - soft_fx) + soft_grid[soft_y1 * GRID_W + soft_x1] * soft_fx;
+            light *= 1.0f - (soft_top * (1 - soft_fy) + soft_bottom * soft_fy) * panel->soft_shadow;
 
             float coverage = ink * panel->contrast;
             float r = panel->glass.r * light * (1.0f - coverage) + panel->ink.r * coverage;
