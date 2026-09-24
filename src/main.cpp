@@ -50,7 +50,7 @@ static void usage() {
         "  --main=PATH         entry point within root (default /main.py)\n"
         "  --size=WxH          window size (default 1040x820)\n"
         "  --no-watch          do not reload when files in root change\n"
-        "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1} etc\n"
+        "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
         "  --frames=N          frames before the screenshot (default 120)\n");
@@ -109,6 +109,12 @@ static uint32_t special_key(SDL_Keycode key) {
     return 0;
 }
 
+static uint32_t held_code(SDL_Keycode key) {
+    if (uint32_t code = special_key(key)) return code;
+    if (key >= SDLK_SPACE && key <= SDLK_Z) return (uint32_t)key;
+    return 0;
+}
+
 static uint8_t modifiers(SDL_Keymod mod) {
     uint8_t mods = 0;
     if (mod & SDL_KMOD_SHIFT) mods |= HOST_MOD_SHIFT;
@@ -129,42 +135,60 @@ static void push_text(const char *text) {
     }
 }
 
+enum KeyAction { PRESS, HOLD, RELEASE };
+
 struct KeyScript {
-    std::vector<std::pair<uint32_t, uint8_t>> keys;
+    struct Step {
+        uint32_t code;
+        KeyAction action;
+    };
+    std::vector<Step> steps;
     size_t next = 0;
     int start_frame = 60;
     int interval = 4;
 
-    void parse(const std::string &script) {
+    static uint32_t named(const std::string &name) {
         static const std::pair<const char *, uint32_t> names[] = {
             { "UP", HOST_KEY_UP }, { "DOWN", HOST_KEY_DOWN }, { "LEFT", HOST_KEY_LEFT }, { "RIGHT", HOST_KEY_RIGHT },
             { "ENTER", HOST_KEY_ENTER }, { "ESC", HOST_KEY_ESC }, { "BS", HOST_KEY_BACKSPACE },
             { "DEL", HOST_KEY_DELETE }, { "TAB", HOST_KEY_TAB }, { "HOME", HOST_KEY_HOME }, { "END", HOST_KEY_END },
-            { "PGUP", HOST_KEY_PGUP }, { "PGDN", HOST_KEY_PGDN }, { "WAIT", 0 },
+            { "PGUP", HOST_KEY_PGUP }, { "PGDN", HOST_KEY_PGDN }, { "SPACE", ' ' },
         };
+        if (name.size() > 1 && name[0] == 'F' && isdigit((unsigned char)name[1])) {
+            return HOST_KEY_F1 + atoi(name.c_str() + 1) - 1;
+        }
+        for (auto &entry : names) {
+            if (name == entry.first) return entry.second;
+        }
+        return name.size() == 1 ? (uint32_t)(unsigned char)name[0] : 0;
+    }
+
+    void parse(const std::string &script) {
         for (size_t i = 0; i < script.size(); i++) {
-            if (script[i] == '{') {
-                size_t close = script.find('}', i);
-                if (close == std::string::npos) break;
-                std::string name = script.substr(i + 1, close - i - 1);
-                i = close;
-                if (name.size() > 1 && name[0] == 'F' && isdigit((unsigned char)name[1])) {
-                    keys.push_back({ HOST_KEY_F1 + atoi(name.c_str() + 1) - 1, 0 });
-                    continue;
-                }
-                for (auto &entry : names) {
-                    if (name == entry.first) keys.push_back({ entry.second, 0 });
-                }
-            } else {
-                keys.push_back({ (uint8_t)script[i], 0 });
+            if (script[i] != '{') {
+                steps.push_back({ (uint8_t)script[i], PRESS });
+                continue;
             }
+            size_t close = script.find('}', i);
+            if (close == std::string::npos) break;
+            std::string name = script.substr(i + 1, close - i - 1);
+            i = close;
+            KeyAction action = PRESS;
+            if (!name.empty() && (name[0] == '+' || name[0] == '-')) {
+                action = name[0] == '+' ? HOLD : RELEASE;
+                name = name.substr(1);
+            }
+            steps.push_back({ name == "WAIT" ? 0 : named(name), action });
         }
     }
 
     void step(int frame) {
-        if (next >= keys.size() || frame < start_frame || (frame - start_frame) % interval) return;
-        auto key = keys[next++];
-        if (key.first) keys_push(key.first, key.second);
+        if (next >= steps.size() || frame < start_frame || (frame - start_frame) % interval) return;
+        Step current = steps[next++];
+        if (!current.code) return;
+        if (current.action == PRESS) keys_push(current.code, 0);
+        else if (current.action == HOLD) { keys_set_held(current.code, true); keys_push(current.code, 0); }
+        else keys_set_held(current.code, false);
     }
 };
 
@@ -294,12 +318,17 @@ int main(int argc, char **argv) {
                     continue;
                 }
                 if (!device_focused || (mod & SDL_KMOD_GUI)) continue;
+                if (uint32_t code = held_code(key)) keys_set_held(code, true);
                 if (uint32_t code = special_key(key)) {
                     keys_push(code, modifiers(mod));
                 } else if ((mod & SDL_KMOD_CTRL) && key >= SDLK_A && key <= SDLK_Z) {
                     keys_push('a' + (key - SDLK_A), modifiers(mod));
                 }
             }
+            if (event.type == SDL_EVENT_KEY_UP) {
+                if (uint32_t code = held_code(event.key.key)) keys_set_held(code, false);
+            }
+            if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) keys_release_all();
             if (event.type == SDL_EVENT_TEXT_INPUT && device_focused) {
                 if (!(SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_GUI))) push_text(event.text.text);
             }
@@ -339,6 +368,7 @@ int main(int argc, char **argv) {
         ImGui::End();
 
         ImGui::Render();
+        if (device_focused && io.WantTextInput) keys_release_all();
         device_focused = !io.WantTextInput;
         if (device_focused && !SDL_TextInputActive(window)) SDL_StartTextInput(window);
 

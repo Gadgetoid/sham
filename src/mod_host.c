@@ -47,6 +47,11 @@ static mp_obj_t host_key(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_key_obj, host_key);
 
+static mp_obj_t host_held(mp_obj_t code_in) {
+    return mp_obj_new_bool(keys_is_held((uint32_t)mp_obj_get_int(code_in)));
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(host_held_obj, host_held);
+
 static mp_obj_t host_resume(size_t n_args, const mp_obj_t *args) {
     if (n_args == 1) {
         runtime_set_resume(args[0] == mp_const_none ? "" : mp_obj_str_get_str(args[0]));
@@ -76,6 +81,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&host_localtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_epoch),     MP_ROM_PTR(&host_epoch_obj) },
     { MP_ROM_QSTR(MP_QSTR_key),       MP_ROM_PTR(&host_key_obj) },
+    { MP_ROM_QSTR(MP_QSTR_held),      MP_ROM_PTR(&host_held_obj) },
     { MP_ROM_QSTR(MP_QSTR_resume),    MP_ROM_PTR(&host_resume_obj) },
     { MP_ROM_QSTR(MP_QSTR_backlight), MP_ROM_PTR(&host_backlight_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },

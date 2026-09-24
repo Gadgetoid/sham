@@ -34,6 +34,9 @@ typedef struct {
 void keys_push(uint32_t code, uint8_t mods);
 bool keys_pop(host_key_t *out);
 void keys_clear(void);
+void keys_set_held(uint32_t code, bool held);
+bool keys_is_held(uint32_t code);
+void keys_release_all(void);
 
 #ifdef __cplusplus
 }

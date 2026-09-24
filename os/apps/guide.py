@@ -8,7 +8,7 @@ TEXT = """KEYS
 F1 MAIN, F2 Tel, F3 Clock, F4 Memo, F5 Guide, F6 backlight. Tab is MENU. Esc goes back. Arrows move, Enter picks. Ctrl-C interrupts the running app.
 
 GAMES
-Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags.
+Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags. Breakout: hold arrows to move, Enter serves and pauses. Blocks: Up or X rotates, Z rotates back, Down soft drops, Space hard drops, C holds, P pauses.
 
 WRITING AN APP
 Drop a file in /apps. Give it TITLE, ICON and ORDER, and a launch() that returns a ui.Screen. Save it and the device restarts straight back into it.
@@ -36,6 +36,9 @@ Subclass ui.View. Draw in draw() with self.text, self.fill, self.icon, self.line
 
 DATA
 store.load(name, default) and store.save(name, value) keep JSON in /data.
+
+HELD KEYS
+keys.held(keys.LEFT) or keys.held("c") is True while a key is down, for smooth movement in tick().
 
 ICONS
 icons.draw("notepad", x, y) or "weather:sun". icons.names("emoji") lists a set. Outline is INK, fill is CLEAR unless you say otherwise.

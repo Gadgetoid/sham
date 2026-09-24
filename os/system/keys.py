@@ -73,3 +73,9 @@ def poll():
         if event is None:
             return
         yield Key(event[0], event[1])
+
+
+def held(code):
+    if isinstance(code, str):
+        code = ord(code.lower())
+    return host.held(code)
