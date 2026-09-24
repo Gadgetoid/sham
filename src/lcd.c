@@ -196,20 +196,23 @@ static uint8_t column_fault[LCD_WIDTH];
 static bool dead_columns = false;
 static bool force_compose = true;
 
-static void fault_cluster(uint8_t fault, int max_width) {
-    int width = 1 + rand() % max_width;
-    int start = rand() % (LCD_WIDTH - width);
-    for (int x = start; x < start + width; x++) column_fault[x] = fault;
+static void fault_region(uint8_t fault) {
+    int count = 3 + rand() % 4;
+    int x = rand() % LCD_WIDTH;
+    for (int i = 0; i < count && x < LCD_WIDTH; i++) {
+        column_fault[x] = fault;
+        if (rand() % 100 < 6 && x + 1 < LCD_WIDTH) column_fault[x + 1] = fault;
+        x += 2 + rand() % 4;
+    }
 }
 
 void lcd_set_dead_columns(bool on) {
     dead_columns = on;
     memset(column_fault, COLUMN_OK, sizeof column_fault);
     if (on) {
-        int off_clusters = 2 + rand() % 2;
-        for (int i = 0; i < off_clusters; i++) fault_cluster(COLUMN_OFF, 3);
-        fault_cluster(COLUMN_WEAK, 2);
-        if (rand() % 3 == 0) fault_cluster(COLUMN_ON, 1);
+        int regions = 1 + rand() % 3;
+        for (int i = 0; i < regions; i++) fault_region(rand() % 4 == 0 ? COLUMN_WEAK : COLUMN_OFF);
+        if (rand() % 4 == 0) column_fault[rand() % LCD_WIDTH] = COLUMN_ON;
     }
     force_compose = true;
 }
