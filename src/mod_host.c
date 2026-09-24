@@ -1,0 +1,109 @@
+#include <time.h>
+
+#include "py/runtime.h"
+#include "py/objstr.h"
+
+#include "host.h"
+#include "keys.h"
+#include "lcd.h"
+#include "runtime.h"
+
+static mp_obj_t host_present(void) {
+    runtime_service();
+    host_yield_to_main();
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_present_obj, host_present);
+
+static mp_obj_t host_ticks(void) {
+    return mp_obj_new_int_from_uint(host_ticks_ms());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_ticks_obj, host_ticks);
+
+static mp_obj_t host_localtime(void) {
+    time_t now = time(NULL);
+    struct tm local;
+    localtime_r(&now, &local);
+    mp_obj_t fields[8] = {
+        MP_OBJ_NEW_SMALL_INT(local.tm_year + 1900), MP_OBJ_NEW_SMALL_INT(local.tm_mon + 1),
+        MP_OBJ_NEW_SMALL_INT(local.tm_mday),        MP_OBJ_NEW_SMALL_INT(local.tm_hour),
+        MP_OBJ_NEW_SMALL_INT(local.tm_min),         MP_OBJ_NEW_SMALL_INT(local.tm_sec),
+        MP_OBJ_NEW_SMALL_INT((local.tm_wday + 6) % 7), MP_OBJ_NEW_SMALL_INT(local.tm_yday + 1),
+    };
+    return mp_obj_new_tuple(8, fields);
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_localtime_obj, host_localtime);
+
+static mp_obj_t host_epoch(void) {
+    return mp_obj_new_int((mp_int_t)time(NULL));
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_epoch_obj, host_epoch);
+
+static mp_obj_t host_key(void) {
+    host_key_t key;
+    if (!keys_pop(&key)) return mp_const_none;
+    mp_obj_t fields[2] = { MP_OBJ_NEW_SMALL_INT(key.code), MP_OBJ_NEW_SMALL_INT(key.mods) };
+    return mp_obj_new_tuple(2, fields);
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_key_obj, host_key);
+
+static mp_obj_t host_resume(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) {
+        runtime_set_resume(args[0] == mp_const_none ? "" : mp_obj_str_get_str(args[0]));
+        return mp_const_none;
+    }
+    const char *name = runtime_get_resume();
+    return name[0] ? mp_obj_new_str(name, strlen(name)) : mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_resume_obj, 0, 1, host_resume);
+
+static mp_obj_t host_backlight(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) lcd_set_backlight(mp_obj_is_true(args[0]));
+    return mp_obj_new_bool(lcd_get_backlight());
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_backlight_obj, 0, 1, host_backlight);
+
+static mp_obj_t host_reload(void) {
+    runtime_request_reload();
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_reload_obj, host_reload);
+
+static const mp_rom_map_elem_t host_module_globals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__),  MP_ROM_QSTR(MP_QSTR_host) },
+    { MP_ROM_QSTR(MP_QSTR_present),   MP_ROM_PTR(&host_present_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_ms),  MP_ROM_PTR(&host_ticks_obj) },
+    { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&host_localtime_obj) },
+    { MP_ROM_QSTR(MP_QSTR_epoch),     MP_ROM_PTR(&host_epoch_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key),       MP_ROM_PTR(&host_key_obj) },
+    { MP_ROM_QSTR(MP_QSTR_resume),    MP_ROM_PTR(&host_resume_obj) },
+    { MP_ROM_QSTR(MP_QSTR_backlight), MP_ROM_PTR(&host_backlight_obj) },
+    { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
+
+    { MP_ROM_QSTR(MP_QSTR_KEY_BACKSPACE), MP_ROM_INT(HOST_KEY_BACKSPACE) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_TAB),       MP_ROM_INT(HOST_KEY_TAB) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_ENTER),     MP_ROM_INT(HOST_KEY_ENTER) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_ESC),       MP_ROM_INT(HOST_KEY_ESC) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_DELETE),    MP_ROM_INT(HOST_KEY_DELETE) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_UP),        MP_ROM_INT(HOST_KEY_UP) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_DOWN),      MP_ROM_INT(HOST_KEY_DOWN) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_LEFT),      MP_ROM_INT(HOST_KEY_LEFT) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_RIGHT),     MP_ROM_INT(HOST_KEY_RIGHT) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_HOME),      MP_ROM_INT(HOST_KEY_HOME) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_END),       MP_ROM_INT(HOST_KEY_END) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_PGUP),      MP_ROM_INT(HOST_KEY_PGUP) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_PGDN),      MP_ROM_INT(HOST_KEY_PGDN) },
+    { MP_ROM_QSTR(MP_QSTR_KEY_F1),        MP_ROM_INT(HOST_KEY_F1) },
+    { MP_ROM_QSTR(MP_QSTR_MOD_SHIFT),     MP_ROM_INT(HOST_MOD_SHIFT) },
+    { MP_ROM_QSTR(MP_QSTR_MOD_CTRL),      MP_ROM_INT(HOST_MOD_CTRL) },
+    { MP_ROM_QSTR(MP_QSTR_MOD_ALT),       MP_ROM_INT(HOST_MOD_ALT) },
+    { MP_ROM_QSTR(MP_QSTR_MOD_CMD),       MP_ROM_INT(HOST_MOD_CMD) },
+};
+static MP_DEFINE_CONST_DICT(host_module_globals, host_module_globals_table);
+
+const mp_obj_module_t host_module = {
+    .base = { &mp_type_module },
+    .globals = (mp_obj_dict_t *)&host_module_globals,
+};
+
+MP_REGISTER_MODULE(MP_QSTR_host, host_module);

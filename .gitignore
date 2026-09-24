@@ -1,0 +1,8 @@
+build/
+build-embed/
+micropython_embed/
+/pocket
+/data/
+imgui.ini
+__pycache__/
+.DS_Store
