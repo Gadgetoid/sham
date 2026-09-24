@@ -5,6 +5,7 @@ from system.gfx import CLEAR, MID, INK, small
 
 TITLE = "Snake"
 ICON = "misc:snake_1"
+CATEGORY = "Games"
 ORDER = 70
 
 CELL = 4

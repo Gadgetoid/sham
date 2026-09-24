@@ -5,6 +5,7 @@ from system.gfx import CLEAR, MID, INK, small
 
 TITLE = "Breakout"
 ICON = "map_markers:building_wall"
+CATEGORY = "Games"
 ORDER = 72
 
 BRICK_W = 18

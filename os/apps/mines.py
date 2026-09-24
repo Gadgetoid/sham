@@ -6,6 +6,7 @@ from system.gfx import CLEAR, LIGHT, MID, INK, small
 
 TITLE = "Mines"
 ICON = "rpg:minesweeper"
+CATEGORY = "Games"
 ORDER = 71
 
 CELL = 9

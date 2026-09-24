@@ -12,6 +12,10 @@ HOTKEYS = {
     keys.PROGRAMS: "guide",
 }
 
+FOLDER_ICONS = {
+    "Games": "controller:gamepad",
+}
+
 
 class App:
     def __init__(self, name, module):
@@ -20,6 +24,18 @@ class App:
         self.title = getattr(module, "TITLE", None) or name[:1].upper() + name[1:]
         self.icon = getattr(module, "ICON", "window_button")
         self.order = getattr(module, "ORDER", 100)
+        self.category = getattr(module, "CATEGORY", None)
+
+
+class Folder:
+    def __init__(self, title):
+        self.title = title
+        self.icon = FOLDER_ICONS.get(title, "file_explorer")
+        self.apps = []
+
+    @property
+    def order(self):
+        return min(app.order for app in self.apps)
 
 
 def discover():
@@ -38,18 +54,60 @@ def discover():
     return apps
 
 
+def group(apps):
+    entries = []
+    folders = {}
+    for app in apps:
+        if not app.category:
+            entries.append(app)
+            continue
+        if app.category not in folders:
+            folders[app.category] = Folder(app.category)
+            entries.append(folders[app.category])
+        folders[app.category].apps.append(app)
+    entries.sort(key=lambda entry: (entry.order, entry.title))
+    return entries, folders
+
+
 class Shell:
     def __init__(self):
         ui._shell = self
         self.apps = discover()
+        self.entries, self.folders = group(self.apps)
         self.stack = []
         self.current = None
         self.minute = None
-        self.grid = ui.Grid(self.apps, on_select=lambda app, index: self.launch(app.name),
-                            label=lambda app: app.title, icon=lambda app: app.icon)
+        self.grid = self.make_grid(self.entries)
         self.launcher = ui.Screen(lambda: timefmt.date_label(host.localtime()), self.grid,
                                   status=lambda: "{}  {}".format(timefmt.time_label(host.localtime()),
                                                                  self.grid.page_label()))
+
+    def make_grid(self, entries):
+        return ui.Grid(entries, on_select=lambda entry, index: self.open(entry),
+                       label=lambda entry: entry.title, icon=lambda entry: entry.icon)
+
+    def open(self, entry):
+        if isinstance(entry, Folder):
+            self.open_folder(entry.title)
+        else:
+            self.launch(entry.name)
+
+    def folder_screen(self, folder, selected=None):
+        grid = self.make_grid(folder.apps)
+        if selected in folder.apps:
+            grid.select(folder.apps.index(selected))
+        return ui.Screen(folder.title, grid, status=grid.page_label)
+
+    def open_folder(self, title):
+        folder = self.folders.get(title)
+        if not folder:
+            return
+        self.close_all()
+        self.current = None
+        self.stack = [self.folder_screen(folder)]
+        self.grid.select(self.entries.index(folder))
+        host.resume("folder:" + title)
+        ui.invalidate()
 
     def find(self, name):
         for app in self.apps:
@@ -58,6 +116,9 @@ class Shell:
         return None
 
     def launch(self, name):
+        if name.startswith("folder:"):
+            self.open_folder(name[7:])
+            return
         app = self.find(name)
         if not app:
             return
@@ -68,8 +129,9 @@ class Shell:
             self.crash(error, app.title)
             return
         self.current = app
-        self.stack = [screen]
-        self.grid.select(self.apps.index(app))
+        folder = self.folders.get(app.category)
+        self.stack = [self.folder_screen(folder, app), screen] if folder else [screen]
+        self.grid.select(self.entries.index(folder or app))
         host.resume(name)
         ui.invalidate()
 
@@ -86,6 +148,9 @@ class Shell:
             screen.on_close()
         if not self.stack:
             self.go_home()
+        elif self.current and self.current.category and len(self.stack) == 1:
+            self.current = None
+            host.resume("folder:" + self.stack[0].title)
 
     def close_all(self):
         while self.stack:

@@ -5,6 +5,7 @@ from system.gfx import CLEAR, LIGHT, MID, INK, small
 
 TITLE = "Blocks"
 ICON = "boardgames:tetris_t1"
+CATEGORY = "Games"
 ORDER = 73
 
 COLUMNS = 10

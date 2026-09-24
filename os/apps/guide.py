@@ -11,7 +11,7 @@ GAMES
 Snake: arrows steer, Enter pauses. Mines: arrows move, Enter reveals (or clears around a satisfied number), F flags. Breakout: hold arrows to move, Enter serves and pauses. Blocks: Up or X rotates, Z rotates back, Down soft drops, Space hard drops, C holds, P pauses.
 
 WRITING AN APP
-Drop a file in /apps. Give it TITLE, ICON and ORDER, and a launch() that returns a ui.Screen. Save it and the device restarts straight back into it.
+Drop a file in /apps. Give it TITLE, ICON and ORDER, and a launch() that returns a ui.Screen. CATEGORY = "Games" files it in a launcher folder. Save it and the device restarts straight back into it.
 
 SCREENS
 ui.Screen(title, body, status=, menu=, on_close=) is a header over one body view. status and title can be callables. menu is a list of (label, function) pairs shown on MENU.
