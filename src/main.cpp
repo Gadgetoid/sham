@@ -24,6 +24,7 @@
 #include "keys.h"
 #include "lcd.h"
 #include "menu.h"
+#include "touch.h"
 #include "runtime.h"
 #include "watch.h"
 
@@ -55,6 +56,8 @@ struct Options {
     bool backlight = true;
     bool scratches = true;
     bool wear = false;
+    bool touchscreen = false;
+    std::string touch_display = "TETRA";
     std::vector<int> menu_items;
 };
 
@@ -65,6 +68,7 @@ struct Settings {
     bool dead_columns;
     bool scratches;
     bool wear;
+    bool touchscreen;
     int fps;
     float response;
     int width;
@@ -72,7 +76,7 @@ struct Settings {
 
     bool operator==(const Settings &other) const {
         return show_repl == other.show_repl && layout == other.layout && backlight == other.backlight &&
-               dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && fps == other.fps && response == other.response &&
+               dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && touchscreen == other.touchscreen && fps == other.fps && response == other.response &&
                width == other.width && height == other.height;
     }
 };
@@ -96,6 +100,7 @@ static void load_settings(const std::string &data, Options &options) {
         else if (name == "dead_columns") options.dead_columns = atoi(value) != 0;
         else if (name == "scratches") options.scratches = atoi(value) != 0;
         else if (name == "wear") options.wear = atoi(value) != 0;
+        else if (name == "touchscreen") options.touchscreen = atoi(value) != 0;
         else if (name == "fps") options.fps = atoi(value);
         else if (name == "response") options.response = (float)atof(value);
         else if (name == "width") options.width = atoi(value);
@@ -109,8 +114,8 @@ static void save_settings(const std::string &data, const Settings &settings) {
     std::string temporary = path + ".tmp";
     FILE *file = fopen(temporary.c_str(), "w");
     if (!file) return;
-    fprintf(file, "show_repl=%d\nlayout=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
-            settings.show_repl, settings.layout, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.fps,
+    fprintf(file, "show_repl=%d\nlayout=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\ntouchscreen=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
+            settings.show_repl, settings.layout, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.touchscreen, settings.fps,
             settings.response, settings.width, settings.height);
     fclose(file);
     rename(temporary.c_str(), path.c_str());
@@ -129,7 +134,7 @@ static int menu_item_named(const std::string &name) {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
         { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
-        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR },
+        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR }, { "touchscreen", MENU_TOUCHSCREEN },
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -150,6 +155,8 @@ static void usage() {
         "  --no-keys           start without the device keys around the screen\n"
         "  --no-keyboard       start without the keyboard\n"
         "  --layout=N          0 screen only, 1 screen & frame, 2 screen & buttons, 3 screen & keyboard\n"
+        "  --touchscreen[=NAME]  take over the named touch display (default TETRA)\n"
+        "  --no-touchscreen    stay in a normal window\n"
         "  --period            run the device at a period accurate 10 fps\n"
         "  --fps=N             device frame rate, 0 for unlimited (default 0)\n"
         "  --response=N        LCD response time scale, 0 instant, 1 normal, 4 very slow\n"
@@ -189,6 +196,12 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (arg == "--no-repl") options.show_repl = false;
         else if (arg == "--no-keys") options.layout = 1;
         else if (arg == "--no-keyboard") options.layout = 2;
+        else if (arg == "--touchscreen") options.touchscreen = true;
+        else if (arg == "--no-touchscreen") options.touchscreen = false;
+        else if (const char *v = value("--touchscreen=")) {
+            options.touchscreen = true;
+            options.touch_display = v;
+        }
         else if (const char *v = value("--layout=")) options.layout = atoi(v);
         else if (arg == "--period") options.fps = 10;
         else if (const char *v = value("--fps=")) options.fps = atoi(v);
@@ -261,6 +274,76 @@ static void push_sdl_key(SDL_Keycode key, bool down) {
     event.key.down = down;
     event.key.windowID = main_window_id;
     SDL_PushEvent(&event);
+}
+
+static void push_mouse(uint8_t kind, float x, float y) {
+    SDL_Event event = {};
+    event.type = SDL_EVENT_MOUSE_MOTION;
+    event.motion.x = x;
+    event.motion.y = y;
+    event.motion.windowID = main_window_id;
+    event.motion.state = kind == TOUCH_UP ? 0 : SDL_BUTTON_LMASK;
+    SDL_PushEvent(&event);
+    if (kind == TOUCH_MOVE) return;
+    event = {};
+    event.type = kind == TOUCH_DOWN ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.down = kind == TOUCH_DOWN;
+    event.button.clicks = 1;
+    event.button.x = x;
+    event.button.y = y;
+    event.button.windowID = main_window_id;
+    SDL_PushEvent(&event);
+}
+
+struct Touchscreen {
+    bool active = false;
+    SDL_Rect windowed = {};
+};
+
+static SDL_DisplayID find_display(const std::string &name) {
+    int count = 0;
+    SDL_DisplayID *ids = SDL_GetDisplays(&count);
+    SDL_DisplayID found = 0;
+    for (int i = 0; i < count && !found; i++) {
+        const char *display = SDL_GetDisplayName(ids[i]);
+        if (display && strstr(display, name.c_str())) found = ids[i];
+    }
+    SDL_free(ids);
+    return found;
+}
+
+static bool set_touchscreen(SDL_Window *window, Touchscreen &touch, bool enable, const std::string &name) {
+    void *native = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
+    if (enable == touch.active) return true;
+    if (enable) {
+        SDL_DisplayID display = find_display(name);
+        if (!display) {
+            SDL_Log("touchscreen: no display matching %s", name.c_str());
+            return false;
+        }
+        SDL_Rect bounds;
+        SDL_GetDisplayBounds(display, &bounds);
+        SDL_GetWindowPosition(window, &touch.windowed.x, &touch.windowed.y);
+        SDL_GetWindowSize(window, &touch.windowed.w, &touch.windowed.h);
+        SDL_SetWindowBordered(window, false);
+        SDL_SetWindowResizable(window, false);
+        SDL_SetWindowPosition(window, bounds.x, bounds.y);
+        SDL_SetWindowSize(window, bounds.w, bounds.h);
+        window_cover_display(native, true);
+        touch_set_panel(bounds.w, bounds.h);
+        touch_start();
+        SDL_RaiseWindow(window);
+        SDL_Log("touchscreen: covering %s (%dx%d at %d,%d)", SDL_GetDisplayName(display), bounds.w, bounds.h, bounds.x, bounds.y);
+    } else {
+        window_cover_display(native, false);
+        SDL_SetWindowBordered(window, true);
+        SDL_SetWindowResizable(window, true);
+        SDL_SetWindowSize(window, touch.windowed.w, touch.windowed.h);
+        SDL_SetWindowPosition(window, touch.windowed.x, touch.windowed.y);
+    }
+    touch.active = enable;
+    return true;
 }
 
 static void push_click(float x, float y) {
@@ -502,6 +585,8 @@ int main(int argc, char **argv) {
     device.wear = options.wear;
     bool &device_focused = device.focused;
     bool show_repl = options.show_repl;
+    Touchscreen touch;
+    bool want_touchscreen = options.touchscreen;
     int restore_height = options.height;
     if (!show_repl) set_repl_visible(window, false, device, restore_height);
     int fps = options.fps;
@@ -571,6 +656,10 @@ int main(int argc, char **argv) {
                 case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 case MENU_SCRATCHES:    device.scratches = !device.scratches; break;
                 case MENU_WEAR:         device.wear = !device.wear; break;
+                case MENU_TOUCHSCREEN:
+                    want_touchscreen = !touch.active;
+                    set_touchscreen(window, touch, want_touchscreen, options.touch_display);
+                    break;
                 case MENU_LAYOUT_NEXT:
                     layout = (layout + 1) % 4;
                     apply_layout();
@@ -584,8 +673,9 @@ int main(int argc, char **argv) {
             static bool have_saved = false;
             int window_w = 0, window_h = 0;
             SDL_GetWindowSize(window, &window_w, &window_h);
-            Settings current = { show_repl, layout, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, fps, response,
-                                 window_w, show_repl ? window_h : restore_height };
+            Settings current = { show_repl, layout, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, want_touchscreen, fps, response,
+                                 touch.active ? touch.windowed.w : window_w,
+                                 touch.active ? touch.windowed.h : show_repl ? window_h : restore_height };
             if (!have_saved) {
                 saved = current;
                 have_saved = true;
@@ -607,6 +697,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < MENU_LAYOUT_END - MENU_LAYOUT_FIRST; i++) menu_set_checked(MENU_LAYOUT_FIRST + i, layout == i);
         menu_set_checked(MENU_SCRATCHES, device.scratches);
         menu_set_checked(MENU_WEAR, device.wear);
+        menu_set_checked(MENU_TOUCHSCREEN, touch.active);
 
         if (options.watch && watch_poll()) {
             console_notice("change detected");
@@ -617,6 +708,16 @@ int main(int argc, char **argv) {
         script.window_w = io.DisplaySize.x;
         script.window_h = io.DisplaySize.y;
         script.step(frame);
+        if (want_touchscreen && !touch.active && frame % 120 == 1) set_touchscreen(window, touch, true, options.touch_display);
+        if (const char *probe = getenv("POCKET_TOUCH_PROBE"); probe && touch.active && (frame == 80 || frame == 82)) {
+            float x = 0, y = 0;
+            sscanf(probe, "%f,%f", &x, &y);
+            push_mouse(frame == 80 ? TOUCH_DOWN : TOUCH_UP, x, y);
+        }
+        for (touch_event_t event; touch_pop(&event);) {
+            if (touch.active) push_mouse(event.kind, event.x, event.y);
+        }
+        device.touch = touch.active;
         if (frame == 45) {
             for (int item : options.menu_items) menu_perform(item);
         }
@@ -639,10 +740,11 @@ int main(int argc, char **argv) {
 
         float total_height = ImGui::GetContentRegionAvail().y;
         float device_share = device.show_keys && device.show_keyboard ? 0.72f : 0.52f;
-        float device_height = show_repl ? std::max(220.0f, total_height * device_share) : total_height;
+        bool repl_visible = show_repl && !touch.active;
+        float device_height = repl_visible ? std::max(220.0f, total_height * device_share) : total_height;
         device_draw(renderer, io.DisplayFramebufferScale.x, device_height, compose_seconds, device);
 
-        if (show_repl) {
+        if (repl_visible) {
             ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
             ImGui::SameLine(ImGui::GetContentRegionMax().x - 200);
             if (fps > 0) {
@@ -673,6 +775,8 @@ int main(int argc, char **argv) {
         SDL_RenderPresent(renderer);
     }
 
+    set_touchscreen(window, touch, false, options.touch_display);
+    touch_stop();
     watch_stop();
     runtime_deinit();
     beeper_deinit();

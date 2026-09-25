@@ -745,8 +745,12 @@ void draw_key(ImDrawList *draw, const Shape &shape, const ButtonStyle &style, bo
     }
 }
 
+ImVec2 hit_pad(0, 0);
+
 bool hit(const char *id, const Shape &shape, bool &pressed) {
     ImRect box = bounds(shape);
+    box.Min -= hit_pad;
+    box.Max += hit_pad;
     ImGui::SetCursorScreenPos(box.Min);
     ImGui::InvisibleButton(id, box.GetSize());
     pressed = ImGui::IsItemActive();
@@ -782,6 +786,7 @@ void finger_grime(ImDrawList *draw, const Shape &shape, float amount, float u) {
 
 void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 device_max, DeviceState &state) {
     float u = frame.u;
+    hit_pad = state.touch ? ImVec2(6.0f, 7.0f) * u : ImVec2(0, 0);
     bool live = state.powered;
     ImVec2 press(0, 1.2f * u);
     auto dip = [&](bool pressed) { return pressed ? press : ImVec2(0, 0); };
@@ -1294,6 +1299,8 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
     int cursor_index = 0;
     for (const KeyboardKey &key : keyboard_keys) {
         Shape shape = keyboard_key_shape(frame, key);
+        if (state.touch) hit_pad = key.shape == KB_SHAPE_CURSOR ? ImVec2(4.0f, 4.0f) * k : ImVec2(9.0f, 5.5f) * k;
+        else hit_pad = ImVec2(0, 0);
         char id[32];
         snprintf(id, sizeof id, "kb-%s", key.id);
         bool pressed;

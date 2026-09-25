@@ -10,7 +10,7 @@ CFLAGS  += -I. -Isrc -Ilib -I$(IMGUI) -I$(IMGUI)/backends -I$(EMBED_DIR) -I$(EMB
 CFLAGS  += -Wall -O2 -fno-common -MMD -MP
 CFLAGS  += $(shell pkg-config --cflags sdl3)
 
-LDFLAGS += $(shell pkg-config --libs sdl3) -framework CoreServices -framework Cocoa
+LDFLAGS += $(shell pkg-config --libs sdl3) -framework CoreServices -framework Cocoa -framework IOKit
 
 CXXFLAGS = $(filter-out -std=c99,$(CFLAGS)) -std=c++17
 
@@ -21,6 +21,7 @@ SRC_APP = \
 	src/lcd.c \
 	src/watch.c \
 	src/beeper.c \
+	src/touch_macos.c \
 	src/mod_host.c \
 	src/mod_lcd.c
 

@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 
 #include "menu.h"
+#include "touch.h"
 
 #define MENU_QUEUE 32
 
@@ -78,6 +79,8 @@ void menu_install(void) {
     for (int i = 0; i < MENU_LAYOUT_END - MENU_LAYOUT_FIRST; i++) add_item(layout, MENU_LAYOUT_FIRST + i, layouts[i], @"", 0);
     [layout addItem:[NSMenuItem separatorItem]];
     add_item(layout, MENU_LAYOUT_NEXT, @"Next Layout", @"k", NSEventModifierFlagCommand);
+    [layout addItem:[NSMenuItem separatorItem]];
+    add_item(layout, MENU_TOUCHSCREEN, @"Touchscreen Mode", @"t", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     [system addItem:[NSMenuItem separatorItem]];
     NSMenu *realism = submenu(system, @"Realism");
     add_item(realism, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
@@ -119,4 +122,18 @@ void menu_set_checked(int item, bool checked) {
     if (item < 0 || item >= MENU_COUNT || !items[item]) return;
     NSControlStateValue state = checked ? NSControlStateValueOn : NSControlStateValueOff;
     if (items[item].state != state) items[item].state = state;
+}
+
+bool window_cover_display(void *handle, bool cover) {
+    NSWindow *window = (__bridge NSWindow *)handle;
+    if (!window) return false;
+    if (cover) {
+        window.level = NSMainMenuWindowLevel + 1;
+        window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary |
+                                    NSWindowCollectionBehaviorFullScreenNone;
+    } else {
+        window.level = NSNormalWindowLevel;
+        window.collectionBehavior = NSWindowCollectionBehaviorDefault;
+    }
+    return true;
 }
