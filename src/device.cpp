@@ -30,6 +30,7 @@ const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
 const float SCREEN_MARGIN = 8.0f;
 const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 120);
+const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 150);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
@@ -189,6 +190,12 @@ void load_scratches(SDL_Renderer *renderer) {
         }
     }
     fclose(file);
+}
+
+void case_scratches(ImDrawList *draw, ImVec2 a, ImVec2 b, float rounding, float offset) {
+    if (!scratch_texture) return;
+    ImVec2 uv0(offset, offset * 0.5f), uv1(offset + 0.55f, offset * 0.5f + 0.55f * (b.y - a.y) / (b.x - a.x) * scratch_w / scratch_h);
+    draw->AddImageRounded((ImTextureID)(intptr_t)scratch_texture, a, b, uv0, uv1, CASE_SCRATCH_TINT, rounding);
 }
 
 void upload_lcd(SDL_Renderer *renderer, float compose_seconds) {
@@ -1215,6 +1222,7 @@ void draw_keybed(ImDrawList *draw, const KeyboardFrame &frame, bool wear) {
         ImRect box = bounds(face);
         draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, box.Min, box.Max, ImVec2(0, 0), ImVec2(1, 1),
                               IM_COL32_WHITE, KB_TOP_RADIUS * k);
+        if (wear) case_scratches(draw, box.Min, box.Max, KB_TOP_RADIUS * k, 0.45f);
     }
     const int lip_rings = 10;
     std::vector<float> offsets = { 0.6f * k };
@@ -1451,18 +1459,14 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     wear_grime = state.wear;
     draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, device_min, device_max, ImVec2(0, 0), ImVec2(1, 1),
                           IM_COL32_WHITE, rounding);
+    load_scratches(renderer);
+    if (state.wear) case_scratches(draw, device_min, device_max, rounding, 0.0f);
     if (!state.show_keys) draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
                                   IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 0));
     draw->AddRect(device_min, device_max, BEZEL_EDGE, rounding, 0, 2.0f);
     draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
 
     if (state.show_keys) {
-        float latch_x = (image_min.x + image_max.x) * 0.5f;
-        ImVec2 latch_a(latch_x - 26 * u, device_min.y - 5 * u), latch_b(latch_x + 26 * u, device_min.y + 11 * u);
-        draw->AddRectFilled(latch_a, latch_b, IM_COL32(160, 168, 174, 255), 4 * u);
-        draw->AddRect(latch_a, latch_b, BEZEL_EDGE, 4 * u, 0, 1.0f);
-        draw->AddRectFilled(latch_a + ImVec2(8, 5) * u, latch_b - ImVec2(8, 7) * u, IM_COL32(70, 78, 84, 255), 2 * u);
-
         ImVec2 frame_min = image_min - ImVec2(20, 18) * u, frame_max = image_max + ImVec2(20, 20) * u;
         draw->AddRectFilled(frame_min, frame_max, FRAME, 12.0f * u);
         draw->AddRect(frame_min, frame_max, BEZEL_LIGHT, 12.0f * u, 0, 1.5f);
