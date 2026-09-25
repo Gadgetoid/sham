@@ -1227,6 +1227,10 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         draw_recess(draw, outset(keyboard_key_shape(frame, key), 2.0f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
     }
 
+    for (const KeyboardKey &key : keyboard_keys) {
+        for (int index = 0; index < key.secondary_count; index++) keyboard_secondary(draw, frame, key, key.secondary[index]);
+    }
+
     int cursor_index = 0;
     for (const KeyboardKey &key : keyboard_keys) {
         Shape shape = keyboard_key_shape(frame, key);
@@ -1278,9 +1282,6 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         if (state.wear) rub_patch(draw, legend_box.Min, legend_box.Max, face, key.wear, (uint32_t)(key.x * 31 + key.y * 17));
     }
 
-    for (const KeyboardKey &key : keyboard_keys) {
-        for (int index = 0; index < key.secondary_count; index++) keyboard_secondary(draw, frame, key, key.secondary[index]);
-    }
 }
 
 float lid_width_units() {
