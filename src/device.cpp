@@ -886,6 +886,7 @@ const float HINGE = 30.0f;
 const float KB_WIDTH_RATIO = 1.0f;
 const float KB_PAD_X = 16.0f;
 const float KEY_TRAVEL = 2.6f;
+const float KEY_SHOULDER = 4.0f;
 const float KB_PAD_TOP = 12.0f;
 const float KB_PAD_BOTTOM = 10.0f;
 const float KB_BOTTOM_MARGIN = 6.0f;
@@ -1260,7 +1261,18 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
                 fill(draw, translated(shape, ImVec2(0, -lift * t)), mix(side_bottom, side_top, t), side_bottom);
             }
         }
-        draw_key(draw, translated(shape, ImVec2(0, -lift)), style, false, u);
+        {
+            Shape body = translated(shape, ImVec2(0, -lift));
+            ImU32 side_top = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.25f);
+            ImU32 lit = lighten(style.top, style.rim / 2);
+            const int rings = 7;
+            float shoulder = KEY_SHOULDER * k;
+            for (int ring = 0; ring <= rings; ring++) {
+                float t = smoothstep((float)ring / rings);
+                Shape layer = ring == 0 ? body : inset(body, shoulder * ring / rings);
+                fill(draw, layer, mix(mix(side_top, lit, 0.7f), style.top, t), mix(side_top, style.bottom, t));
+            }
+        }
         rub_mode = false;
         ImVec2 dip = ImVec2(0, -lift);
         ImVec2 centre = frame.at(key.x, key.y) + dip;
