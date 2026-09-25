@@ -53,14 +53,19 @@ const ImU32 LABEL = IM_COL32(236, 240, 244, 255);
 const ImU32 PRINT = IM_COL32(52, 58, 64, 255);
 const ImU32 ICON_BLUE = IM_COL32(96, 172, 226, 255);
 
-struct KeyStyle {
+struct ButtonStyle {
     ImU32 top;
     ImU32 bottom;
+    int rim = 42;
+    float gap = 1.6f;
+    float shadow = 1.0f;
+    float dome = 0.0f;
 };
 
-const KeyStyle DARK_KEY = { IM_COL32(70, 80, 92, 255), IM_COL32(30, 37, 46, 255) };
-const KeyStyle BLUE_KEY = { IM_COL32(82, 126, 186, 255), IM_COL32(42, 80, 132, 255) };
-const KeyStyle TEAL_KEY = { IM_COL32(68, 150, 140, 255), IM_COL32(30, 102, 96, 255) };
+const ButtonStyle DARK_KEY = { IM_COL32(70, 80, 92, 255), IM_COL32(30, 37, 46, 255) };
+const ButtonStyle DARK_DOMED_KEY = { IM_COL32(70, 80, 92, 255), IM_COL32(30, 37, 46, 255), 42, 1.6f, 1.0f, 1.0f };
+const ButtonStyle BLUE_KEY = { IM_COL32(82, 126, 186, 255), IM_COL32(42, 80, 132, 255) };
+const ButtonStyle TEAL_KEY = { IM_COL32(68, 150, 140, 255), IM_COL32(30, 102, 96, 255) };
 
 const unsigned ICON_CALL = 0xe0b0;
 const unsigned ICON_CALENDAR = 0xebcc;
@@ -550,17 +555,28 @@ Shape outset(const Shape &shape, float distance) {
 }
 
 
-void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool pressed, float u) {
+void draw_key(ImDrawList *draw, const Shape &shape, const ButtonStyle &style, bool pressed, float u) {
     const int layers = 4;
     for (int layer = layers; layer >= 1; layer--) {
-        int alpha = (pressed ? 10 : 18) + (layers - layer) * 4;
+        int alpha = (int)(((pressed ? 10 : 18) + (layers - layer) * 4) * style.shadow);
         fill(draw, translated(shape, ImVec2(0, layer * 0.8f * u)), IM_COL32(20, 26, 32, alpha), IM_COL32(20, 26, 32, alpha));
     }
-    fill(draw, outset(shape, 1.6f * u), IM_COL32(16, 20, 24, 215), IM_COL32(16, 20, 24, 170));
+    if (style.gap > 0) fill(draw, outset(shape, style.gap * u), IM_COL32(16, 20, 24, 215), IM_COL32(16, 20, 24, 170));
     Shape body = translated(shape, ImVec2(0, pressed ? 1.2f * u : 0));
     ImU32 face_top = pressed ? style.bottom : style.top;
-    fill(draw, body, lighten(face_top, pressed ? 14 : 42), lighten(style.bottom, 16));
+    fill(draw, body, lighten(face_top, pressed ? style.rim / 3 : style.rim), lighten(style.bottom, 16));
     fill(draw, inset(body, 1.3f * u), face_top, style.bottom);
+    if (style.dome > 0) {
+        ImRect box = bounds(body);
+        float depth = std::min(box.GetWidth(), box.GetHeight()) * 0.5f;
+        ImVec2 offset = ImVec2(-0.08f, -0.14f) * depth;
+        const int rings = 14;
+        for (int ring = 0; ring < rings; ring++) {
+            float t = (float)ring / rings;
+            Shape layer = translated(inset(body, depth * (0.2f + 0.75f * t)), offset * t);
+            fill(draw, layer, IM_COL32(255, 255, 255, (int)(4 * style.dome)), IM_COL32(255, 255, 255, (int)(2 * style.dome)));
+        }
+    }
 }
 
 bool hit(const char *id, const Shape &shape, bool &pressed) {
@@ -634,7 +650,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         Shape shape = side_key(box.Min, box.Max, SIDE_KEY_CORNER * u);
         bool pressed;
         if (hit(side[index].id, shape, pressed) && live) keys_push(side[index].code, 0);
-        key(draw, shape, DARK_KEY, pressed, u);
+        draw_key(draw, shape, DARK_KEY, pressed, u);
         ImVec2 at = bounds(shape).GetCenter() + ImVec2(2 * u, 0) + dip(pressed);
         if (side[index].text) {
             centred_text(draw, at, 17.0f * u, LABEL, side[index].text);
@@ -652,7 +668,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         draw_recess(draw, pill(box.Min - ImVec2(WELL_MARGIN, WELL_MARGIN) * u, box.Max + ImVec2(WELL_MARGIN, WELL_MARGIN) * u), KEY_WELL, u);
         bool pressed;
         if (hit("key-light", shape, pressed)) lcd_set_backlight(!lcd_get_backlight());
-        key(draw, shape, TEAL_KEY, pressed, u);
+        draw_key(draw, shape, TEAL_KEY, pressed, u);
         icon(draw, box.GetCenter() + dip(pressed), 34.0f * u, LABEL, ICON_LIGHT);
     }
 
@@ -662,11 +678,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         Shape shape = circle(menu_centre, fit_menu[2] * u);
         bool pressed;
         if (hit("key-menu", shape, pressed) && live) keys_push(HOST_KEY_TAB, 0);
-        key(draw, shape, DARK_KEY, pressed, u);
-        ImVec2 dome = menu_centre + dip(pressed) - ImVec2(3.0f, 5.0f) * u;
-        for (int ring = 16; ring >= 1; ring--) {
-            draw->AddCircleFilled(dome, fit_menu[2] * u * 0.05f * ring, IM_COL32(255, 255, 255, 3), 40);
-        }
+        draw_key(draw, shape, DARK_DOMED_KEY, pressed, u);
     }
 
     {
@@ -676,7 +688,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
             state.powered = !state.powered;
             lcd_set_power(state.powered);
         }
-        key(draw, power, TEAL_KEY, pressed, u);
+        draw_key(draw, power, TEAL_KEY, pressed, u);
         icon(draw, power_box.GetCenter() + dip(pressed), 32.0f * u, LABEL, ICON_POWER);
     }
 
@@ -687,7 +699,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         bool pressed;
         bool activated = hit(arrows[index].id, shape, pressed);
         repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live);
-        key(draw, shape, BLUE_KEY, pressed, u);
+        draw_key(draw, shape, BLUE_KEY, pressed, u);
         ImRect box = bounds(shape);
         ImVec2 centre = ImVec2(box.GetCenter().x + 3.0f * u, box.GetCenter().y + (index == 0 ? 4.0f : -4.0f) * u) + dip(pressed);
         float dy = index == 0 ? 1.0f : -1.0f;
@@ -701,14 +713,14 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         Shape shape = circle(esc_centre, fit_esc[2] * u);
         bool pressed;
         if (hit("key-esc", shape, pressed) && live) keys_push(HOST_KEY_ESC, 0);
-        key(draw, shape, DARK_KEY, pressed, u);
+        draw_key(draw, shape, DARK_KEY, pressed, u);
         centred_text(draw, esc_centre + dip(pressed), 15.0f * u, LABEL, "ESC");
     }
     {
         Shape shape = circle(enter_centre, fit_enter[2] * u);
         bool pressed;
         if (hit("key-enter", shape, pressed) && live) keys_push(HOST_KEY_ENTER, 0);
-        key(draw, shape, DARK_KEY, pressed, u);
+        draw_key(draw, shape, DARK_KEY, pressed, u);
         centred_text(draw, enter_centre + dip(pressed), 16.0f * u, LABEL, "ENTER");
     }
 }
