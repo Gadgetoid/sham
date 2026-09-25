@@ -26,7 +26,7 @@ const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
-const int SCRATCH_ALPHA = 70;
+const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 42);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
@@ -877,10 +877,10 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     draw->AddRect(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(210, 216, 220, 255), 5.0f, 0, 1.0f);
     if (lcd_texture) draw->AddImage((ImTextureID)(intptr_t)lcd_texture, image_min, image_max);
     load_scratches(renderer);
-    if (scratch_texture) {
+    if (scratch_texture && state.scratches) {
         float band = std::min(1.0f, scratch_w / (GRID_W / GRID_H) / scratch_h);
         draw->AddImage((ImTextureID)(intptr_t)scratch_texture, image_min, image_max, ImVec2(0, 0.5f - band * 0.5f),
-                       ImVec2(1, 0.5f + band * 0.5f), IM_COL32(255, 255, 255, SCRATCH_ALPHA));
+                       ImVec2(1, 0.5f + band * 0.5f), SCRATCH_TINT);
     }
 
     ImGui::SetCursorScreenPos(image_min);
