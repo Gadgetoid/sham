@@ -884,6 +884,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
 const float HINGE = 30.0f;
 const float KB_WIDTH_RATIO = 1.0f;
 const float KB_PAD_X = 16.0f;
+const float KEY_TRAVEL = 2.6f;
 const float KB_PAD_TOP = 12.0f;
 const float KB_PAD_BOTTOM = 10.0f;
 const float KB_BOTTOM_MARGIN = 6.0f;
@@ -1242,9 +1243,19 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         bool down = pressed || latched;
         ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 60 : 34, 1.6f, 1.0f,
                               0.0f };
-        draw_key(draw, shape, style, down, u);
+        float lift = down ? 0.0f : KEY_TRAVEL * k;
+        if (lift > 0) {
+            ImU32 side_top = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.25f);
+            ImU32 side_bottom = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.45f);
+            const int slices = 6;
+            for (int slice = 0; slice <= slices; slice++) {
+                float t = (float)slice / slices;
+                fill(draw, translated(shape, ImVec2(0, -lift * t)), mix(side_bottom, side_top, t), side_bottom);
+            }
+        }
+        draw_key(draw, translated(shape, ImVec2(0, -lift)), style, false, u);
         rub_mode = false;
-        ImVec2 dip = down ? ImVec2(0, 1.2f * u) : ImVec2(0, 0);
+        ImVec2 dip = ImVec2(0, -lift);
         ImVec2 centre = frame.at(key.x, key.y) + dip;
         ImU32 face = mix(style.top, style.bottom, 0.5f);
         if (key.homing) {
