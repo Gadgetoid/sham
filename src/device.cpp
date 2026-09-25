@@ -32,7 +32,6 @@ const ImVec2 ARROW_CENTRE(181.1f, 113.5f);
 const float ARROW_R = 80.5f;
 const float ARROW_GAP_Y = 113.5f;
 const float ARROW_HALF_GAP = 6.8f;
-const float ARROW_REACH = 79.2f;
 const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 15.0f;
@@ -50,8 +49,6 @@ const ImU32 BEZEL = IM_COL32(182, 190, 194, 255);
 const ImU32 BEZEL_EDGE = IM_COL32(112, 120, 126, 255);
 const ImU32 BEZEL_LIGHT = IM_COL32(226, 232, 236, 255);
 const ImU32 FRAME = IM_COL32(196, 204, 208, 255);
-const ImU32 RECESS_TOP = IM_COL32(150, 158, 164, 255);
-const ImU32 RECESS_BOTTOM = IM_COL32(186, 194, 198, 255);
 const ImU32 LABEL = IM_COL32(236, 240, 244, 255);
 const ImU32 PRINT = IM_COL32(52, 58, 64, 255);
 const ImU32 ICON_BLUE = IM_COL32(96, 172, 226, 255);
@@ -348,11 +345,6 @@ ImRect bounds(const Shape &shape) {
     return box;
 }
 
-ImVec2 centroid(const Shape &shape) {
-    ImVec2 sum(0, 0);
-    for (const ImVec2 &point : shape) sum += point;
-    return sum / (float)shape.size();
-}
 
 void fill(ImDrawList *draw, const Shape &shape, ImU32 top, ImU32 bottom) {
     ImRect box = bounds(shape);
@@ -362,17 +354,7 @@ void fill(ImDrawList *draw, const Shape &shape, ImU32 top, ImU32 bottom) {
                                                   ImVec2(0, box.Max.y), top, bottom);
 }
 
-void stroke(ImDrawList *draw, const Shape &shape, ImU32 colour, float thickness) {
-    draw->AddPolyline(shape.data(), (int)shape.size(), colour, ImDrawFlags_Closed, thickness);
-}
 
-void stroke_band(ImDrawList *draw, const Shape &shape, ImU32 colour, float thickness, float from, float to) {
-    ImRect box = bounds(shape);
-    float height = box.Max.y - box.Min.y;
-    draw->PushClipRect(ImVec2(box.Min.x - 4, box.Min.y + height * from - 2), ImVec2(box.Max.x + 4, box.Min.y + height * to + 2), true);
-    stroke(draw, shape, colour, thickness);
-    draw->PopClipRect();
-}
 
 struct Span {
     float top;
@@ -405,93 +387,88 @@ float smoothstep(float t) {
     return t * t * (3 - 2 * t);
 }
 
-const int CUT_ROWS = 5;
-const ImU32 CUT_PROFILE[CUT_ROWS + 1] = {
-    IM_COL32(140, 148, 154, 255), IM_COL32(152, 160, 166, 255), IM_COL32(162, 170, 176, 255),
-    IM_COL32(170, 178, 183, 255), IM_COL32(178, 186, 190, 255), IM_COL32(186, 193, 197, 255),
+struct RecessStyle {
+    float outer;
+    float inner;
+    float flatness;
 };
+
+struct Mask {
+    float from = 0;
+    float to = 0;
+
+    float at(float x) const {
+        return from != to ? smoothstep((x - from) / (to - from)) : 1.0f;
+    }
+};
+
+const RecessStyle FLUTE_RECESS = { 1.4f, 7.0f, 0.15f };
+const RecessStyle KEY_WELL = { 1.1f, 5.5f, 0.3f };
+const RecessStyle FLAT_WELL = { 0.9f, 4.5f, 1.0f };
+
 const ImU32 WALL_SHADE = IM_COL32(104, 112, 118, 255);
 const ImU32 WALL_LIT = IM_COL32(238, 242, 246, 255);
+const ImU32 BOWL_TOP = IM_COL32(146, 154, 160, 255);
+const ImU32 BOWL_BOTTOM = IM_COL32(188, 195, 199, 255);
+const ImU32 FLOOR = IM_COL32(178, 186, 191, 255);
 
 ImU32 mix(ImU32 a, ImU32 b, float t) {
+    t = std::max(0.0f, std::min(1.0f, t));
     auto channel = [&](int shift) { return (int)(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t); };
     return IM_COL32(channel(IM_COL32_R_SHIFT), channel(IM_COL32_G_SHIFT), channel(IM_COL32_B_SHIFT), channel(IM_COL32_A_SHIFT));
 }
 
-ImU32 profile_colour(float t, float alpha) {
-    t = std::max(0.0f, std::min(1.0f, t)) * CUT_ROWS;
-    int row = std::min(CUT_ROWS - 1, (int)t);
-    float f = t - row;
-    ImU32 a = CUT_PROFILE[row], b = CUT_PROFILE[row + 1];
-    auto channel = [&](int shift) { return (int)(((a >> shift) & 0xff) * (1 - f) + ((b >> shift) & 0xff) * f); };
-    return IM_COL32(channel(IM_COL32_R_SHIFT), channel(IM_COL32_G_SHIFT), channel(IM_COL32_B_SHIFT),
-                    (int)(255 * std::max(0.0f, std::min(1.0f, alpha))));
-}
-
-void shade_cut(ImDrawList *draw, const Shape &shape, float opacity, float fade_from, float fade_to, float wall) {
-    const float fringe = 1.0f;
-    ImRect box = bounds(shape);
-    auto fade = [&](float x) {
-        return fade_from != fade_to ? opacity * smoothstep((x - fade_from) / (fade_to - fade_from)) : opacity;
-    };
-    auto span_at = [&](float x) {
-        Span span = convex_span(shape, std::max(box.Min.x + 0.01f, std::min(box.Max.x - 0.01f, x)));
-        if (!span.valid) span.top = span.bottom = box.GetCenter().y;
-        return span;
-    };
-    int columns = std::max(8, std::min(200, (int)(box.GetWidth() / 1.5f)));
-    draw->PrimReserve(columns * CUT_ROWS * 6, (columns + 1) * (CUT_ROWS + 1));
-    ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
-    ImVec2 uv = draw->_Data->TexUvWhitePixel;
-    for (int column = 0; column <= columns; column++) {
-        float x = box.Min.x + box.GetWidth() * column / columns;
-        Span span = span_at(x);
-        for (int row = 0; row <= CUT_ROWS; row++) {
-            float y = span.top + (span.bottom - span.top) * row / CUT_ROWS;
-            draw->PrimWriteVtx(ImVec2(x, y), uv, faded(CUT_PROFILE[row], fade(x)));
-        }
-    }
-    for (int column = 0; column < columns; column++) {
-        for (int row = 0; row < CUT_ROWS; row++) {
-            ImDrawIdx i = (ImDrawIdx)(base + column * (CUT_ROWS + 1) + row);
-            ImDrawIdx right = (ImDrawIdx)(i + CUT_ROWS + 1);
-            draw->PrimWriteIdx(i); draw->PrimWriteIdx(right); draw->PrimWriteIdx((ImDrawIdx)(right + 1));
-            draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(right + 1)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
-        }
-    }
-
+void draw_recess(ImDrawList *draw, const Shape &shape, const RecessStyle &style, float u, Mask mask = Mask()) {
+    const int inner_rings = 6;
     size_t count = shape.size();
+    ImRect box = bounds(shape);
     float outward = bounds(grown(shape, 1.0f)).GetWidth() > box.GetWidth() ? -1.0f : 1.0f;
-    auto floor_at = [&](ImVec2 point) {
-        Span span = span_at(point.x);
-        float t = span.bottom > span.top ? (point.y - span.top) / (span.bottom - span.top) : 0.5f;
-        return profile_colour(t, fade(point.x));
-    };
-    draw->PrimReserve((int)count * 12, (int)count * 3);
-    base = (ImDrawIdx)draw->_VtxCurrentIdx;
+    std::vector<ImVec2> normals(count);
+    std::vector<float> facing(count);
     for (size_t i = 0; i < count; i++) {
-        ImVec2 point = shape[i];
         ImVec2 tangent = shape[(i + 1) % count] - shape[(i + count - 1) % count];
         float length = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y);
-        ImVec2 normal = length > 0 ? ImVec2(tangent.y, -tangent.x) * (outward / length) : ImVec2(0, 0);
-        float lit = smoothstep((normal.y + 1.0f) * 0.5f);
-        ImU32 wall_colour = faded(mix(WALL_SHADE, WALL_LIT, lit), fade(point.x));
-        ImVec2 inner = point - normal * wall;
-        draw->PrimWriteVtx(inner, uv, floor_at(inner));
-        draw->PrimWriteVtx(point, uv, wall_colour);
-        draw->PrimWriteVtx(point + normal * fringe, uv, wall_colour & ~IM_COL32_A_MASK);
+        normals[i] = length > 0 ? ImVec2(tangent.y, -tangent.x) * (outward / length) : ImVec2(0, 0);
+        facing[i] = smoothstep((normals[i].y + 1.0f) * 0.5f);
     }
+    auto floor_colour = [&](ImVec2 point) {
+        float t = box.GetHeight() > 0 ? (point.y - box.Min.y) / box.GetHeight() : 0.5f;
+        return mix(mix(BOWL_TOP, BOWL_BOTTOM, t), FLOOR, style.flatness);
+    };
+    auto shaded = [&](ImU32 colour, ImVec2 point) { return faded(colour, mask.at(point.x)); };
+
+    const int rings = inner_rings + 2;
+    float inner = style.inner * u;
+    draw->PrimReserve((int)count * (rings - 1) * 6 + ((int)count - 2) * 3, (int)count * rings + (int)count);
+    ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
+    ImVec2 uv = draw->_Data->TexUvWhitePixel;
     for (size_t i = 0; i < count; i++) {
-        ImDrawIdx a = (ImDrawIdx)(base + i * 3), b = (ImDrawIdx)(base + ((i + 1) % count) * 3);
-        for (int band = 0; band < 2; band++) {
-            draw->PrimWriteIdx((ImDrawIdx)(a + band)); draw->PrimWriteIdx((ImDrawIdx)(b + band)); draw->PrimWriteIdx((ImDrawIdx)(b + band + 1));
-            draw->PrimWriteIdx((ImDrawIdx)(a + band)); draw->PrimWriteIdx((ImDrawIdx)(b + band + 1)); draw->PrimWriteIdx((ImDrawIdx)(a + band + 1));
+        ImU32 wall = mix(WALL_SHADE, WALL_LIT, facing[i]);
+        ImVec2 edge = shape[i];
+        ImVec2 outer_point = edge + normals[i] * (style.outer * u);
+        draw->PrimWriteVtx(outer_point, uv, shaded(wall, outer_point) & ~IM_COL32_A_MASK);
+        draw->PrimWriteVtx(edge, uv, shaded(wall, edge));
+        for (int ring = 1; ring <= inner_rings; ring++) {
+            float t = (float)ring / inner_rings;
+            ImVec2 point = edge - normals[i] * (inner * t);
+            draw->PrimWriteVtx(point, uv, shaded(mix(wall, floor_colour(point), smoothstep(t)), point));
         }
     }
-}
-
-void recess(ImDrawList *draw, const Shape &shape, float u) {
-    shade_cut(draw, shape, 1.0f, 0, 0, 2.2f * u);
+    for (size_t i = 0; i < count; i++) {
+        ImDrawIdx a = (ImDrawIdx)(base + i * rings), b = (ImDrawIdx)(base + ((i + 1) % count) * rings);
+        for (int ring = 0; ring < rings - 1; ring++) {
+            draw->PrimWriteIdx((ImDrawIdx)(a + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring + 1));
+            draw->PrimWriteIdx((ImDrawIdx)(a + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring + 1)); draw->PrimWriteIdx((ImDrawIdx)(a + ring + 1));
+        }
+    }
+    ImDrawIdx centre = (ImDrawIdx)draw->_VtxCurrentIdx;
+    for (size_t i = 0; i < count; i++) {
+        ImVec2 point = shape[i] - normals[i] * inner;
+        draw->PrimWriteVtx(point, uv, shaded(floor_colour(point), point));
+    }
+    for (size_t i = 1; i + 1 < count; i++) {
+        draw->PrimWriteIdx(centre); draw->PrimWriteIdx((ImDrawIdx)(centre + i)); draw->PrimWriteIdx((ImDrawIdx)(centre + i + 1));
+    }
 }
 
 float bezel_brightness(float x, const ImVec2 &lcd_min, const ImVec2 &lcd_max, float u) {
@@ -572,11 +549,6 @@ Shape outset(const Shape &shape, float distance) {
     return result;
 }
 
-void flat_recess(ImDrawList *draw, const Shape &shape, float u) {
-    fill(draw, shape, IM_COL32(96, 104, 110, 255), IM_COL32(238, 242, 246, 255));
-    Shape floor = translated(inset(shape, 2.2f * u), ImVec2(0.3f * u, 1.3f * u));
-    fill(draw, floor, IM_COL32(168, 176, 181, 255), BEZEL);
-}
 
 void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool pressed, float u) {
     const int layers = 4;
@@ -637,17 +609,17 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         Shape scoop = side_key(ImVec2(box.Min.x - reach, box.Min.y - FLUTE_MARGIN * u),
                                ImVec2(box.Max.x + FLUTE_MARGIN * u, box.Max.y + FLUTE_MARGIN * u),
                                (SIDE_KEY_CORNER + FLUTE_MARGIN) * u);
-        shade_cut(draw, scoop, 0.85f, box.Min.x - reach, box.Min.x + box.GetHeight() * 0.2f, 2.2f * u);
+        draw_recess(draw, scoop, FLUTE_RECESS, u, Mask{ box.Min.x - reach, box.Min.x + box.GetHeight() * 0.2f });
     }
     {
         float reach = power_box.GetHeight() * FLUTE_REACH;
         Shape scoop = pill(power_box.Min - ImVec2(FLUTE_MARGIN, FLUTE_MARGIN) * u,
                            ImVec2(power_box.Max.x + reach, power_box.Max.y + FLUTE_MARGIN * u));
-        shade_cut(draw, scoop, 0.85f, power_box.Max.x + reach, power_box.Max.x - power_box.GetHeight() * 0.2f, 2.2f * u);
+        draw_recess(draw, scoop, FLUTE_RECESS, u, Mask{ power_box.Max.x + reach, power_box.Max.x - power_box.GetHeight() * 0.2f });
     }
     {
         Shape well = to_screen(frame, arrow_well(), true);
-        shade_cut(draw, well, 0.95f, bounds(well).Max.x, frame.at(ARROW_EDGE_X - 4.0f, 0, true).x, 2.4f * u);
+        draw_recess(draw, well, KEY_WELL, u, Mask{ bounds(well).Max.x, frame.at(ARROW_EDGE_X - 4.0f, 0, true).x });
     }
     draw->PopClipRect();
 
@@ -677,7 +649,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     {
         ImRect box = bounds(traced(frame, "light"));
         Shape shape = pill(box.Min, box.Max);
-        recess(draw, pill(box.Min - ImVec2(WELL_MARGIN, WELL_MARGIN) * u, box.Max + ImVec2(WELL_MARGIN, WELL_MARGIN) * u), u);
+        draw_recess(draw, pill(box.Min - ImVec2(WELL_MARGIN, WELL_MARGIN) * u, box.Max + ImVec2(WELL_MARGIN, WELL_MARGIN) * u), KEY_WELL, u);
         bool pressed;
         if (hit("key-light", shape, pressed)) lcd_set_backlight(!lcd_get_backlight());
         key(draw, shape, TEAL_KEY, pressed, u);
@@ -686,7 +658,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
 
     {
         centred_text(draw, menu_centre - ImVec2(0, 39 * u), 15.0f * u, PRINT, "MENU");
-        recess(draw, circle(menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), u);
+        draw_recess(draw, circle(menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
         Shape shape = circle(menu_centre, fit_menu[2] * u);
         bool pressed;
         if (hit("key-menu", shape, pressed) && live) keys_push(HOST_KEY_TAB, 0);
@@ -724,7 +696,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         draw->AddPolyline(chevron, 3, IM_COL32(222, 228, 234, 235), 0, 2.6f * u);
     }
 
-    flat_recess(draw, capsule(esc_centre, (fit_esc[2] + 6) * u, enter_centre, (fit_enter[2] + 6) * u), u);
+    draw_recess(draw, capsule(esc_centre, (fit_esc[2] + 6) * u, enter_centre, (fit_enter[2] + 6) * u), FLAT_WELL, u);
     {
         Shape shape = circle(esc_centre, fit_esc[2] * u);
         bool pressed;
