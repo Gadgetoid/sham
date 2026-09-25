@@ -24,22 +24,22 @@ ui.alert("Fur Elise, on a piezo.", title="Tune")
     "bounce.py": """class Bounce(ui.View):
     def __init__(self):
         super().__init__()
-        self.x, self.y = 20, 10
+        self.ball_x, self.ball_y = 20, 10
         self.dx, self.dy = 1, 1
 
     def tick(self, now):
-        self.x += self.dx
-        self.y += self.dy
-        if self.x <= 0 or self.x >= self.w - 16:
+        self.ball_x += self.dx
+        self.ball_y += self.dy
+        if self.ball_x <= 0 or self.ball_x >= self.w - 15:
             self.dx = -self.dx
             sound.beep(1800, 8)
-        if self.y <= 0 or self.y >= self.h - 16:
+        if self.ball_y <= 0 or self.ball_y >= self.h - 16:
             self.dy = -self.dy
             sound.beep(1200, 8)
         self.refresh()
 
     def draw(self):
-        self.icon("emoji:face_happy", self.x, self.y)
+        self.icon("emoji:face_happy", self.ball_x, self.ball_y)
 
 
 def launch():
