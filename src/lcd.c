@@ -163,8 +163,8 @@ typedef struct {
 } panel_t;
 
 static const panel_t panel_lit = {
-    .glass = { 96, 213, 168 },
-    .ink = { 15, 45, 42 },
+    .glass = { 86, 211, 180 },
+    .ink = { 14, 44, 46 },
     .contrast = 0.92f,
     .shadow = 0.22f,
     .soft_shadow = 0.20f,
