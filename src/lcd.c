@@ -193,7 +193,12 @@ static bool force_compose = true;
 static bool backlight = true;
 static bool powered = true;
 
+static int power_ons = 0;
+
+int lcd_power_ons(void) { return power_ons; }
+
 void lcd_set_power(bool on) {
+    if (on && !powered) power_ons++;
     powered = on;
     force_compose = true;
 }

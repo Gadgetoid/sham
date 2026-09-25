@@ -143,6 +143,11 @@ static mp_obj_t host_capture_stop_fn(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_capture_stop_obj, host_capture_stop_fn);
 
+static mp_obj_t host_power_ons(void) {
+    return MP_OBJ_NEW_SMALL_INT(lcd_power_ons());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_power_ons_obj, host_power_ons);
+
 static mp_obj_t host_boots(void) {
     return MP_OBJ_NEW_SMALL_INT(runtime_boots());
 }
@@ -174,6 +179,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_beeping),   MP_ROM_PTR(&host_beeping_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_start), MP_ROM_PTR(&host_capture_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_stop),  MP_ROM_PTR(&host_capture_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_power_ons), MP_ROM_PTR(&host_power_ons_obj) },
     { MP_ROM_QSTR(MP_QSTR_boots),     MP_ROM_PTR(&host_boots_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
 

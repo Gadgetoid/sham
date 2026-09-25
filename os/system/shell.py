@@ -189,6 +189,10 @@ class Shell:
         host.resume(None)
         ui.invalidate()
 
+    def show_owner(self):
+        if prefs.get("startup_owner", False) and prefs.get("owner", {}).get("name"):
+            self.push(OwnerSplash(prefs.get("owner", {})))
+
     def top(self):
         return self.stack[-1] if self.stack else self.launcher
 
@@ -238,13 +242,17 @@ class Shell:
         resume = host.resume()
         if resume:
             self.launch(resume)
-        if host.boots() == 1 and prefs.get("startup_owner", False) and prefs.get("owner", {}).get("name"):
-            self.push(OwnerSplash(prefs.get("owner", {})))
+        self.power_ons = host.power_ons()
+        if host.boots() == 1:
+            self.show_owner()
         while True:
             try:
                 for key in keys.poll():
                     self.handle(key)
                 alarms.check()
+                if host.power_ons() != self.power_ons:
+                    self.power_ons = host.power_ons()
+                    self.show_owner()
                 sound.save_prefs()
                 self.top().tick(host.ticks_ms())
                 minute = host.localtime()[4]
