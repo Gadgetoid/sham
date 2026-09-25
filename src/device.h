@@ -15,6 +15,7 @@ struct DeviceState {
     bool shift = false;
     bool caps = false;
     bool touch = false;
+    bool select = false;
 };
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state);

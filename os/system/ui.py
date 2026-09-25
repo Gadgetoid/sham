@@ -548,11 +548,13 @@ class TextEdit(View):
         self.blink_on = True
         self.blink_at = 0
         self._spans = None
+        self.anchor = None
         self.preferred_height = type.line_height + 2
 
     def set_text(self, text):
         self.value = text
         self.cursor = len(text)
+        self.anchor = None
         self._spans = None
         invalidate()
 
@@ -645,7 +647,47 @@ class TextEdit(View):
         self.cursor = self.cursor_at(line, self.goal_x)
         return True
 
+    @property
+    def selection(self):
+        if self.anchor is None or self.anchor == self.cursor:
+            return None
+        return min(self.anchor, self.cursor), max(self.anchor, self.cursor)
+
+    def delete_selection(self):
+        start, end = self.selection
+        self.value = self.value[:start] + self.value[end:]
+        self.cursor = start
+        self.anchor = None
+        self.edited()
+
     def key(self, key):
+        global _clipboard
+        code = key.code
+        navigation = code in (keys.LEFT, keys.RIGHT, keys.UP, keys.DOWN, keys.HOME, keys.END)
+        if navigation:
+            anchor = (self.cursor if self.anchor is None else self.anchor) if key.shift else None
+            handled = self.edit_key(key)
+            self.anchor = anchor if anchor != self.cursor else None
+            invalidate()
+            return handled
+        selection = self.selection
+        if selection:
+            if code in (keys.CUT, keys.COPY):
+                _clipboard = self.value[selection[0]:selection[1]]
+                if code == keys.CUT:
+                    self.delete_selection()
+                self.anchor = None
+                invalidate()
+                return True
+            if key.char or code in (keys.BACKSPACE, keys.DELETE, keys.ENTER, keys.PASTE):
+                self.delete_selection()
+                if code in (keys.BACKSPACE, keys.DELETE):
+                    invalidate()
+                    return True
+        self.anchor = None
+        return self.edit_key(key)
+
+    def edit_key(self, key):
         if key.second and key.code in (keys.UP, keys.DOWN):
             self.cursor = 0 if key.code == keys.UP else len(self.value)
             self.goal_x = None
@@ -764,6 +806,18 @@ class TextEdit(View):
                 break
             start, end = spans[line]
             self.text(self.value[start:end], offset, row * line_h + 1, INK, self.type)
+        selection = self.selection
+        if selection:
+            for row in range(self.rows):
+                line = self.top + row
+                if line >= len(spans):
+                    break
+                start, end = spans[line]
+                a, b = max(start, selection[0]), min(end, selection[1])
+                if a < b or (selection[0] <= end < selection[1] and a == b == end):
+                    x0 = offset + self.type.measure(self.value[start:a])
+                    x1 = offset + self.type.measure(self.value[start:b]) + (2 if b == end and selection[1] > end else 0)
+                    self.invert(x0, row * line_h, max(1, x1 - x0), line_h)
         if self.focused and self.blink_on:
             row = self.line_of(self.cursor) - self.top
             if 0 <= row < self.rows:

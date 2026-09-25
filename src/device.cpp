@@ -1080,6 +1080,10 @@ void keyboard_press(const KeyboardKey &key, DeviceState &state) {
         state.second = !state.second;
         return;
     }
+    if (key.action == KB_ACTION_SHIFT && strcmp(key.id, "shift_right") == 0 && !state.second) {
+        state.select = !state.select;
+        return;
+    }
     if (key.action == KB_ACTION_SHIFT) {
         if (state.second) {
             state.caps = !state.caps;
@@ -1089,6 +1093,7 @@ void keyboard_press(const KeyboardKey &key, DeviceState &state) {
         }
         return;
     }
+    state.select = false;
     uint32_t code = key.code;
     if (state.second) {
         code = key.second_code;
@@ -1320,13 +1325,15 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         bool activated = hit(id, shape, pressed);
         if (key.shape == KB_SHAPE_CURSOR) {
             KeyRepeat &repeat = keyboard_repeats[cursor_index++ % 4];
-            if (!(live && second_arrow(key.code, 0, activated, state))) {
-                repeat_key(repeat, key.code, activated && live, pressed && live);
+            uint8_t select_mods = state.select ? HOST_MOD_SHIFT : 0;
+            if (!(live && second_arrow(key.code, select_mods, activated, state))) {
+                repeat_key(repeat, key.code, activated && live, pressed && live, select_mods);
             }
         } else if (activated && live) {
             keyboard_press(key, state);
         }
         bool latched = (key.action == KB_ACTION_SECOND && state.second) ||
+                       (key.action == KB_ACTION_SHIFT && strcmp(key.id, "shift_right") == 0 && state.select) ||
                        (key.action == KB_ACTION_SHIFT && (state.shift || state.caps));
         bool down = pressed || latched;
         ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 60 : 34, 1.6f, 1.0f,
