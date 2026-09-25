@@ -37,7 +37,7 @@ const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 15.0f;
 const float ARROW_WELL_TUCK = 3.0f;
-const float ARROW_WELL_FLAT = 2.1f;
+const float ARROW_WELL_FLAT = 0.4f;
 const float ARROW_WELL_CORNER = 12.0f;
 const float FLUTE_REACH = 0.45f;
 const float SIDE_KEY_CORNER = 6.0f;
@@ -306,13 +306,16 @@ Shape arrow_well() {
     float radius = ARROW_R + ARROW_WELL_MARGIN + 1.0f;
     float edge_x = ARROW_EDGE_X + ARROW_WELL_MARGIN + ARROW_WELL_TUCK + 10.0f;
     Shape shape;
+    float flat_x = ARROW_CENTRE.x - ARROW_R - ARROW_WELL_FLAT;
+    const float softness = 2.5f;
     for (int i = 0; i <= 90; i++) {
         float angle = IM_PI * 0.5f + IM_PI * i / 90;
-        shape.push_back(ARROW_CENTRE + ImVec2(cosf(angle), sinf(angle)) * radius);
+        ImVec2 point = ARROW_CENTRE + ImVec2(cosf(angle), sinf(angle)) * radius;
+        point.x = flat_x + softness * logf(expf((point.x - flat_x) / softness) + 1.0f);
+        shape.push_back(point);
     }
     shape.push_back(ImVec2(edge_x, ARROW_CENTRE.y - radius));
     shape.push_back(ImVec2(edge_x, ARROW_CENTRE.y + radius));
-    shape = clip(shape, ImVec2(ARROW_CENTRE.x - ARROW_R - ARROW_WELL_FLAT, 0), ImVec2(-1.0f, 0));
     return rounded(shape, ARROW_WELL_CORNER);
 }
 
