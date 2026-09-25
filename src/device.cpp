@@ -2,6 +2,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstring>
+#include <string>
 #include <vector>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -25,6 +26,7 @@ const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
+const int SCRATCH_ALPHA = 70;
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
@@ -78,6 +80,9 @@ const unsigned ICON_DOWN = 0xe313;
 
 SDL_Texture *lcd_texture = nullptr;
 SDL_Texture *grime_texture = nullptr;
+SDL_Texture *scratch_texture = nullptr;
+bool scratch_tried = false;
+int scratch_w = 0, scratch_h = 0;
 int grime_w = 0, grime_h = 0;
 ImFont *label_font = nullptr;
 ImFont *icon_font = nullptr;
@@ -150,6 +155,28 @@ void build_grime(SDL_Renderer *renderer, int w, int h, float scale) {
     grime_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, w, h);
     SDL_SetTextureBlendMode(grime_texture, SDL_BLENDMODE_BLEND);
     SDL_UpdateTexture(grime_texture, nullptr, pixels.data(), w * 4);
+}
+
+void load_scratches(SDL_Renderer *renderer) {
+    if (scratch_tried) return;
+    scratch_tried = true;
+    std::string path = std::string(SDL_GetBasePath() ? SDL_GetBasePath() : "") + "assets/lcd_scratches.bin";
+    FILE *file = fopen(path.c_str(), "rb");
+    if (!file) return;
+    uint16_t size[2];
+    if (fread(size, sizeof size, 1, file) == 1) {
+        std::vector<uint8_t> alpha((size_t)size[0] * size[1]);
+        if (fread(alpha.data(), 1, alpha.size(), file) == alpha.size()) {
+            std::vector<uint32_t> pixels(alpha.size());
+            for (size_t i = 0; i < alpha.size(); i++) pixels[i] = 0x00ffffffu | (uint32_t)alpha[i] << 24;
+            scratch_w = size[0];
+            scratch_h = size[1];
+            scratch_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, scratch_w, scratch_h);
+            SDL_SetTextureBlendMode(scratch_texture, SDL_BLENDMODE_BLEND);
+            SDL_UpdateTexture(scratch_texture, nullptr, pixels.data(), scratch_w * 4);
+        }
+    }
+    fclose(file);
 }
 
 void upload_lcd(SDL_Renderer *renderer, float compose_seconds) {
@@ -849,6 +876,12 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     draw->AddRectFilled(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(58, 64, 68, 255), 5.0f);
     draw->AddRect(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(210, 216, 220, 255), 5.0f, 0, 1.0f);
     if (lcd_texture) draw->AddImage((ImTextureID)(intptr_t)lcd_texture, image_min, image_max);
+    load_scratches(renderer);
+    if (scratch_texture) {
+        float band = std::min(1.0f, scratch_w / (GRID_W / GRID_H) / scratch_h);
+        draw->AddImage((ImTextureID)(intptr_t)scratch_texture, image_min, image_max, ImVec2(0, 0.5f - band * 0.5f),
+                       ImVec2(1, 0.5f + band * 0.5f), IM_COL32(255, 255, 255, SCRATCH_ALPHA));
+    }
 
     ImGui::SetCursorScreenPos(image_min);
     ImGui::InvisibleButton("device", image_size);
@@ -881,4 +914,6 @@ void device_shutdown(void) {
     lcd_texture = nullptr;
     if (grime_texture) SDL_DestroyTexture(grime_texture);
     grime_texture = nullptr;
+    if (scratch_texture) SDL_DestroyTexture(scratch_texture);
+    scratch_texture = nullptr;
 }
