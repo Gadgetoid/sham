@@ -48,6 +48,7 @@ struct Options {
     bool dead_columns = false;
     bool show_repl = true;
     bool show_keys = true;
+    bool show_keyboard = true;
     int fps = 0;
     float response = 1.0f;
     bool backlight = true;
@@ -59,6 +60,7 @@ struct Options {
 struct Settings {
     bool show_repl;
     bool show_keys;
+    bool show_keyboard;
     bool backlight;
     bool dead_columns;
     bool scratches;
@@ -69,7 +71,7 @@ struct Settings {
     int height;
 
     bool operator==(const Settings &other) const {
-        return show_repl == other.show_repl && show_keys == other.show_keys && backlight == other.backlight &&
+        return show_repl == other.show_repl && show_keys == other.show_keys && show_keyboard == other.show_keyboard && backlight == other.backlight &&
                dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && fps == other.fps && response == other.response &&
                width == other.width && height == other.height;
     }
@@ -88,6 +90,7 @@ static void load_settings(const std::string &data, Options &options) {
         std::string name = key;
         if (name == "show_repl") options.show_repl = atoi(value) != 0;
         else if (name == "show_keys") options.show_keys = atoi(value) != 0;
+        else if (name == "show_keyboard") options.show_keyboard = atoi(value) != 0;
         else if (name == "backlight") options.backlight = atoi(value) != 0;
         else if (name == "dead_columns") options.dead_columns = atoi(value) != 0;
         else if (name == "scratches") options.scratches = atoi(value) != 0;
@@ -105,8 +108,8 @@ static void save_settings(const std::string &data, const Settings &settings) {
     std::string temporary = path + ".tmp";
     FILE *file = fopen(temporary.c_str(), "w");
     if (!file) return;
-    fprintf(file, "show_repl=%d\nshow_keys=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
-            settings.show_repl, settings.show_keys, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.fps,
+    fprintf(file, "show_repl=%d\nshow_keys=%d\nshow_keyboard=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
+            settings.show_repl, settings.show_keys, settings.show_keyboard, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.fps,
             settings.response, settings.width, settings.height);
     fclose(file);
     rename(temporary.c_str(), path.c_str());
@@ -125,7 +128,7 @@ static int menu_item_named(const std::string &name) {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
         { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
-        { "show-keys", MENU_SHOW_KEYS }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR },
+        { "show-keys", MENU_SHOW_KEYS }, { "show-keyboard", MENU_SHOW_KEYBOARD }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR },
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -144,6 +147,7 @@ static void usage() {
         "  --dead-columns      simulate failed LCD column drivers\n"
         "  --no-repl           start with the REPL hidden\n"
         "  --no-keys           start without the device keys around the screen\n"
+        "  --no-keyboard       start without the keyboard\n"
         "  --period            run the device at a period accurate 10 fps\n"
         "  --fps=N             device frame rate, 0 for unlimited (default 0)\n"
         "  --response=N        LCD response time scale, 0 instant, 1 normal, 4 very slow\n"
@@ -182,6 +186,7 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (arg == "--dead-columns") options.dead_columns = true;
         else if (arg == "--no-repl") options.show_repl = false;
         else if (arg == "--no-keys") options.show_keys = false;
+        else if (arg == "--no-keyboard") options.show_keyboard = false;
         else if (arg == "--period") options.fps = 10;
         else if (const char *v = value("--fps=")) options.fps = atoi(v);
         else if (const char *v = value("--response=")) options.response = (float)atof(v);
@@ -386,10 +391,10 @@ struct KeyScript {
     }
 };
 
-static void set_repl_visible(SDL_Window *window, bool visible, bool show_keys, int &restore_height) {
+static void set_repl_visible(SDL_Window *window, bool visible, bool show_keys, bool show_keyboard, int &restore_height) {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
-    int device_height = (int)device_fit_height((float)width, show_keys);
+    int device_height = (int)device_fit_height((float)width, show_keys, show_keyboard);
     if (visible) {
         SDL_SetWindowSize(window, width, std::max(restore_height, device_height + 200));
     } else {
@@ -446,6 +451,15 @@ int main(int argc, char **argv) {
     io.Fonts->AddFontDefault();
     const char *label_font = "/System/Library/Fonts/Supplemental/Arial Bold.ttf";
     if (access(label_font, R_OK) == 0) device_set_label_font(io.Fonts->AddFontFromFileTTF(label_font, 16.0f));
+    const char *keyboard_font = "/System/Library/Fonts/HelveticaNeue.ttc";
+    if (access(keyboard_font, R_OK) == 0) {
+        ImFontConfig medium;
+        medium.FontNo = 10;
+        ImFontConfig regular;
+        regular.FontNo = 0;
+        device_set_keyboard_fonts(io.Fonts->AddFontFromFileTTF(keyboard_font, 16.0f, &medium),
+                                  io.Fonts->AddFontFromFileTTF(keyboard_font, 16.0f, &regular));
+    }
     std::string icon_font = std::string(SDL_GetBasePath() ? SDL_GetBasePath() : "") + "assets/MaterialSymbolsKeys.ttf";
     if (access(icon_font.c_str(), R_OK) == 0) device_set_icon_font(io.Fonts->AddFontFromFileTTF(icon_font.c_str(), 24.0f));
     ImGuiStyle &style = ImGui::GetStyle();
@@ -471,12 +485,13 @@ int main(int argc, char **argv) {
     bool running = true;
     DeviceState device;
     device.show_keys = options.show_keys;
+    device.show_keyboard = options.show_keyboard;
     device.scratches = options.scratches;
     device.wear = options.wear;
     bool &device_focused = device.focused;
     bool show_repl = options.show_repl;
     int restore_height = options.height;
-    if (!show_repl) set_repl_visible(window, false, device.show_keys, restore_height);
+    if (!show_repl) set_repl_visible(window, false, device.show_keys, device.show_keyboard, restore_height);
     int fps = options.fps;
     float response = options.response;
     lcd_set_response(response);
@@ -526,10 +541,10 @@ int main(int argc, char **argv) {
                 case MENU_INTERRUPT:    runtime_interrupt(); break;
                 case MENU_SHOW_REPL:
                     show_repl = !show_repl;
-                    set_repl_visible(window, show_repl, device.show_keys, restore_height);
+                    set_repl_visible(window, show_repl, device.show_keys, device.show_keyboard, restore_height);
                     break;
                 case MENU_FOCUS_REPL:
-                    if (!show_repl) set_repl_visible(window, true, device.show_keys, restore_height);
+                    if (!show_repl) set_repl_visible(window, true, device.show_keys, device.show_keyboard, restore_height);
                     show_repl = true;
                     console_focus();
                     break;
@@ -539,9 +554,13 @@ int main(int argc, char **argv) {
                 case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 case MENU_SCRATCHES:    device.scratches = !device.scratches; break;
                 case MENU_WEAR:         device.wear = !device.wear; break;
+                case MENU_SHOW_KEYBOARD:
+                    device.show_keyboard = !device.show_keyboard;
+                    if (!show_repl) set_repl_visible(window, false, device.show_keys, device.show_keyboard, restore_height);
+                    break;
                 case MENU_SHOW_KEYS:
                     device.show_keys = !device.show_keys;
-                    if (!show_repl) set_repl_visible(window, false, device.show_keys, restore_height);
+                    if (!show_repl) set_repl_visible(window, false, device.show_keys, device.show_keyboard, restore_height);
                     break;
                 default: break;
             }
@@ -551,7 +570,7 @@ int main(int argc, char **argv) {
             static bool have_saved = false;
             int window_w = 0, window_h = 0;
             SDL_GetWindowSize(window, &window_w, &window_h);
-            Settings current = { show_repl, device.show_keys, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, fps, response,
+            Settings current = { show_repl, device.show_keys, device.show_keyboard, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, fps, response,
                                  window_w, show_repl ? window_h : restore_height };
             if (!have_saved) {
                 saved = current;
@@ -572,6 +591,7 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_SOUND, beeper_sound());
         menu_set_checked(MENU_KEY_CLICK, beeper_key_click());
         menu_set_checked(MENU_SHOW_KEYS, device.show_keys);
+        menu_set_checked(MENU_SHOW_KEYBOARD, device.show_keyboard);
         menu_set_checked(MENU_SCRATCHES, device.scratches);
         menu_set_checked(MENU_WEAR, device.wear);
 
@@ -605,7 +625,8 @@ int main(int argc, char **argv) {
                                       ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
         float total_height = ImGui::GetContentRegionAvail().y;
-        float device_height = show_repl ? std::max(220.0f, total_height * 0.52f) : total_height;
+        float device_share = device.show_keys && device.show_keyboard ? 0.72f : 0.52f;
+        float device_height = show_repl ? std::max(220.0f, total_height * device_share) : total_height;
         device_draw(renderer, io.DisplayFramebufferScale.x, device_height, compose_seconds, device);
 
         if (show_repl) {

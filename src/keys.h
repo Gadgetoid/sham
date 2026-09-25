@@ -20,6 +20,15 @@ extern "C" {
 #define HOST_KEY_PGUP      0x106
 #define HOST_KEY_PGDN      0x107
 #define HOST_KEY_F1        0x110
+#define HOST_KEY_NEW       0x120
+#define HOST_KEY_SMBL      0x121
+#define HOST_KEY_SEARCH    0x122
+#define HOST_KEY_CASE      0x123
+#define HOST_KEY_CUT       0x124
+#define HOST_KEY_COPY      0x125
+#define HOST_KEY_PASTE     0x126
+#define HOST_KEY_EDIT      0x127
+#define HOST_KEY_SYNC      0x128
 
 #define HOST_MOD_SHIFT 1
 #define HOST_MOD_CTRL  2

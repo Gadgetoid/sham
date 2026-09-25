@@ -87,6 +87,9 @@ screenshot: $(PROG)
 
 WORLD_GEOJSON ?= ../../badgeware/tufty2350/firmware/assets/world.geo.json
 
+keyboard:
+	python3 tools/make_keyboard.py tools/keyboard_layout.json src/keyboard_layout.h
+
 worldmap:
 	python3 tools/make_worldmap.py $(WORLD_GEOJSON) os/assets/worldmap.bin
 
@@ -98,4 +101,4 @@ clean:
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot worldmap check clean rebuild
+.PHONY: embed embed-clean run screenshot keyboard worldmap check clean rebuild

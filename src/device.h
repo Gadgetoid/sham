@@ -9,10 +9,15 @@ struct DeviceState {
     bool powered = true;
     bool scratches = true;
     bool wear = false;
+    bool show_keyboard = true;
+    bool second = false;
+    bool shift = false;
+    bool caps = false;
 };
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state);
-float device_fit_height(float width, bool show_keys);
+float device_fit_height(float width, bool show_keys, bool show_keyboard);
 void  device_shutdown(void);
 void  device_set_label_font(ImFont *font);
 void  device_set_icon_font(ImFont *font);
+void  device_set_keyboard_fonts(ImFont *legend, ImFont *label);

@@ -74,6 +74,7 @@ void menu_install(void) {
 
     NSMenu *system = add_menu(@"System");
     add_item(system, MENU_SHOW_KEYS, @"Show Keys", @"k", NSEventModifierFlagCommand);
+    add_item(system, MENU_SHOW_KEYBOARD, @"Show Keyboard", @"k", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     [system addItem:[NSMenuItem separatorItem]];
     add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
     NSMenu *realism = submenu(system, @"Realism");

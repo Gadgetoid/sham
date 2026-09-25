@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "imgui_internal.h"
 
 #include "device.h"
+#include "keyboard_layout.h"
 #include "key_shapes.h"
 #include "keys.h"
 #include "lcd.h"
@@ -87,6 +89,8 @@ int grime_w = 0, grime_h = 0;
 bool grime_wear = false;
 bool wear_labels = false;
 ImFont *label_font = nullptr;
+ImFont *kb_legend_font = nullptr;
+ImFont *kb_label_font = nullptr;
 ImFont *icon_font = nullptr;
 
 struct KeyRepeat {
@@ -204,8 +208,30 @@ ImVec2 text_size(ImFont *font, float size, const char *text) {
 }
 
 ImU32 erase_colour = 0;
+bool rub_mode = false;
+float rub_amount = 0.45f;
+
+void rub_patch(ImDrawList *draw, ImVec2 a, ImVec2 b, ImU32 face, float amount, uint32_t seed) {
+    if (!wear_labels || amount <= 0) return;
+    ImVec2 size = b - a;
+    ImVec2 centre = (a + b) * 0.5f;
+    centre.x += ((hash2((int)seed, 3, 5) & 0xffff) / 65535.0f - 0.5f) * 0.35f * size.x;
+    centre.y += ((hash2((int)seed, 5, 7) & 0xffff) / 65535.0f - 0.2f) * 0.3f * size.y;
+    ImVec2 radius(size.x * 0.5f, size.y * 0.62f);
+    ImU32 colour = face & ~IM_COL32_A_MASK;
+    const int layers = 9;
+    for (int layer = 0; layer < layers; layer++) {
+        float t = (float)layer / layers;
+        int alpha = (int)(std::min(1.0f, amount) * 30.0f);
+        draw->AddEllipseFilled(centre, radius * (1.0f - t * 0.82f), colour | ((ImU32)alpha << IM_COL32_A_SHIFT), 0, 40);
+    }
+}
 
 void wear_patch(ImDrawList *draw, ImVec2 a, ImVec2 b, uint32_t seed) {
+    if (rub_mode) {
+        rub_patch(draw, a, b, erase_colour, rub_amount, seed);
+        return;
+    }
     if (!wear_labels || !scratch_texture || !erase_colour) return;
     float span = std::min(0.5f, (b.x - a.x) / 900.0f + 0.05f);
     float aspect = (b.y - a.y) / std::max(1.0f, b.x - a.x) * scratch_w / (float)scratch_h;
@@ -523,11 +549,22 @@ const RecessStyle FLUTE_RECESS = { 1.4f, 7.0f, 0.15f };
 const RecessStyle KEY_WELL = { 1.1f, 5.5f, 0.3f };
 const RecessStyle FLAT_WELL = { 0.9f, 4.5f, 1.0f };
 
-const ImU32 WALL_SHADE = IM_COL32(104, 112, 118, 255);
-const ImU32 WALL_LIT = IM_COL32(238, 242, 246, 255);
-const ImU32 BOWL_TOP = IM_COL32(146, 154, 160, 255);
-const ImU32 BOWL_BOTTOM = IM_COL32(188, 195, 199, 255);
-const ImU32 FLOOR = IM_COL32(178, 186, 191, 255);
+struct RecessPalette {
+    ImU32 shade;
+    ImU32 lit;
+    ImU32 bowl_top;
+    ImU32 bowl_bottom;
+    ImU32 floor;
+};
+
+const RecessPalette LID_RECESS = { IM_COL32(104, 112, 118, 255), IM_COL32(238, 242, 246, 255), IM_COL32(146, 154, 160, 255),
+                                   IM_COL32(188, 195, 199, 255), IM_COL32(178, 186, 191, 255) };
+const RecessPalette KEYBED_WELL = { IM_COL32(68, 76, 82, 255), IM_COL32(238, 242, 246, 255), IM_COL32(118, 126, 132, 255),
+                                    IM_COL32(172, 180, 184, 255), IM_COL32(160, 168, 172, 255) };
+const RecessPalette FINGER_SCOOP = { IM_COL32(66, 76, 84, 255), IM_COL32(214, 224, 230, 255), IM_COL32(84, 96, 104, 255),
+                                     IM_COL32(138, 150, 158, 255), IM_COL32(120, 132, 140, 255) };
+const RecessStyle CURSOR_WELL = { 1.4f, 7.0f, 0.1f };
+const RecessStyle SCOOP_RECESS = { 1.0f, 7.0f, 0.0f };
 
 ImU32 mix(ImU32 a, ImU32 b, float t) {
     t = std::max(0.0f, std::min(1.0f, t));
@@ -535,7 +572,8 @@ ImU32 mix(ImU32 a, ImU32 b, float t) {
     return IM_COL32(channel(IM_COL32_R_SHIFT), channel(IM_COL32_G_SHIFT), channel(IM_COL32_B_SHIFT), channel(IM_COL32_A_SHIFT));
 }
 
-void draw_recess(ImDrawList *draw, const Shape &shape, const RecessStyle &style, float u, Mask mask = Mask()) {
+void draw_recess(ImDrawList *draw, const Shape &shape, const RecessStyle &style, float u, Mask mask = Mask(),
+                 const RecessPalette &palette = LID_RECESS) {
     const int inner_rings = 6;
     size_t count = shape.size();
     ImRect box = bounds(shape);
@@ -550,7 +588,7 @@ void draw_recess(ImDrawList *draw, const Shape &shape, const RecessStyle &style,
     }
     auto floor_colour = [&](ImVec2 point) {
         float t = box.GetHeight() > 0 ? (point.y - box.Min.y) / box.GetHeight() : 0.5f;
-        return mix(mix(BOWL_TOP, BOWL_BOTTOM, t), FLOOR, style.flatness);
+        return mix(mix(palette.bowl_top, palette.bowl_bottom, t), palette.floor, style.flatness);
     };
     auto shaded = [&](ImU32 colour, ImVec2 point) { return faded(colour, mask.at(point.x)); };
 
@@ -560,7 +598,7 @@ void draw_recess(ImDrawList *draw, const Shape &shape, const RecessStyle &style,
     ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
     ImVec2 uv = draw->_Data->TexUvWhitePixel;
     for (size_t i = 0; i < count; i++) {
-        ImU32 wall = mix(WALL_SHADE, WALL_LIT, facing[i]);
+        ImU32 wall = mix(palette.shade, palette.lit, facing[i]);
         ImVec2 edge = shape[i];
         ImVec2 outer_point = edge + normals[i] * (style.outer * u);
         draw->PrimWriteVtx(outer_point, uv, shaded(wall, outer_point) & ~IM_COL32_A_MASK);
@@ -669,6 +707,7 @@ Shape outset(const Shape &shape, float distance) {
 
 void draw_key(ImDrawList *draw, const Shape &shape, const ButtonStyle &style, bool pressed, float u) {
     erase_colour = faded(mix(style.top, style.bottom, 0.55f), 0.9f);
+    rub_mode = true;
     const int layers = 4;
     for (int layer = layers; layer >= 1; layer--) {
         int alpha = (int)(((pressed ? 10 : 18) + (layers - layer) * 4) * style.shadow);
@@ -784,6 +823,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
 
     {
         erase_colour = faded(BEZEL, 0.9f);
+        rub_mode = false;
         centred_text(draw, menu_centre - ImVec2(0, 39 * u), 15.0f * u, PRINT, "MENU");
         draw_recess(draw, circle(menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
         Shape shape = circle(menu_centre, fit_menu[2] * u);
@@ -794,6 +834,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
 
     {
         erase_colour = faded(BEZEL, 0.9f);
+        rub_mode = false;
         centred_text(draw, ImVec2(power_box.GetCenter().x, menu_centre.y - 39 * u), 15.0f * u, PRINT, "POWER");
         bool pressed;
         if (hit("key-power", power, pressed)) {
@@ -837,13 +878,419 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     }
 }
 
+const float HINGE = 30.0f;
+const float KB_WIDTH_RATIO = 1.0f;
+const float KB_PAD_X = 16.0f;
+const float KB_PAD_TOP = 12.0f;
+const float KB_PAD_BOTTOM = 10.0f;
+const float KB_BOTTOM_MARGIN = 6.0f;
+const ImU32 KB_RING = IM_COL32(96, 84, 156, 255);
+const ImU32 KB_HIGHLIGHT = IM_COL32(236, 240, 242, 255);
+
+KeyRepeat keyboard_repeats[4];
+
+ImFont *keyboard_font(bool label) {
+    ImFont *font = label ? kb_label_font : kb_legend_font;
+    return font ? font : text_font();
 }
 
-float device_fit_height(float width, bool show_keys) {
+float glyph_middle(ImFont *font, float size, unsigned codepoint, float *bottom = nullptr) {
+    ImFontBaked *baked = font->GetFontBaked(size);
+    ImFontGlyph *glyph = baked->FindGlyph((ImWchar)codepoint);
+    float scale = size / baked->Size;
+    if (bottom) *bottom = glyph->Y1 * scale;
+    return (glyph->Y0 + glyph->Y1) * 0.5f * scale;
+}
+
+float stretched_width(ImFont *font, float size, const char *text, float stretch) {
+    return font->CalcTextSizeA(size, FLT_MAX, 0.0f, text).x * stretch;
+}
+
+void stretched_text(ImDrawList *draw, ImFont *font, float size, const char *text, float left, float top, ImU32 colour, float stretch) {
+    int start = draw->VtxBuffer.Size;
+    draw->AddText(font, size, ImVec2(left, top), colour, text);
+    for (int i = start; i < draw->VtxBuffer.Size; i++) {
+        draw->VtxBuffer[i].pos.x = left + (draw->VtxBuffer[i].pos.x - left) * stretch;
+    }
+}
+
+ImRect centred_legend(ImDrawList *draw, ImFont *font, float size, const char *text, ImVec2 centre, ImU32 colour, float stretch) {
+    unsigned first = 0;
+    ImTextCharFromUtf8(&first, text, nullptr);
+    bool own_glyph = text[1] == 0 || strcmp(text, "−") == 0;
+    unsigned reference = own_glyph ? first : 'H';
+    float middle = glyph_middle(font, size, reference);
+    float width = stretched_width(font, size, text, stretch);
+    float left = centre.x - width * 0.5f;
+    float top = centre.y - middle;
+    stretched_text(draw, font, size, text, left, top, colour, stretch);
+    float half_height = glyph_middle(font, size, 'H') - font->GetFontBaked(size)->FindGlyph('H')->Y0 * size / font->GetFontBaked(size)->Size;
+    return ImRect(left, centre.y - half_height, left + width, centre.y + half_height);
+}
+
+void label_on_baseline(ImDrawList *draw, ImFont *font, float size, const char *text, float cx, float baseline, ImU32 colour, float stretch) {
+    float bottom = 0;
+    glyph_middle(font, size, 'H', &bottom);
+    float width = stretched_width(font, size, text, stretch);
+    stretched_text(draw, font, size, text, cx - width * 0.5f, baseline - bottom, colour, stretch);
+}
+
+Shape rounded_box(ImVec2 a, ImVec2 b, float top_radius, float bottom_radius) {
+    Shape shape;
+    add_arc(shape, ImVec2(b.x - top_radius, a.y + top_radius), top_radius, -IM_PI * 0.5f, 0, 16);
+    add_arc(shape, ImVec2(b.x - bottom_radius, b.y - bottom_radius), bottom_radius, 0, IM_PI * 0.5f, 16);
+    add_arc(shape, ImVec2(a.x + bottom_radius, b.y - bottom_radius), bottom_radius, IM_PI * 0.5f, IM_PI, 16);
+    add_arc(shape, ImVec2(a.x + top_radius, a.y + top_radius), top_radius, IM_PI, IM_PI * 1.5f, 16);
+    return shape;
+}
+
+Shape cursor_outline(float length, float breadth, float depth, float exponent, float corner) {
+    depth = std::min(std::max(depth, 1.0f), length - corner);
+    corner = std::min(corner, breadth * 0.5f);
+    Shape points;
+    float centre_x = length * 0.5f - depth;
+    for (int i = 0; i <= 96; i++) {
+        float angle = -IM_PI * 0.5f + IM_PI * i / 96;
+        float c = cosf(angle), s = sinf(angle);
+        float x = depth * copysignf(powf(fabsf(c), 2.0f / exponent), c);
+        float y = breadth * 0.5f * copysignf(powf(fabsf(s), 2.0f / exponent), s);
+        points.push_back(ImVec2(centre_x + x, y));
+    }
+    for (float sign : { -1.0f, 1.0f }) {
+        add_arc(points, ImVec2(-length * 0.5f + corner, sign * (breadth * 0.5f - corner)), corner, 0, 2 * IM_PI, 24);
+    }
+    return hull(points);
+}
+
+template <typename ColourAt>
+void ring_mesh(ImDrawList *draw, const Shape &shape, const std::vector<float> &offsets, ColourAt colour_at) {
+    size_t count = shape.size();
+    float outward = bounds(grown(shape, 1.0f)).GetWidth() > bounds(shape).GetWidth() ? -1.0f : 1.0f;
+    std::vector<ImVec2> normals(count);
+    for (size_t i = 0; i < count; i++) {
+        ImVec2 tangent = shape[(i + 1) % count] - shape[(i + count - 1) % count];
+        float length = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y);
+        normals[i] = length > 0 ? ImVec2(tangent.y, -tangent.x) * (outward / length) : ImVec2(0, 0);
+    }
+    int rings = (int)offsets.size();
+    draw->PrimReserve((int)count * (rings - 1) * 6, (int)count * rings);
+    ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
+    ImVec2 uv = draw->_Data->TexUvWhitePixel;
+    for (size_t i = 0; i < count; i++) {
+        for (int ring = 0; ring < rings; ring++) {
+            draw->PrimWriteVtx(shape[i] + normals[i] * offsets[ring], uv, colour_at(normals[i], ring));
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        ImDrawIdx a = (ImDrawIdx)(base + i * rings), b = (ImDrawIdx)(base + ((i + 1) % count) * rings);
+        for (int ring = 0; ring < rings - 1; ring++) {
+            draw->PrimWriteIdx((ImDrawIdx)(a + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring + 1));
+            draw->PrimWriteIdx((ImDrawIdx)(a + ring)); draw->PrimWriteIdx((ImDrawIdx)(b + ring + 1)); draw->PrimWriteIdx((ImDrawIdx)(a + ring + 1));
+        }
+    }
+}
+
+struct KeyboardFrame {
+    ImVec2 origin;
+    float kbu;
+
+    ImVec2 at(float x, float y) const {
+        return origin + ImVec2(x, y) * kbu;
+    }
+
+    Shape local(const Shape &shape, float x, float y) const {
+        Shape result;
+        for (const ImVec2 &point : shape) result.push_back(at(x + point.x, y + point.y));
+        return result;
+    }
+};
+
+Shape keyboard_key_shape(const KeyboardFrame &frame, const KeyboardKey &key) {
+    if (key.shape == KB_SHAPE_CURSOR) {
+        Shape local = cursor_outline(key.w, key.h, KB_CURSOR_DEPTH, KB_CURSOR_EXPONENT, KB_CURSOR_CORNER);
+        float angle = key.round_side * IM_PI * 0.5f;
+        float c = cosf(angle), s = sinf(angle);
+        for (ImVec2 &point : local) point = ImVec2(point.x * c - point.y * s, point.x * s + point.y * c);
+        return frame.local(local, key.x, key.y);
+    }
+    return pill(frame.at(key.x - key.w * 0.5f, key.y - key.h * 0.5f), frame.at(key.x + key.w * 0.5f, key.y + key.h * 0.5f));
+}
+
+void keyboard_press(const KeyboardKey &key, DeviceState &state) {
+    if (key.action == KB_ACTION_SECOND) {
+        state.second = !state.second;
+        return;
+    }
+    if (key.action == KB_ACTION_SHIFT) {
+        if (state.second) {
+            state.caps = !state.caps;
+            state.second = false;
+        } else {
+            state.shift = !state.shift;
+        }
+        return;
+    }
+    uint32_t code = key.code;
+    if (state.second) {
+        code = key.second_code;
+    } else if (key.shift_code && (state.shift || (state.caps && key.letter))) {
+        code = key.shift_code;
+    }
+    state.second = false;
+    state.shift = false;
+    if (code == KB_KEY_CAPS) {
+        state.caps = !state.caps;
+        return;
+    }
+    if (code) keys_push(code, 0);
+}
+
+void keyboard_icon(ImDrawList *draw, const KeyboardFrame &frame, const KeyboardKey &key, ImVec2 centre, ImU32 colour) {
+    float k = frame.kbu;
+    auto point = [&](float x, float y) { return centre + ImVec2(x, y) * k; };
+    switch (key.icon) {
+        case KB_ICON_BACKSPACE: {
+            centred_legend(draw, keyboard_font(false), key.legend_size * k, key.legend, point(1.0f, -6.5f), colour, KB_LEGEND_STRETCH);
+            ImVec2 base = point(1.0f, 7.5f);
+            float left = -15.0f, right = 15.0f, head = 8.0f;
+            ImVec2 arrow[7] = { base + ImVec2(left, 0) * k, base + ImVec2(left + head, -5.0f) * k, base + ImVec2(left + head, -1.5f) * k,
+                                base + ImVec2(right, -1.5f) * k, base + ImVec2(right, 1.5f) * k, base + ImVec2(left + head, 1.5f) * k,
+                                base + ImVec2(left + head, 5.0f) * k };
+            draw->AddConcavePolyFilled(arrow, 7, colour);
+            break;
+        }
+        case KB_ICON_RETURN: {
+            float left = -30.0f, right = 28.5f, head = 8.0f, stem_top = -7.5f, bar = 3.0f;
+            ImVec2 arrow[9] = { point(left, bar), point(left + head, bar - 5.0f), point(left + head, bar - 1.5f), point(right - 3.0f, bar - 1.5f),
+                                point(right - 3.0f, stem_top), point(right, stem_top), point(right, bar + 1.5f), point(left + head, bar + 1.5f),
+                                point(left + head, bar + 5.0f) };
+            draw->AddConcavePolyFilled(arrow, 9, colour);
+            break;
+        }
+        case KB_ICON_SHIFT: {
+            ImVec2 outline[7] = { point(0, -11.0f), point(12.0f, 1.0f), point(5.8f, 1.0f), point(5.8f, 10.0f), point(-5.8f, 10.0f),
+                                  point(-5.8f, 1.0f), point(-12.0f, 1.0f) };
+            draw->AddPolyline(outline, 7, colour, ImDrawFlags_Closed, 1.7f * k);
+            break;
+        }
+        case KB_ICON_BOX_DOWN: {
+            draw->AddRect(point(-12.5f, -8.5f), point(12.5f, 8.5f), colour, 0, 0, 1.6f * k);
+            draw->AddTriangleFilled(point(-7.0f, -4.5f), point(7.0f, -4.5f), point(0, 2.5f), colour);
+            draw->AddRectFilled(point(-7.0f, 3.6f), point(7.0f, 5.2f), colour);
+            break;
+        }
+        case KB_ICON_TRIANGLE: {
+            float angle = key.round_side * IM_PI * 0.5f;
+            ImVec2 corners[3];
+            for (int corner = 0; corner < 3; corner++) {
+                float theta = angle + corner * IM_PI * 2.0f / 3.0f;
+                corners[corner] = centre + ImVec2(cosf(theta), sinf(theta)) * (9.0f * 0.62f * k);
+            }
+            draw->AddTriangleFilled(corners[0], corners[1], corners[2], colour);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void keyboard_secondary(ImDrawList *draw, const KeyboardFrame &frame, const KeyboardKey &key, const KeyboardSecondary &item) {
+    float k = frame.kbu;
+    ImFont *font = keyboard_font(true);
+    float baseline = frame.at(0, key.y - key.h * 0.5f - KB_LABEL_CLEARANCE).y;
+    float cx = frame.at(key.x + item.dx, 0).x;
+    float size = item.size * k;
+    ImU32 colour = faded(KB_SECONDARY[item.colour], KB_LEGEND_ALPHA);
+    float cap_bottom = 0;
+    float cap_middle = glyph_middle(font, size, 'H', &cap_bottom);
+    float cap = (cap_bottom - cap_middle) * 2.0f;
+    if (item.colour == KB_BADGE) {
+        float width = stretched_width(font, size, item.text, KB_LEGEND_STRETCH);
+        draw->AddRectFilled(ImVec2(cx - width * 0.5f - 1.2f * k, baseline - cap - 1.1f * k), ImVec2(cx + width * 0.5f + 1.2f * k, baseline + 1.1f * k),
+                           KB_SECONDARY[KB_BADGE], 0.5f * k);
+        label_on_baseline(draw, font, size, item.text, cx, baseline, KB_BADGE_TEXT, KB_LEGEND_STRETCH);
+        return;
+    }
+    if (item.icon == KB_ICON_CHECK) {
+        float s = 9.0f * k;
+        ImVec2 middle(cx, baseline - cap * 0.45f);
+        ImVec2 tick[3] = { middle + ImVec2(-0.45f, -0.15f) * s, middle + ImVec2(-0.05f, 0.25f) * s, middle + ImVec2(0.55f, -0.3f) * s };
+        draw->AddPolyline(tick, 3, colour, 0, 0.12f * s);
+        return;
+    }
+    if (item.icon == KB_ICON_CASE_TOGGLE) {
+        float small_size = size * 0.72f;
+        float small_width = stretched_width(font, small_size, "A", KB_LEGEND_STRETCH);
+        float large_width = stretched_width(font, size, "A", KB_LEGEND_STRETCH);
+        float arrows = 6.5f * k, spacing = 0.8f * k;
+        float x = cx - (small_width + arrows + large_width + 2 * spacing) * 0.5f;
+        label_on_baseline(draw, font, small_size, "A", x + small_width * 0.5f, baseline, colour, KB_LEGEND_STRETCH);
+        float mid_x = x + small_width + spacing + arrows * 0.5f, mid_y = baseline - cap * 0.5f, half = arrows * 0.5f;
+        ImVec2 upper[3] = { ImVec2(mid_x - half, mid_y - 1.3f * k), ImVec2(mid_x + half, mid_y - 1.3f * k), ImVec2(mid_x + half - 2.4f * k, mid_y - 3.3f * k) };
+        ImVec2 lower[3] = { ImVec2(mid_x + half, mid_y + 1.3f * k), ImVec2(mid_x - half, mid_y + 1.3f * k), ImVec2(mid_x - half + 2.4f * k, mid_y + 3.3f * k) };
+        draw->AddPolyline(upper, 3, colour, 0, 0.75f * k);
+        draw->AddPolyline(lower, 3, colour, 0, 0.75f * k);
+        label_on_baseline(draw, font, size, "A", x + small_width + arrows + 2 * spacing + large_width * 0.5f, baseline, colour, KB_LEGEND_STRETCH);
+        return;
+    }
+    if (strcmp(item.text, "*") == 0) {
+        ImVec2 middle(cx, baseline - cap * 0.62f);
+        float radius = item.size * 0.36f * k;
+        for (int spoke = 0; spoke < 3; spoke++) {
+            float theta = IM_PI * 0.5f + spoke * IM_PI / 3.0f;
+            ImVec2 arm(cosf(theta) * radius, sinf(theta) * radius);
+            draw->AddLine(middle - arm, middle + arm, colour, item.size * 0.1f * k);
+        }
+        return;
+    }
+    if (strcmp(item.text, "^") == 0) {
+        ImVec2 middle(cx, baseline - cap * 0.62f);
+        float s = item.size * k;
+        ImVec2 caret[3] = { middle + ImVec2(-0.24f, 0.22f) * s, middle + ImVec2(0, -0.24f) * s, middle + ImVec2(0.24f, 0.22f) * s };
+        draw->AddPolyline(caret, 3, colour, 0, 0.075f * s);
+        return;
+    }
+    if (strcmp(item.text, "¨") == 0) {
+        for (float dx : { -3.2f, 3.2f }) draw->AddCircleFilled(ImVec2(cx + dx * k, baseline - cap * 0.55f), 1.1f * k, colour, 12);
+        return;
+    }
+    const char *text = strcmp(item.text, "-") == 0 ? "−" : item.text;
+    label_on_baseline(draw, font, size, text, cx, baseline, colour, KB_LEGEND_STRETCH);
+}
+
+void draw_keybed(ImDrawList *draw, const KeyboardFrame &frame, bool wear) {
+    float k = frame.kbu;
+    float left = -KB_PAD_X, top = -KB_PAD_TOP, right = KB_WIDTH + KB_PAD_X, bottom_edge = KB_HEIGHT + KB_PAD_BOTTOM;
+    Shape body = rounded_box(frame.at(left - 3, top - 3), frame.at(right + 3, bottom_edge + KB_FRONT_DEPTH), (KB_TOP_RADIUS + 3) * k, (KB_BOTTOM_RADIUS + 4) * k);
+    fill(draw, translated(body, ImVec2(0, 4 * k)), IM_COL32(0, 0, 0, 80), IM_COL32(0, 0, 0, 120));
+    fill(draw, body, KB_FRONT_TOP, KB_FRONT_BOTTOM);
+
+    Shape face = rounded_box(frame.at(left, top), frame.at(right, bottom_edge), KB_TOP_RADIUS * k, KB_BOTTOM_RADIUS * k);
+    Shape seam;
+    float bottom = frame.at(0, bottom_edge).y;
+    for (const ImVec2 &point : face) {
+        if (point.y > bottom - KB_BOTTOM_RADIUS * k - 0.01f) seam.push_back(point + ImVec2(0, KB_FRONT_SEAM * k));
+    }
+    std::sort(seam.begin(), seam.end(), [](ImVec2 a, ImVec2 b) { return a.x < b.x; });
+    draw->AddPolyline(seam.data(), (int)seam.size(), KB_SEAM_DARK, 0, 0.8f * k);
+    Shape seam_light = translated(seam, ImVec2(0, 0.8f * k));
+    draw->AddPolyline(seam_light.data(), (int)seam_light.size(), faded(KB_SEAM_LIGHT, 0.6f), 0, 0.6f * k);
+
+    fill(draw, face, lighten(KB_KEYBED, 10), mix(KB_KEYBED, IM_COL32(156, 164, 166, 255), 0.35f));
+    if (grime_texture) {
+        ImRect box = bounds(face);
+        draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, box.Min, box.Max, ImVec2(0, 0), ImVec2(1, 1),
+                              IM_COL32_WHITE, KB_TOP_RADIUS * k);
+    }
+    const int lip_rings = 10;
+    std::vector<float> offsets = { 0.6f * k };
+    for (int ring = 0; ring <= lip_rings; ring++) offsets.push_back(-KB_LIP * k * ring / lip_rings);
+    ImU32 front_edge = mix(KB_FRONT_TOP, IM_COL32(120, 134, 142, 255), 0.2f);
+    ImU32 side_edge = mix(KB_KEYBED, IM_COL32(132, 142, 148, 255), 0.6f);
+    ring_mesh(draw, face, offsets, [&](ImVec2 normal, int ring) {
+        float facing_front = smoothstep(normal.y);
+        ImU32 edge = mix(mix(KB_KEYBED, side_edge, fabsf(normal.x)), front_edge, facing_front);
+        if (normal.y < 0) edge = mix(KB_KEYBED, BEZEL_LIGHT, -normal.y * 0.5f);
+        if (ring == 0) return edge & ~IM_COL32_A_MASK;
+        float t = (float)(ring - 1) / lip_rings;
+        ImU32 colour = mix(edge, KB_KEYBED, smoothstep(t));
+        float highlight = expf(-powf((t - 0.28f) / 0.12f, 2.0f)) * facing_front * 0.55f;
+        colour = mix(colour, KB_HIGHLIGHT, highlight);
+        return faded(colour, 1.0f - smoothstep((t - 0.7f) / 0.3f));
+    });
+
+    float finger_y = KB_FINGER_Y - KB_HEIGHT + bottom_edge;
+    draw_recess(draw, pill(frame.at(KB_FINGER_X - KB_FINGER_W * 0.5f, finger_y - KB_FINGER_H * 0.5f),
+                           frame.at(KB_FINGER_X + KB_FINGER_W * 0.5f, finger_y + KB_FINGER_H * 0.5f)),
+                SCOOP_RECESS, k, Mask(), FINGER_SCOOP);
+    draw_recess(draw, circle(frame.at(KB_WELL_X, KB_WELL_Y), KB_WELL_R * k), CURSOR_WELL, k, Mask(), KEYBED_WELL);
+}
+
+void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, DeviceState &state) {
+    float k = frame.kbu;
+    bool live = state.powered;
+    draw_keybed(draw, frame, state.wear);
+
+    for (const KeyboardKey &key : keyboard_keys) {
+        if (!key.ring) continue;
+        Shape ring = outset(keyboard_key_shape(frame, key), 1.6f * u + 4.6f * k + 0.75f * k);
+        draw->AddPolyline(ring.data(), (int)ring.size(), faded(KB_RING, 0.95f), ImDrawFlags_Closed, 1.5f * k);
+    }
+
+    int cursor_index = 0;
+    for (const KeyboardKey &key : keyboard_keys) {
+        Shape shape = keyboard_key_shape(frame, key);
+        char id[32];
+        snprintf(id, sizeof id, "kb-%s", key.id);
+        bool pressed;
+        bool activated = hit(id, shape, pressed);
+        if (key.shape == KB_SHAPE_CURSOR) {
+            repeat_key(keyboard_repeats[cursor_index++ % 4], key.code, activated && live, pressed && live);
+        } else if (activated && live) {
+            keyboard_press(key, state);
+        }
+        bool latched = (key.action == KB_ACTION_SECOND && state.second) ||
+                       (key.action == KB_ACTION_SHIFT && (state.shift || state.caps));
+        bool down = pressed || latched;
+        ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 22 : 34, 1.6f, 1.0f, 0.7f };
+        draw_key(draw, shape, style, down, u);
+        rub_mode = false;
+        ImVec2 dip = down ? ImVec2(0, 1.2f * u) : ImVec2(0, 0);
+        ImVec2 centre = frame.at(key.x, key.y) + dip;
+        ImU32 face = mix(style.top, style.bottom, 0.5f);
+        if (key.homing) {
+            Shape bar = pill(centre + ImVec2(-6.75f, 12.5f - 1.8f) * k, centre + ImVec2(6.75f, 12.5f + 1.8f) * k);
+            fill(draw, translated(bar, ImVec2(0, 0.8f * k)), IM_COL32(110, 112, 118, 200), IM_COL32(110, 112, 118, 200));
+            fill(draw, bar, lighten(style.top, 22), style.top);
+        }
+        ImU32 legend_colour = faded(KB_KEY_LEGEND[key.colour], KB_LEGEND_ALPHA);
+        ImVec2 legend_centre = centre + ImVec2(0, key.legend_dy * k);
+        ImRect legend_box(legend_centre - ImVec2(12, 9) * k, legend_centre + ImVec2(12, 9) * k);
+        if (key.icon == KB_ICON_NONE && key.legend) {
+            legend_box = centred_legend(draw, keyboard_font(false), key.legend_size * k, key.legend, legend_centre, legend_colour,
+                                        KB_LEGEND_STRETCH * key.stretch);
+        } else {
+            keyboard_icon(draw, frame, key, key.icon == KB_ICON_TRIANGLE ? centre : legend_centre, legend_colour);
+        }
+        if (state.wear) rub_patch(draw, legend_box.Min, legend_box.Max, face, key.wear, (uint32_t)(key.x * 31 + key.y * 17));
+    }
+
+    for (const KeyboardKey &key : keyboard_keys) {
+        for (int index = 0; index < key.secondary_count; index++) keyboard_secondary(draw, frame, key, key.secondary[index]);
+    }
+}
+
+float lid_width_units() {
+    return LEFT_EXTENT + RIGHT_EXTENT + REFERENCE_LCD_H * GRID_W / GRID_H;
+}
+
+float keyboard_unit_in_lid_units() {
+    return lid_width_units() * KB_WIDTH_RATIO / (KB_WIDTH + 2 * KB_PAD_X);
+}
+
+float keyboard_height_in_lid_units() {
+    return HINGE + (KB_PAD_TOP + KB_HEIGHT + KB_PAD_BOTTOM + KB_FRONT_DEPTH + KB_BOTTOM_MARGIN) * keyboard_unit_in_lid_units();
+}
+
+void draw_hinge(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float u) {
+    float width = (device_max.x - device_min.x) * 0.9f;
+    float centre = (device_min.x + device_max.x) * 0.5f;
+    ImVec2 a(centre - width * 0.5f, device_max.y - 14 * u), b(centre + width * 0.5f, device_max.y + HINGE * u + 10 * u);
+    Shape barrel = pill(a, b);
+    fill(draw, translated(barrel, ImVec2(0, 3 * u)), IM_COL32(0, 0, 0, 70), IM_COL32(0, 0, 0, 70));
+    fill(draw, barrel, IM_COL32(150, 158, 164, 255), IM_COL32(96, 104, 110, 255));
+    Shape shine = pill(ImVec2(a.x + 20 * u, device_max.y + 2 * u), ImVec2(b.x - 20 * u, device_max.y + 10 * u));
+    fill(draw, shine, IM_COL32(220, 226, 230, 90), IM_COL32(220, 226, 230, 0));
+}
+
+}
+
+float device_fit_height(float width, bool show_keys, bool show_keyboard) {
     float usable = width - 16.0f;
     if (show_keys) {
         float image_h = usable / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
-        return image_h * (1.0f + (TOP_EXTENT + BOTTOM_EXTENT) / REFERENCE_LCD_H) + 24.0f;
+        float lid = REFERENCE_LCD_H + TOP_EXTENT + BOTTOM_EXTENT + (show_keyboard ? keyboard_height_in_lid_units() : 0.0f);
+        return image_h * lid / REFERENCE_LCD_H + 24.0f;
     }
     float lcd_w = usable - 2 * PLAIN_BEZEL;
     return lcd_w * GRID_H / GRID_W + 2 * PLAIN_BEZEL + 28.0f;
@@ -854,9 +1301,11 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     float avail_w = ImGui::GetContentRegionAvail().x;
 
     float image_h;
+    bool has_keyboard = state.show_keys && state.show_keyboard;
+    float extra_units = has_keyboard ? keyboard_height_in_lid_units() : 0.0f;
     if (state.show_keys) {
         float by_width = avail_w / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
-        float by_height = height / (1.0f + (TOP_EXTENT + BOTTOM_EXTENT) / REFERENCE_LCD_H);
+        float by_height = height / (1.0f + (TOP_EXTENT + BOTTOM_EXTENT + extra_units) / REFERENCE_LCD_H);
         image_h = std::min(by_width, by_height);
     } else {
         image_h = std::min((avail_w - 2 * PLAIN_BEZEL) * GRID_H / GRID_W, height - 2 * PLAIN_BEZEL);
@@ -870,13 +1319,15 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     ImVec2 pad_min = state.show_keys ? ImVec2(LEFT_EXTENT, TOP_EXTENT) * u : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
     ImVec2 pad_max = state.show_keys ? ImVec2(RIGHT_EXTENT, BOTTOM_EXTENT) * u : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
     ImVec2 device_size = image_size + pad_min + pad_max;
-    ImVec2 device_min = origin + ImVec2((avail_w - device_size.x) * 0.5f, (height - device_size.y) * 0.5f);
+    float total_height = device_size.y + extra_units * u;
+    ImVec2 device_min = origin + ImVec2((avail_w - device_size.x) * 0.5f, (height - total_height) * 0.5f);
     ImVec2 device_max = device_min + device_size;
     ImVec2 image_min = device_min + pad_min;
     ImVec2 image_max = image_min + image_size;
     float rounding = state.show_keys ? 34.0f * u : 18.0f;
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
+    if (has_keyboard) draw_hinge(draw, device_min, device_max, u);
     if (state.focused) {
         draw->AddRect(device_min - ImVec2(3, 3), device_max + ImVec2(3, 3), IM_COL32(90, 200, 180, 160), rounding + 4, 0, 2.0f);
     }
@@ -921,21 +1372,32 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
         float brand = 24.0f * u;
         ImVec2 at = image_min + ImVec2(-4 * u, -50 * u);
         erase_colour = faded(BEZEL, 0.9f);
+        rub_mode = false;
         draw->AddText(text_font(), brand, at, PRINT, "POCKET");
         wear_patch(draw, at, at + text_size(text_font(), brand, "POCKET"), 1);
         draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-239");
         draw_keys(draw, Frame{ image_min, image_max, u }, device_min, device_max, state);
+        if (has_keyboard) {
+            float kbu = keyboard_unit_in_lid_units() * u;
+            ImVec2 keyboard_origin((device_min.x + device_max.x) * 0.5f - KB_WIDTH * kbu * 0.5f, device_max.y + HINGE * u + KB_PAD_TOP * kbu);
+            draw_keyboard(draw, KeyboardFrame{ keyboard_origin, kbu }, u, state);
+        }
     } else {
         draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-239");
     }
 
     ImGui::SetCursorScreenPos(origin + ImVec2(0, height));
     ImGui::Dummy(ImVec2(0, 0));
-    return device_size.y;
+    return total_height;
 }
 
 void device_set_label_font(ImFont *font) {
     label_font = font;
+}
+
+void device_set_keyboard_fonts(ImFont *legend, ImFont *label) {
+    kb_legend_font = legend;
+    kb_label_font = label;
 }
 
 void device_set_icon_font(ImFont *font) {
