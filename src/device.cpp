@@ -28,6 +28,16 @@ const float PLAIN_BEZEL = 30.0f;
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 7.0f;
+const ImVec2 ARROW_CENTRE(191.0f, 112.7f);
+const float ARROW_R = 92.85f;
+const float ARROW_GAP_Y = 113.5f;
+const float ARROW_HALF_GAP = 6.8f;
+const float ARROW_REACH = 79.2f;
+const float ARROW_EDGE_X = 179.2f;
+const float ARROW_EDGE_R = 560.0f;
+const float ARROW_CORNER = 7.5f;
+const float ARROW_WELL_CORNER = 12.0f;
+const float FLUTE_REACH = 0.9f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
 
@@ -147,11 +157,11 @@ Shape capsule(ImVec2 from, float from_r, ImVec2 to, float to_r) {
     float distance = sqrtf(axis.x * axis.x + axis.y * axis.y);
     float theta = atan2f(axis.y, axis.x);
     float phi = asinf((from_r - to_r) / distance);
-    float alpha = theta + IM_PI * 0.5f + phi;
-    float beta = theta - IM_PI * 0.5f - phi;
+    float alpha = theta + IM_PI * 0.5f - phi;
+    float beta = theta - IM_PI * 0.5f + phi;
     Shape shape;
-    add_arc(shape, from, from_r, alpha, beta + 2 * IM_PI, 28);
-    add_arc(shape, to, to_r, beta + 2 * IM_PI, alpha + 2 * IM_PI, 28);
+    add_arc(shape, from, from_r, alpha, beta + 2 * IM_PI, 48);
+    add_arc(shape, to, to_r, beta + 2 * IM_PI, alpha + 2 * IM_PI, 48);
     return shape;
 }
 
@@ -204,6 +214,97 @@ Shape grown(const Shape &shape, float margin) {
     return result;
 }
 
+float signed_area(const Shape &shape) {
+    float area = 0;
+    for (size_t i = 0; i < shape.size(); i++) area += cross(ImVec2(0, 0), shape[i], shape[(i + 1) % shape.size()]);
+    return area;
+}
+
+Shape clip(const Shape &shape, ImVec2 point, ImVec2 outward) {
+    Shape result;
+    size_t count = shape.size();
+    for (size_t i = 0; i < count; i++) {
+        ImVec2 a = shape[i], b = shape[(i + 1) % count];
+        float da = (a.x - point.x) * outward.x + (a.y - point.y) * outward.y;
+        float db = (b.x - point.x) * outward.x + (b.y - point.y) * outward.y;
+        if (da <= 0) result.push_back(a);
+        if ((da <= 0) != (db <= 0)) result.push_back(a + (b - a) * (da / (da - db)));
+    }
+    return result;
+}
+
+Shape clip_convex(Shape shape, const Shape &window) {
+    float orientation = signed_area(window) > 0 ? 1.0f : -1.0f;
+    for (size_t i = 0; i < window.size() && !shape.empty(); i++) {
+        ImVec2 a = window[i], b = window[(i + 1) % window.size()];
+        ImVec2 edge = b - a;
+        shape = clip(shape, a, ImVec2(edge.y, -edge.x) * orientation);
+    }
+    return shape;
+}
+
+Shape rounded(const Shape &shape, float radius) {
+    float orientation = signed_area(shape) > 0 ? 1.0f : -1.0f;
+    Shape inner = shape;
+    for (size_t i = 0; i < shape.size() && !inner.empty(); i++) {
+        ImVec2 a = shape[i], b = shape[(i + 1) % shape.size()];
+        ImVec2 edge = b - a;
+        float length = sqrtf(edge.x * edge.x + edge.y * edge.y);
+        if (length < 1e-4f) continue;
+        ImVec2 outward = ImVec2(edge.y, -edge.x) * (orientation / length);
+        inner = clip(inner, a - outward * radius, outward);
+    }
+    if (inner.size() < 3) return shape;
+    Shape result;
+    size_t count = inner.size();
+    for (size_t i = 0; i < count; i++) {
+        ImVec2 before = inner[(i + count - 1) % count], at = inner[i], after = inner[(i + 1) % count];
+        ImVec2 e0 = at - before, e1 = after - at;
+        float from = atan2f(-e0.x * orientation, e0.y * orientation);
+        float to = atan2f(-e1.x * orientation, e1.y * orientation);
+        if (orientation > 0) { while (to < from) to += 2 * IM_PI; }
+        else { while (to > from) to -= 2 * IM_PI; }
+        int steps = std::max(1, (int)(fabsf(to - from) / 0.12f));
+        for (int step = 0; step <= steps; step++) {
+            float angle = from + (to - from) * step / steps;
+            result.push_back(at + ImVec2(cosf(angle), sinf(angle)) * radius);
+        }
+    }
+    return result;
+}
+
+Shape reference_circle(ImVec2 centre, float radius, int segments) {
+    Shape shape;
+    for (int i = 0; i < segments; i++) {
+        float angle = 2 * IM_PI * i / segments;
+        shape.push_back(centre + ImVec2(cosf(angle), sinf(angle)) * radius);
+    }
+    return shape;
+}
+
+Shape arrow_region(bool up, float grow) {
+    Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + grow, 180);
+    float near_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP + grow : ARROW_GAP_Y + ARROW_HALF_GAP - grow;
+    float far_y = up ? ARROW_GAP_Y - ARROW_REACH - grow : ARROW_GAP_Y + ARROW_REACH + grow;
+    shape = clip(shape, ImVec2(0, near_y), ImVec2(0, up ? 1.0f : -1.0f));
+    shape = clip(shape, ImVec2(0, far_y), ImVec2(0, up ? -1.0f : 1.0f));
+    Shape edge = reference_circle(ImVec2(ARROW_EDGE_X + grow - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720);
+    return clip_convex(shape, edge);
+}
+
+Shape arrow_well() {
+    Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + ARROW_WELL_MARGIN, 180);
+    shape = clip(shape, ImVec2(0, ARROW_GAP_Y - ARROW_REACH - ARROW_WELL_MARGIN), ImVec2(0, -1.0f));
+    shape = clip(shape, ImVec2(0, ARROW_GAP_Y + ARROW_REACH + ARROW_WELL_MARGIN), ImVec2(0, 1.0f));
+    return rounded(shape, ARROW_WELL_CORNER);
+}
+
+Shape to_screen(const Frame &frame, const Shape &reference, bool right) {
+    Shape shape;
+    for (const ImVec2 &point : reference) shape.push_back(frame.at(point.x, point.y, right));
+    return shape;
+}
+
 Shape traced(const Frame &frame, const char *name) {
     for (const TracedKey &key : traced_keys) {
         if (strcmp(key.name, name) != 0) continue;
@@ -246,10 +347,125 @@ void stroke_band(ImDrawList *draw, const Shape &shape, ImU32 colour, float thick
     draw->PopClipRect();
 }
 
+struct Span {
+    float top;
+    float bottom;
+    bool valid;
+};
+
+Span convex_span(const Shape &shape, float x) {
+    Span span = { FLT_MAX, -FLT_MAX, false };
+    size_t count = shape.size();
+    for (size_t i = 0; i < count; i++) {
+        ImVec2 a = shape[i], b = shape[(i + 1) % count];
+        if ((a.x <= x && b.x >= x) || (b.x <= x && a.x >= x)) {
+            float y = fabsf(b.x - a.x) < 1e-5f ? a.y : a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x);
+            span.top = std::min(span.top, y);
+            span.bottom = std::max(span.bottom, y);
+            span.valid = true;
+        }
+    }
+    return span;
+}
+
+ImU32 faded(ImU32 colour, float alpha) {
+    int a = (int)(((colour >> IM_COL32_A_SHIFT) & 0xff) * std::max(0.0f, std::min(1.0f, alpha)));
+    return (colour & ~IM_COL32_A_MASK) | ((ImU32)a << IM_COL32_A_SHIFT);
+}
+
+float smoothstep(float t) {
+    t = std::max(0.0f, std::min(1.0f, t));
+    return t * t * (3 - 2 * t);
+}
+
+const int CUT_ROWS = 5;
+const ImU32 CUT_PROFILE[CUT_ROWS + 1] = {
+    IM_COL32(118, 126, 132, 255), IM_COL32(146, 154, 160, 255), IM_COL32(166, 174, 179, 255),
+    IM_COL32(180, 188, 192, 255), IM_COL32(198, 205, 209, 255), IM_COL32(236, 240, 244, 255),
+};
+
+void shade_cut(ImDrawList *draw, const Shape &shape, float opacity, float fade_from, float fade_to) {
+    ImRect box = bounds(shape);
+    int columns = std::max(8, std::min(160, (int)(box.GetWidth() / 2)));
+    draw->PrimReserve(columns * CUT_ROWS * 6, (columns + 1) * (CUT_ROWS + 1));
+    ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
+    ImVec2 uv = draw->_Data->TexUvWhitePixel;
+    for (int column = 0; column <= columns; column++) {
+        float x = box.Min.x + box.GetWidth() * column / columns;
+        Span span = convex_span(shape, std::max(box.Min.x + 0.01f, std::min(box.Max.x - 0.01f, x)));
+        if (!span.valid) span.top = span.bottom = box.GetCenter().y;
+        float alpha = opacity;
+        if (fade_from != fade_to) alpha *= smoothstep((x - fade_from) / (fade_to - fade_from));
+        for (int row = 0; row <= CUT_ROWS; row++) {
+            float y = span.top + (span.bottom - span.top) * row / CUT_ROWS;
+            draw->PrimWriteVtx(ImVec2(x, y), uv, faded(CUT_PROFILE[row], alpha));
+        }
+    }
+    for (int column = 0; column < columns; column++) {
+        for (int row = 0; row < CUT_ROWS; row++) {
+            ImDrawIdx i = (ImDrawIdx)(base + column * (CUT_ROWS + 1) + row);
+            ImDrawIdx right = (ImDrawIdx)(i + CUT_ROWS + 1);
+            draw->PrimWriteIdx(i); draw->PrimWriteIdx(right); draw->PrimWriteIdx((ImDrawIdx)(right + 1));
+            draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(right + 1)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
+        }
+    }
+}
+
 void recess(ImDrawList *draw, const Shape &shape, float u) {
-    fill(draw, shape, RECESS_TOP, RECESS_BOTTOM);
-    stroke_band(draw, shape, IM_COL32(96, 104, 110, 150), 1.4f * u, 0.0f, 0.5f);
-    stroke_band(draw, translated(shape, ImVec2(0, 0.6f * u)), IM_COL32(238, 242, 246, 190), 1.2f * u, 0.55f, 1.0f);
+    shade_cut(draw, shape, 1.0f, 0, 0);
+    stroke(draw, shape, IM_COL32(110, 118, 124, 70), 1.0f);
+}
+
+float bezel_brightness(float x, const ImVec2 &lcd_min, const ImVec2 &lcd_max, float u) {
+    static const float left_profile[][2] = { { -202, 0.80f }, { -192, 0.98f }, { -182, 1.07f }, { -150, 1.03f }, { -60, 0.97f }, { 0, 0.94f } };
+    static const float right_profile[][2] = { { 0, 0.94f }, { 60, 0.97f }, { 170, 1.03f }, { 196, 1.07f }, { 206, 0.98f }, { 214, 0.80f } };
+    const float (*profile)[2];
+    int count = 6;
+    float at;
+    if (x < lcd_min.x) {
+        profile = left_profile;
+        at = (x - lcd_min.x) / u;
+    } else if (x > lcd_max.x) {
+        profile = right_profile;
+        at = (x - lcd_max.x) / u;
+    } else {
+        return 0.94f;
+    }
+    if (at <= profile[0][0]) return profile[0][1];
+    for (int i = 1; i < count; i++) {
+        if (at <= profile[i][0]) {
+            float t = (at - profile[i - 1][0]) / (profile[i][0] - profile[i - 1][0]);
+            return profile[i - 1][1] + (profile[i][1] - profile[i - 1][1]) * t;
+        }
+    }
+    return profile[count - 1][1];
+}
+
+void shade_body(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float rounding, const ImVec2 &lcd_min,
+                const ImVec2 &lcd_max, float u) {
+    Shape body;
+    add_arc(body, ImVec2(device_max.x - rounding, device_min.y + rounding), rounding, IM_PI * 1.5f, IM_PI * 2.0f, 16);
+    add_arc(body, ImVec2(device_max.x - rounding, device_max.y - rounding), rounding, 0, IM_PI * 0.5f, 16);
+    add_arc(body, ImVec2(device_min.x + rounding, device_max.y - rounding), rounding, IM_PI * 0.5f, IM_PI, 16);
+    add_arc(body, ImVec2(device_min.x + rounding, device_min.y + rounding), rounding, IM_PI, IM_PI * 1.5f, 16);
+    int columns = std::max(16, (int)((device_max.x - device_min.x) / 3));
+    draw->PrimReserve(columns * 6, (columns + 1) * 2);
+    ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
+    ImVec2 uv = draw->_Data->TexUvWhitePixel;
+    int r = (BEZEL >> IM_COL32_R_SHIFT) & 0xff, g = (BEZEL >> IM_COL32_G_SHIFT) & 0xff, b = (BEZEL >> IM_COL32_B_SHIFT) & 0xff;
+    for (int column = 0; column <= columns; column++) {
+        float x = device_min.x + (device_max.x - device_min.x) * column / columns;
+        Span span = convex_span(body, std::max(device_min.x + 0.01f, std::min(device_max.x - 0.01f, x)));
+        float k = bezel_brightness(x, lcd_min, lcd_max, u);
+        ImU32 colour = IM_COL32(std::min(255, (int)(r * k)), std::min(255, (int)(g * k)), std::min(255, (int)(b * k)), 255);
+        draw->PrimWriteVtx(ImVec2(x, span.top), uv, colour);
+        draw->PrimWriteVtx(ImVec2(x, span.bottom), uv, colour);
+    }
+    for (int column = 0; column < columns; column++) {
+        ImDrawIdx i = (ImDrawIdx)(base + column * 2);
+        draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 2)); draw->PrimWriteIdx((ImDrawIdx)(i + 3));
+        draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 3)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
+    }
 }
 
 void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool pressed, float u) {
@@ -301,26 +517,33 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     ImVec2 menu_centre = frame.at(fit_menu[0], fit_menu[1], true);
     ImVec2 esc_centre = frame.at(fit_esc[0], fit_esc[1], true);
     ImVec2 enter_centre = frame.at(fit_enter[0], fit_enter[1], true);
-    Shape power = traced(frame, "power");
+    Shape power = pill(frame.at(fit_power[0] - fit_power[2], fit_power[1] - fit_power[3], true),
+                       frame.at(fit_power[0] + fit_power[2], fit_power[1] + fit_power[3], true));
     ImRect power_box = bounds(power);
+    Shape up_key = to_screen(frame, rounded(arrow_region(true, 0), ARROW_CORNER), true);
+    Shape down_key = to_screen(frame, rounded(arrow_region(false, 0), ARROW_CORNER), true);
 
     draw->PushClipRect(device_min, device_max, true);
     for (const char *name : side_names) {
         ImRect box = bounds(traced(frame, name));
-        ImVec2 a(device_min.x - 20 * u, box.Min.y - FLUTE_MARGIN * u);
-        ImVec2 b(box.Min.x + box.GetHeight() * 0.5f + 6 * u, box.Max.y + FLUTE_MARGIN * u);
-        recess(draw, pill(a, b), u);
+        float reach = box.GetHeight() * FLUTE_REACH;
+        Shape scoop = pill(ImVec2(box.Min.x - reach, box.Min.y - FLUTE_MARGIN * u),
+                           ImVec2(box.Max.x + FLUTE_MARGIN * u, box.Max.y + FLUTE_MARGIN * u));
+        shade_cut(draw, scoop, 0.85f, box.Min.x - reach, box.Min.x + box.GetHeight() * 0.2f);
     }
-    recess(draw, pill(power_box.Min - ImVec2(FLUTE_MARGIN, FLUTE_MARGIN) * u,
-                      ImVec2(device_max.x + 20 * u, power_box.Max.y + FLUTE_MARGIN * u)), u);
     {
-        Shape both = traced(frame, "up");
-        Shape down = traced(frame, "down");
-        both.insert(both.end(), down.begin(), down.end());
-        ImRect box = bounds(both);
-        both.push_back(ImVec2(device_max.x + 20 * u, box.Min.y));
-        both.push_back(ImVec2(device_max.x + 20 * u, box.Max.y));
-        recess(draw, smooth(grown(hull(both), ARROW_WELL_MARGIN * u), 1), u);
+        float reach = power_box.GetHeight() * FLUTE_REACH;
+        Shape scoop = pill(power_box.Min - ImVec2(FLUTE_MARGIN, FLUTE_MARGIN) * u,
+                           ImVec2(power_box.Max.x + reach, power_box.Max.y + FLUTE_MARGIN * u));
+        shade_cut(draw, scoop, 0.85f, power_box.Max.x + reach, power_box.Max.x - power_box.GetHeight() * 0.2f);
+    }
+    {
+        Shape well = to_screen(frame, arrow_well(), true);
+        float keys_right = frame.at(ARROW_EDGE_X, 0, true).x;
+        shade_cut(draw, well, 0.95f, device_max.x - 2 * u, keys_right);
+        draw->PushClipRect(bounds(well).Min, ImVec2(keys_right, bounds(well).Max.y), true);
+        stroke(draw, well, IM_COL32(110, 118, 124, 70), 1.0f);
+        draw->PopClipRect();
     }
     draw->PopClipRect();
 
@@ -379,7 +602,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     struct ArrowKey { const char *id; const char *shape; uint32_t code; unsigned glyph; };
     const ArrowKey arrows[] = { { "key-up", "up", HOST_KEY_UP, ICON_UP }, { "key-down", "down", HOST_KEY_DOWN, ICON_DOWN } };
     for (int index = 0; index < 2; index++) {
-        Shape shape = traced(frame, arrows[index].shape);
+        const Shape &shape = index == 0 ? up_key : down_key;
         bool pressed;
         bool activated = hit(arrows[index].id, shape, pressed);
         repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live);
@@ -448,9 +671,12 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
         draw->AddRect(device_min - ImVec2(3, 3), device_max + ImVec2(3, 3), IM_COL32(90, 200, 180, 160), rounding + 4, 0, 2.0f);
     }
     draw->AddRectFilled(device_min + ImVec2(0, 4), device_max + ImVec2(0, 4), IM_COL32(0, 0, 0, 90), rounding);
-    draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
+    if (state.show_keys) shade_body(draw, device_min, device_max, rounding, image_min, image_max, u);
+    else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
     draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
                                   IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 0));
+    draw->AddRect(device_min, device_max, BEZEL_EDGE, rounding, 0, 2.0f);
+    draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
 
     if (state.show_keys) {
         float latch_x = (image_min.x + image_max.x) * 0.5f;
@@ -480,9 +706,6 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     } else {
         draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-239");
     }
-
-    draw->AddRect(device_min, device_max, BEZEL_EDGE, rounding, 0, 2.0f);
-    draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
 
     ImGui::SetCursorScreenPos(origin + ImVec2(0, height));
     ImGui::Dummy(ImVec2(0, 0));
