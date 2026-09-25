@@ -27,9 +27,9 @@ const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
-const float ARROW_WELL_MARGIN = 7.0f;
-const ImVec2 ARROW_CENTRE(191.0f, 112.7f);
-const float ARROW_R = 92.85f;
+const float ARROW_WELL_MARGIN = 4.0f;
+const ImVec2 ARROW_CENTRE(181.1f, 113.5f);
+const float ARROW_R = 80.5f;
 const float ARROW_GAP_Y = 113.5f;
 const float ARROW_HALF_GAP = 6.8f;
 const float ARROW_REACH = 79.2f;
@@ -37,7 +37,7 @@ const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 15.0f;
 const float ARROW_WELL_TUCK = 3.0f;
-const float ARROW_WELL_CORNER = 18.0f;
+const float ARROW_WELL_CORNER = 12.0f;
 const float FLUTE_REACH = 0.45f;
 const float SIDE_KEY_CORNER = 6.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
@@ -296,17 +296,13 @@ Shape reference_circle(ImVec2 centre, float radius, int segments) {
 Shape arrow_region(bool up, float grow) {
     Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + grow, 180);
     float near_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP + grow : ARROW_GAP_Y + ARROW_HALF_GAP - grow;
-    float far_y = up ? ARROW_GAP_Y - ARROW_REACH - grow : ARROW_GAP_Y + ARROW_REACH + grow;
     shape = clip(shape, ImVec2(0, near_y), ImVec2(0, up ? 1.0f : -1.0f));
-    shape = clip(shape, ImVec2(0, far_y), ImVec2(0, up ? -1.0f : 1.0f));
     Shape edge = reference_circle(ImVec2(ARROW_EDGE_X + grow - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720);
     return clip_convex(shape, edge);
 }
 
 Shape arrow_well() {
     Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + ARROW_WELL_MARGIN, 180);
-    shape = clip(shape, ImVec2(0, ARROW_GAP_Y - ARROW_REACH - ARROW_WELL_MARGIN), ImVec2(0, -1.0f));
-    shape = clip(shape, ImVec2(0, ARROW_GAP_Y + ARROW_REACH + ARROW_WELL_MARGIN), ImVec2(0, 1.0f));
     float edge_x = ARROW_EDGE_X + ARROW_WELL_MARGIN + ARROW_WELL_TUCK;
     shape = clip_convex(shape, reference_circle(ImVec2(edge_x - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720));
     return rounded(shape, ARROW_WELL_CORNER);
@@ -504,13 +500,22 @@ Shape inset(const Shape &shape, float distance) {
     return result;
 }
 
+Shape outset(const Shape &shape, float distance) {
+    Shape result = grown(shape, distance);
+    if (bounds(result).GetWidth() < bounds(shape).GetWidth()) result = grown(shape, -distance);
+    return result;
+}
+
 void flat_recess(ImDrawList *draw, const Shape &shape, float u) {
-    const ImU32 floor_colour = IM_COL32(162, 170, 175, 255);
-    fill(draw, shape, IM_COL32(140, 148, 154, 255), IM_COL32(214, 220, 224, 255));
-    const int steps = 5;
+    const ImU32 floor_colour = IM_COL32(156, 164, 170, 255);
+    fill(draw, outset(shape, 1.0f * u), IM_COL32(200, 206, 210, 120), IM_COL32(240, 244, 247, 200));
+    fill(draw, shape, IM_COL32(104, 112, 118, 255), IM_COL32(222, 228, 232, 255));
+    const int steps = 6;
     for (int step = 1; step <= steps; step++) {
         float t = (float)step / steps;
-        fill(draw, inset(shape, t * 4.0f * u), faded(floor_colour, 0.25f + 0.75f * t), faded(floor_colour, 0.25f + 0.75f * t));
+        Shape layer = translated(inset(shape, t * 4.5f * u), ImVec2(0.4f * u * t, 1.6f * u * t));
+        ImU32 top = faded(IM_COL32(138, 146, 152, 255), 0.3f + 0.7f * t);
+        fill(draw, layer, step == steps ? IM_COL32(140, 148, 154, 255) : top, faded(floor_colour, 0.3f + 0.7f * t));
     }
 }
 
@@ -520,6 +525,7 @@ void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool press
         int alpha = (pressed ? 10 : 18) + (layers - layer) * 4;
         fill(draw, translated(shape, ImVec2(0, layer * 0.8f * u)), IM_COL32(20, 26, 32, alpha), IM_COL32(20, 26, 32, alpha));
     }
+    fill(draw, outset(shape, 1.6f * u), IM_COL32(16, 20, 24, 215), IM_COL32(16, 20, 24, 170));
     Shape body = translated(shape, ImVec2(0, pressed ? 1.2f * u : 0));
     ImU32 face_top = pressed ? style.bottom : style.top;
     fill(draw, body, lighten(face_top, pressed ? 14 : 42), lighten(style.bottom, 16));
