@@ -41,8 +41,8 @@ LETTER_FREQUENCY = {
     "v": 1.0, "k": 0.8, "j": 0.2, "x": 0.2, "q": 0.1, "z": 0.1,
 }
 
-KEY_WEAR = {"space": 1.0, "enter": 0.8, "enter_wide": 0.8, "del": 0.85, "up": 0.7, "down": 0.75, "left": 0.6,
-            "right": 0.6, "esc": 0.5, "menu": 0.45}
+KEY_WEAR = {"fn_2nd": 0.9, "space": 1.0, "enter": 0.8, "enter_wide": 0.8, "del": 0.85, "up": 0.7, "down": 0.75, "left": 0.6,
+            "right": 0.6, "esc": 0.5, "menu": 0.85}
 
 SHAPES = {"pill": "KB_SHAPE_PILL", "d_key": "KB_SHAPE_CURSOR"}
 SIDES = {"right": 0, "down": 1, "left": 2, "up": 3}

@@ -147,8 +147,8 @@ void build_grime(SDL_Renderer *renderer, int w, int h, float scale, bool wear) {
     grime_h = h;
     grime_wear = wear;
     float grain_strength = wear ? 0.13f : 0.10f;
-    float dirt_threshold = wear ? 0.56f : 0.62f;
-    float dirt_strength = wear ? 0.15f : 0.10f;
+    float dirt_threshold = 0.62f;
+    float dirt_strength = wear ? 0.0f : 0.10f;
     uint32_t speck_mask = wear ? 0x7ff : 0x1fff;
     std::vector<uint32_t> pixels((size_t)w * h);
     float smudge = 90.0f * scale;
@@ -211,6 +211,9 @@ ImVec2 text_size(ImFont *font, float size, const char *text) {
 ImU32 erase_colour = 0;
 bool rub_mode = false;
 float rub_amount = 0.45f;
+
+bool wear_grime = false;
+
 
 void rub_patch(ImDrawList *draw, ImVec2 a, ImVec2 b, ImU32 face, float amount, uint32_t seed) {
     if (!wear_labels || amount <= 0) return;
@@ -758,6 +761,18 @@ void repeat_key(KeyRepeat &repeat, uint32_t code, bool activated, bool pressed) 
     }
 }
 
+void finger_grime(ImDrawList *draw, const Shape &shape, float amount, float u) {
+    if (!wear_grime || amount <= 0) return;
+    const int rings = 8;
+    float reach = 13.0f * u;
+    for (int ring = rings; ring >= 1; ring--) {
+        float t = (float)ring / rings;
+        int alpha = (int)(amount * 34.0f * (1.0f - t * 0.6f));
+        Shape halo = translated(outset(shape, reach * t), ImVec2(0, reach * 0.35f * t));
+        fill(draw, halo, IM_COL32(58, 52, 44, alpha / 2), IM_COL32(58, 52, 44, alpha));
+    }
+}
+
 void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 device_max, DeviceState &state) {
     float u = frame.u;
     bool live = state.powered;
@@ -794,6 +809,17 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         draw_recess(draw, well, KEY_WELL, u, Mask{ bounds(well).Max.x, frame.at(ARROW_EDGE_X - 4.0f, 0, true).x });
     }
     draw->PopClipRect();
+    const float side_wear[] = { 0.7f, 0.45f, 0.45f, 0.5f, 1.0f };
+    for (int index = 0; index < 5; index++) {
+        ImRect box = bounds(traced(frame, side_names[index]));
+        finger_grime(draw, side_key(box.Min, box.Max, SIDE_KEY_CORNER * u), side_wear[index], u);
+    }
+    finger_grime(draw, circle(menu_centre, fit_menu[2] * u), 1.0f, u);
+    finger_grime(draw, power, 0.4f, u);
+    finger_grime(draw, up_key, 0.8f, u);
+    finger_grime(draw, down_key, 0.85f, u);
+    finger_grime(draw, circle(esc_centre, fit_esc[2] * u), 0.8f, u);
+    finger_grime(draw, circle(enter_centre, fit_enter[2] * u), 0.9f, u);
 
     struct SideKey { const char *id; uint32_t code; const char *text; unsigned glyph; };
     const SideKey side[] = {
@@ -1227,6 +1253,7 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         if (key.shape == KB_SHAPE_CURSOR) continue;
         draw_recess(draw, outset(keyboard_key_shape(frame, key), 2.0f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
     }
+    for (const KeyboardKey &key : keyboard_keys) finger_grime(draw, keyboard_key_shape(frame, key), key.wear, k);
 
     for (const KeyboardKey &key : keyboard_keys) {
         for (int index = 0; index < key.secondary_count; index++) keyboard_secondary(draw, frame, key, key.secondary[index]);
@@ -1396,6 +1423,7 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
     build_grime(renderer, (int)(device_size.x * framebuffer_scale), (int)(device_size.y * framebuffer_scale), framebuffer_scale * u, state.wear);
     wear_labels = state.wear;
+    wear_grime = state.wear;
     draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, device_min, device_max, ImVec2(0, 0), ImVec2(1, 1),
                           IM_COL32_WHITE, rounding);
     if (!state.show_keys) draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
