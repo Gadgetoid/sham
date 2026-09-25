@@ -398,9 +398,11 @@ const ImU32 CUT_PROFILE[CUT_ROWS + 1] = {
 };
 
 void shade_cut(ImDrawList *draw, const Shape &shape, float opacity, float fade_from, float fade_to) {
+    const float fringe = 1.0f;
+    const int rows = CUT_ROWS + 2;
     ImRect box = bounds(shape);
-    int columns = std::max(8, std::min(160, (int)(box.GetWidth() / 2)));
-    draw->PrimReserve(columns * CUT_ROWS * 6, (columns + 1) * (CUT_ROWS + 1));
+    int columns = std::max(8, std::min(200, (int)(box.GetWidth() / 1.5f)));
+    draw->PrimReserve(columns * rows * 6, (columns + 1) * (rows + 1));
     ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
     ImVec2 uv = draw->_Data->TexUvWhitePixel;
     for (int column = 0; column <= columns; column++) {
@@ -409,15 +411,17 @@ void shade_cut(ImDrawList *draw, const Shape &shape, float opacity, float fade_f
         if (!span.valid) span.top = span.bottom = box.GetCenter().y;
         float alpha = opacity;
         if (fade_from != fade_to) alpha *= smoothstep((x - fade_from) / (fade_to - fade_from));
+        draw->PrimWriteVtx(ImVec2(x, span.top - fringe), uv, faded(CUT_PROFILE[0], 0));
         for (int row = 0; row <= CUT_ROWS; row++) {
             float y = span.top + (span.bottom - span.top) * row / CUT_ROWS;
             draw->PrimWriteVtx(ImVec2(x, y), uv, faded(CUT_PROFILE[row], alpha));
         }
+        draw->PrimWriteVtx(ImVec2(x, span.bottom + fringe), uv, faded(CUT_PROFILE[CUT_ROWS], 0));
     }
     for (int column = 0; column < columns; column++) {
-        for (int row = 0; row < CUT_ROWS; row++) {
-            ImDrawIdx i = (ImDrawIdx)(base + column * (CUT_ROWS + 1) + row);
-            ImDrawIdx right = (ImDrawIdx)(i + CUT_ROWS + 1);
+        for (int row = 0; row < rows; row++) {
+            ImDrawIdx i = (ImDrawIdx)(base + column * (rows + 1) + row);
+            ImDrawIdx right = (ImDrawIdx)(i + rows + 1);
             draw->PrimWriteIdx(i); draw->PrimWriteIdx(right); draw->PrimWriteIdx((ImDrawIdx)(right + 1));
             draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(right + 1)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
         }
