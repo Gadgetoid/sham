@@ -757,6 +757,17 @@ bool hit(const char *id, const Shape &shape, bool &pressed) {
     return ImGui::IsItemActivated();
 }
 
+bool second_arrow(uint32_t code, uint8_t mods, bool activated, DeviceState &state) {
+    if (!state.second) return false;
+    if (activated) {
+        state.second = false;
+        if (code == HOST_KEY_LEFT) keys_push(HOST_KEY_HOME, mods);
+        else if (code == HOST_KEY_RIGHT) keys_push(HOST_KEY_END, mods);
+        else keys_push(code, mods | HOST_MOD_SECOND);
+    }
+    return true;
+}
+
 void repeat_key(KeyRepeat &repeat, uint32_t code, bool activated, bool pressed, uint8_t mods = 0) {
     uint64_t now = SDL_GetTicks();
     if (activated) {
@@ -893,7 +904,9 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         const Shape &shape = index == 0 ? up_key : down_key;
         bool pressed;
         bool activated = hit(arrows[index].id, shape, pressed);
-        repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live, HOST_MOD_LID);
+        if (!(live && second_arrow(arrows[index].code, HOST_MOD_LID, activated, state))) {
+            repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live, HOST_MOD_LID);
+        }
         draw_key(draw, shape, BLUE_KEY, pressed, u);
         ImRect box = bounds(shape);
         ImVec2 centre = ImVec2(box.GetCenter().x + 3.0f * u, box.GetCenter().y + (index == 0 ? 4.0f : -4.0f) * u) + dip(pressed);
@@ -1306,7 +1319,10 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         bool pressed;
         bool activated = hit(id, shape, pressed);
         if (key.shape == KB_SHAPE_CURSOR) {
-            repeat_key(keyboard_repeats[cursor_index++ % 4], key.code, activated && live, pressed && live);
+            KeyRepeat &repeat = keyboard_repeats[cursor_index++ % 4];
+            if (!(live && second_arrow(key.code, 0, activated, state))) {
+                repeat_key(repeat, key.code, activated && live, pressed && live);
+            }
         } else if (activated && live) {
             keyboard_press(key, state);
         }

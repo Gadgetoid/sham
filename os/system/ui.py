@@ -319,6 +319,9 @@ class List(View):
         if key.code == keys.SEARCH and self.items:
             self.search()
             return True
+        if key.second and key.code in (keys.UP, keys.DOWN) and self.items:
+            self.select(0 if key.code == keys.UP else len(self.items) - 1)
+            return True
         if not self.items:
             return False
         code = key.code
@@ -643,6 +646,12 @@ class TextEdit(View):
         return True
 
     def key(self, key):
+        if key.second and key.code in (keys.UP, keys.DOWN):
+            self.cursor = 0 if key.code == keys.UP else len(self.value)
+            self.goal_x = None
+            self.reveal()
+            invalidate()
+            return True
         global _clipboard
         if key.code in (keys.CUT, keys.COPY):
             start, end = self.spans[self.line_index]
@@ -939,6 +948,8 @@ class Form(View):
         field = self.field
         code = key.code
         char = key.char
+        if key.second and code in (keys.UP, keys.DOWN):
+            return self.move(0 if code == keys.UP else len(self.fields) - 1)
         if code == keys.UP:
             return self.move(self.index - 1)
         if code == keys.DOWN:

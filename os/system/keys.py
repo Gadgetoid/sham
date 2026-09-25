@@ -45,6 +45,7 @@ SHIFT = host.MOD_SHIFT
 CTRL = host.MOD_CTRL
 ALT = host.MOD_ALT
 LID = host.MOD_LID
+SECOND = host.MOD_SECOND
 
 
 class Key:
@@ -65,6 +66,10 @@ class Key:
     @property
     def shift(self):
         return bool(self.mods & SHIFT)
+
+    @property
+    def second(self):
+        return bool(self.mods & SECOND)
 
     @property
     def lid(self):

@@ -221,6 +221,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_MOD_ALT),       MP_ROM_INT(HOST_MOD_ALT) },
     { MP_ROM_QSTR(MP_QSTR_MOD_CMD),       MP_ROM_INT(HOST_MOD_CMD) },
     { MP_ROM_QSTR(MP_QSTR_MOD_LID),       MP_ROM_INT(HOST_MOD_LID) },
+    { MP_ROM_QSTR(MP_QSTR_MOD_SECOND),    MP_ROM_INT(HOST_MOD_SECOND) },
 };
 static MP_DEFINE_CONST_DICT(host_module_globals, host_module_globals_table);
 

@@ -16,7 +16,8 @@ SEARCH in a list finds text.
 In text: 2nd+X, C and V cut, copy and paste. 2nd+F flips case. 2nd+SMBL picks a symbol.
 The box-arrow key (under SMBL) pops up a calendar on date fields, and in Schedule jumps to a date.
 In the calendar the lid's blue up/down keys change month and the keyboard arrows pick the day.
-2nd and Shift latch for one keypress. 2nd then Shift toggles CAPS."""),
+2nd and Shift latch for one keypress. 2nd then Shift toggles CAPS.
+2nd+Left/Right go to the start or end of a line. 2nd+Up/Down go to the first or last line of text, or item of a list. In forms, 2nd with the lid's up/down goes to the first or last field."""),
         ("Char Map", """SEARCH finds an icon by name across every set. Search again for the next match.
 2nd+SMBL picks a set. [ and ] step through sets.
 Enter previews an icon and prints the code to use it."""),
