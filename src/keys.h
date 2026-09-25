@@ -35,6 +35,7 @@ extern "C" {
 #define HOST_MOD_CTRL  2
 #define HOST_MOD_ALT   4
 #define HOST_MOD_CMD   8
+#define HOST_MOD_LID   16
 
 typedef struct {
     uint32_t code;

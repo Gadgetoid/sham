@@ -15,6 +15,7 @@ MAIN always returns to the first page of the menu."""),
 SEARCH in a list finds text.
 In text: 2nd+X, C and V cut, copy and paste. 2nd+F flips case. 2nd+SMBL picks a symbol.
 The box-arrow key (under SMBL) pops up a calendar on date fields, and in Schedule jumps to a date.
+In the calendar the lid's blue up/down keys change month and the keyboard arrows pick the day.
 2nd and Shift latch for one keypress. 2nd then Shift toggles CAPS."""),
         ("Char Map", """SEARCH finds an icon by name across every set. Search again for the next match.
 2nd+SMBL picks a set. [ and ] step through sets.

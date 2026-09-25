@@ -1182,21 +1182,25 @@ def open_menu(entries):
     choose("Menu", entries, lambda entry, index: entry[1](), label=lambda entry: entry[0])
 
 
-class Calendar(View):
+class CalendarPopup(Screen):
+    modal = True
+    POPUP_W = 118
+
     def __init__(self, day, on_pick):
-        super().__init__()
+        View.__init__(self)
         from system import dates
         self.dates = dates
         self.day = day
         self.on_pick = on_pick
+        self.title = ""
+        self.body = None
+        self.status = None
+        self.menu = None
+        self.on_close = None
+        self.place(WIDTH - self.POPUP_W, 0, self.POPUP_W, HEIGHT)
 
-    def month_start(self):
-        year, month, _ = self.dates.from_days(self.day)
-        return self.dates.to_days(year, month, 1)
-
-    def move(self, step):
-        self.day += step
-        invalidate()
+    def layout(self):
+        pass
 
     def shift_month(self, step):
         year, month, day = self.dates.from_days(self.day)
@@ -1210,62 +1214,63 @@ class Calendar(View):
 
     def key(self, key):
         code = key.code
+        if code in (keys.UP, keys.DOWN) and key.lid or code in (keys.PGUP, keys.PGDN):
+            self.shift_month(-1 if code in (keys.UP, keys.PGUP) else 1)
+            return True
         steps = {keys.LEFT: -1, keys.RIGHT: 1, keys.UP: -7, keys.DOWN: 7}
         if code in steps:
-            self.move(steps[code])
-        elif code in (keys.PGUP, keys.PGDN):
-            self.shift_month(-1 if code == keys.PGUP else 1)
+            self.day += steps[code]
+            invalidate()
         elif key.char in ("t", "T"):
             self.day = self.dates.today()
             invalidate()
         elif code in (keys.ENTER, keys.PICK):
             pop()
             self.on_pick(self.day)
-        else:
-            return False
+        elif code == keys.ESC:
+            pop()
         return True
 
-    def draw(self):
+    def render(self):
         from system import timefmt
-        first_weekday = timefmt.week_start()
-        start = self.month_start()
-        offset = (self.dates.weekday(start) - first_weekday) % 7
-        year, month, _ = self.dates.from_days(start)
+        lcd.clip()
+        x0, w = self.x, self.w
+        lcd.fill(x0, 0, w, HEIGHT, CLEAR)
+        lcd.rect(x0, 0, w, HEIGHT, INK)
+        lcd.rect(x0 + 1, 0, w - 2, HEIGHT, INK)
+        year, month, _ = self.dates.from_days(self.day)
+        start = self.dates.to_days(year, month, 1)
         next_start = self.dates.to_days(year + (month == 12), month % 12 + 1, 1)
         length = next_start - start
-        weeks = (offset + length + 6) // 7
-        header_h = 10
-        cell_w = self.w // 7
-        cell_h = max(8, (self.h - header_h) // weeks)
-        left = (self.w - cell_w * 7) // 2
-        names = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+        first = timefmt.week_start()
+        offset = (self.dates.weekday(start) - first) % 7
+        heading = "{}  {}".format(timefmt.MONTHS[month - 1], year)
+        small.draw(heading, x0 + (w - small.measure(heading)) // 2, 1)
+        cell_w = (w - 4) // 7
+        left = x0 + 2 + (w - 4 - cell_w * 7) // 2
+        names = "MTWTFSS"
         for column in range(7):
-            name = names[(first_weekday + column) % 7]
-            self.text(name, left + column * cell_w + (cell_w - small.measure(name)) // 2, 0, MID)
-        lcd.hline(self.x + left, self.y + header_h - 2, cell_w * 7, LIGHT)
+            name = names[(first + column) % 7]
+            small.draw(name, left + column * cell_w + (cell_w - small.measure(name)) // 2, 11)
+        lcd.hline(x0 + 2, 21, w - 4, INK)
+        weeks = (offset + length + 6) // 7
+        row_h = max(9, (HEIGHT - 24) // max(5, weeks))
         today = self.dates.today()
         for index in range(length):
-            day = start + index
             slot = offset + index
-            x = left + (slot % 7) * cell_w
-            y = header_h + (slot // 7) * cell_h
+            cx = left + (slot % 7) * cell_w
+            cy = 23 + (slot // 7) * row_h
             label = str(index + 1)
-            self.text(label, x + (cell_w - small.measure(label)) // 2, y + (cell_h - small.height) // 2)
+            small.draw(label, cx + cell_w - 1 - small.measure(label), cy)
+            day = start + index
             if day == today:
-                self.rect(x + 2, y, cell_w - 4, cell_h, MID)
+                lcd.hline(cx + 1, cy + small.height + 1, cell_w - 1, MID)
             if day == self.day:
-                self.invert(x + 1, y, cell_w - 2, cell_h)
+                lcd.invert(cx, cy - 1, cell_w, small.height + 2)
 
 
 def pick_date(day, on_pick, title="Date"):
-    from system import dates, timefmt
-    calendar = Calendar(day, on_pick)
-
-    def heading():
-        year, month, _ = dates.from_days(calendar.day)
-        return "{} {} {}".format(title, timefmt.MONTHS[month - 1], year)
-
-    push(Screen(heading, calendar, status="PgUp/PgDn: month"))
+    push(CalendarPopup(day, on_pick))
 
 
 def date_picker(parse, format):

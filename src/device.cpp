@@ -757,14 +757,14 @@ bool hit(const char *id, const Shape &shape, bool &pressed) {
     return ImGui::IsItemActivated();
 }
 
-void repeat_key(KeyRepeat &repeat, uint32_t code, bool activated, bool pressed) {
+void repeat_key(KeyRepeat &repeat, uint32_t code, bool activated, bool pressed, uint8_t mods = 0) {
     uint64_t now = SDL_GetTicks();
     if (activated) {
-        keys_push(code, 0);
+        keys_push(code, mods);
         keys_set_held(code, true);
         repeat = { true, now, now };
     } else if (pressed && repeat.active && now - repeat.since >= REPEAT_DELAY_MS && now - repeat.last >= REPEAT_RATE_MS) {
-        keys_push(code, 0);
+        keys_push(code, mods);
         repeat.last = now;
     } else if (!pressed && repeat.active) {
         keys_set_held(code, false);
@@ -893,7 +893,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         const Shape &shape = index == 0 ? up_key : down_key;
         bool pressed;
         bool activated = hit(arrows[index].id, shape, pressed);
-        repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live);
+        repeat_key(repeats[index], arrows[index].code, activated && live, pressed && live, HOST_MOD_LID);
         draw_key(draw, shape, BLUE_KEY, pressed, u);
         ImRect box = bounds(shape);
         ImVec2 centre = ImVec2(box.GetCenter().x + 3.0f * u, box.GetCenter().y + (index == 0 ? 4.0f : -4.0f) * u) + dip(pressed);

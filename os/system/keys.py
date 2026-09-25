@@ -44,6 +44,7 @@ PICK = host.KEY_PICK
 SHIFT = host.MOD_SHIFT
 CTRL = host.MOD_CTRL
 ALT = host.MOD_ALT
+LID = host.MOD_LID
 
 
 class Key:
@@ -64,6 +65,10 @@ class Key:
     @property
     def shift(self):
         return bool(self.mods & SHIFT)
+
+    @property
+    def lid(self):
+        return bool(self.mods & LID)
 
     @property
     def ctrl(self):
