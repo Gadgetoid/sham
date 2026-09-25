@@ -44,13 +44,15 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Cmd-J | Show or hide the REPL (Run menu) |
 | Cmd-L | Focus the REPL, Esc to return to the device |
 | Cmd-B | Backlight (System menu) |
-| Cmd-D | Dead LCD columns, re-rolled each time (System menu) |
+| Cmd-D | Dead LCD columns, re-rolled each time (System > Realism) |
 
 The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
 
 The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 
-Menu settings (REPL, keys, backlight, dead columns, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+System > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
+
+Menu settings (REPL, keys, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
 ## Layout
 

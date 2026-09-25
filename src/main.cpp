@@ -52,6 +52,7 @@ struct Options {
     float response = 1.0f;
     bool backlight = true;
     bool scratches = true;
+    bool wear = false;
     std::vector<int> menu_items;
 };
 
@@ -61,6 +62,7 @@ struct Settings {
     bool backlight;
     bool dead_columns;
     bool scratches;
+    bool wear;
     int fps;
     float response;
     int width;
@@ -68,7 +70,7 @@ struct Settings {
 
     bool operator==(const Settings &other) const {
         return show_repl == other.show_repl && show_keys == other.show_keys && backlight == other.backlight &&
-               dead_columns == other.dead_columns && scratches == other.scratches && fps == other.fps && response == other.response &&
+               dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && fps == other.fps && response == other.response &&
                width == other.width && height == other.height;
     }
 };
@@ -89,6 +91,7 @@ static void load_settings(const std::string &data, Options &options) {
         else if (name == "backlight") options.backlight = atoi(value) != 0;
         else if (name == "dead_columns") options.dead_columns = atoi(value) != 0;
         else if (name == "scratches") options.scratches = atoi(value) != 0;
+        else if (name == "wear") options.wear = atoi(value) != 0;
         else if (name == "fps") options.fps = atoi(value);
         else if (name == "response") options.response = (float)atof(value);
         else if (name == "width") options.width = atoi(value);
@@ -102,8 +105,8 @@ static void save_settings(const std::string &data, const Settings &settings) {
     std::string temporary = path + ".tmp";
     FILE *file = fopen(temporary.c_str(), "w");
     if (!file) return;
-    fprintf(file, "show_repl=%d\nshow_keys=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
-            settings.show_repl, settings.show_keys, settings.backlight, settings.dead_columns, settings.scratches, settings.fps,
+    fprintf(file, "show_repl=%d\nshow_keys=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
+            settings.show_repl, settings.show_keys, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.fps,
             settings.response, settings.width, settings.height);
     fclose(file);
     rename(temporary.c_str(), path.c_str());
@@ -122,7 +125,7 @@ static int menu_item_named(const std::string &name) {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
         { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
-        { "show-keys", MENU_SHOW_KEYS }, { "scratches", MENU_SCRATCHES },
+        { "show-keys", MENU_SHOW_KEYS }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR },
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -469,6 +472,7 @@ int main(int argc, char **argv) {
     DeviceState device;
     device.show_keys = options.show_keys;
     device.scratches = options.scratches;
+    device.wear = options.wear;
     bool &device_focused = device.focused;
     bool show_repl = options.show_repl;
     int restore_height = options.height;
@@ -534,6 +538,7 @@ int main(int argc, char **argv) {
                 case MENU_SOUND:        beeper_set_sound(!beeper_sound()); break;
                 case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 case MENU_SCRATCHES:    device.scratches = !device.scratches; break;
+                case MENU_WEAR:         device.wear = !device.wear; break;
                 case MENU_SHOW_KEYS:
                     device.show_keys = !device.show_keys;
                     if (!show_repl) set_repl_visible(window, false, device.show_keys, restore_height);
@@ -546,7 +551,7 @@ int main(int argc, char **argv) {
             static bool have_saved = false;
             int window_w = 0, window_h = 0;
             SDL_GetWindowSize(window, &window_w, &window_h);
-            Settings current = { show_repl, device.show_keys, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, fps, response,
+            Settings current = { show_repl, device.show_keys, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, fps, response,
                                  window_w, show_repl ? window_h : restore_height };
             if (!have_saved) {
                 saved = current;
@@ -568,6 +573,7 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_KEY_CLICK, beeper_key_click());
         menu_set_checked(MENU_SHOW_KEYS, device.show_keys);
         menu_set_checked(MENU_SCRATCHES, device.scratches);
+        menu_set_checked(MENU_WEAR, device.wear);
 
         if (options.watch && watch_poll()) {
             console_notice("change detected");

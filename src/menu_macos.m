@@ -53,6 +53,7 @@ static void attach_menus(void) {
     }
 }
 
+
 static NSMenu *submenu(NSMenu *parent, NSString *title) {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:title];
     NSMenuItem *holder = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
@@ -75,8 +76,10 @@ void menu_install(void) {
     add_item(system, MENU_SHOW_KEYS, @"Show Keys", @"k", NSEventModifierFlagCommand);
     [system addItem:[NSMenuItem separatorItem]];
     add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
-    add_item(system, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
-    add_item(system, MENU_SCRATCHES, @"Scratches", @"", 0);
+    NSMenu *realism = submenu(system, @"Realism");
+    add_item(realism, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
+    add_item(realism, MENU_SCRATCHES, @"Scratches", @"", 0);
+    add_item(realism, MENU_WEAR, @"Wear", @"", 0);
     [system addItem:[NSMenuItem separatorItem]];
     add_item(system, MENU_SOUND, @"Sound", @"", 0);
     add_item(system, MENU_KEY_CLICK, @"Key Click", @"", 0);

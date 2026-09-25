@@ -8,6 +8,7 @@ struct DeviceState {
     bool focused = true;
     bool powered = true;
     bool scratches = true;
+    bool wear = false;
 };
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state);

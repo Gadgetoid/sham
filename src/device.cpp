@@ -84,6 +84,8 @@ SDL_Texture *scratch_texture = nullptr;
 bool scratch_tried = false;
 int scratch_w = 0, scratch_h = 0;
 int grime_w = 0, grime_h = 0;
+bool grime_wear = false;
+bool wear_labels = false;
 ImFont *label_font = nullptr;
 ImFont *icon_font = nullptr;
 
@@ -133,20 +135,25 @@ float smooth_noise(float x, float y, uint32_t seed) {
     return top * (1 - fy) + bottom * fy;
 }
 
-void build_grime(SDL_Renderer *renderer, int w, int h, float scale) {
-    if (grime_texture && grime_w == w && grime_h == h) return;
+void build_grime(SDL_Renderer *renderer, int w, int h, float scale, bool wear) {
+    if (grime_texture && grime_w == w && grime_h == h && grime_wear == wear) return;
     if (grime_texture) SDL_DestroyTexture(grime_texture);
     grime_w = w;
     grime_h = h;
+    grime_wear = wear;
+    float grain_strength = wear ? 0.13f : 0.10f;
+    float dirt_threshold = wear ? 0.56f : 0.62f;
+    float dirt_strength = wear ? 0.15f : 0.10f;
+    uint32_t speck_mask = wear ? 0x7ff : 0x1fff;
     std::vector<uint32_t> pixels((size_t)w * h);
     float smudge = 90.0f * scale;
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             float grain = unit_noise(x, y, 1) - 0.5f;
             float blotch = smooth_noise(x / smudge, y / smudge, 2) * 0.6f + smooth_noise(x / (smudge * 0.35f), y / (smudge * 0.35f), 3) * 0.4f;
-            float dirt = std::max(0.0f, blotch - 0.62f) * 2.2f;
-            float speck = (hash2(x, y, 4) & 0x1fff) == 0 ? 0.55f : 0.0f;
-            float shade = grain * 0.10f - dirt * 0.10f - speck;
+            float dirt = std::max(0.0f, blotch - dirt_threshold) * 2.2f;
+            float speck = (hash2(x, y, 4) & speck_mask) == 0 ? 0.55f : 0.0f;
+            float shade = grain * grain_strength - dirt * dirt_strength - speck;
             uint8_t value = shade >= 0 ? 255 : 0;
             uint8_t alpha = (uint8_t)std::min(255.0f, fabsf(shade) * 255.0f);
             pixels[(size_t)y * w + x] = (uint32_t)value | (uint32_t)value << 8 | (uint32_t)value << 16 | (uint32_t)alpha << 24;
@@ -196,9 +203,28 @@ ImVec2 text_size(ImFont *font, float size, const char *text) {
     return font->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
 }
 
+ImU32 erase_colour = 0;
+
+void wear_patch(ImDrawList *draw, ImVec2 a, ImVec2 b, uint32_t seed) {
+    if (!wear_labels || !scratch_texture || !erase_colour) return;
+    float span = std::min(0.5f, (b.x - a.x) / 900.0f + 0.05f);
+    float aspect = (b.y - a.y) / std::max(1.0f, b.x - a.x) * scratch_w / (float)scratch_h;
+    float span_v = std::min(0.9f, span * aspect);
+    float u0 = (hash2((int)seed, 7, 11) & 0xffff) / 65535.0f * (1 - span);
+    float v0 = (hash2((int)seed, 9, 13) & 0xffff) / 65535.0f * (1 - span_v);
+    draw->AddImage((ImTextureID)(intptr_t)scratch_texture, a, b, ImVec2(u0, v0), ImVec2(u0 + span, v0 + span_v), erase_colour);
+}
+
+uint32_t text_seed(const char *text, ImVec2 at) {
+    uint32_t seed = (uint32_t)(at.x * 7 + at.y * 13);
+    for (const char *c = text; *c; c++) seed = seed * 31 + (uint8_t)*c;
+    return seed;
+}
+
 void centred_text(ImDrawList *draw, ImVec2 centre, float size, ImU32 colour, const char *text) {
     ImVec2 extent = text_size(text_font(), size, text);
     draw->AddText(text_font(), size, centre - extent * 0.5f, colour, text);
+    wear_patch(draw, centre - extent * 0.5f, centre + extent * 0.5f, text_seed(text, centre));
 }
 
 void icon(ImDrawList *draw, ImVec2 centre, float size, ImU32 colour, unsigned codepoint) {
@@ -207,6 +233,7 @@ void icon(ImDrawList *draw, ImVec2 centre, float size, ImU32 colour, unsigned co
     ImFont *font = icon_font ? icon_font : ImGui::GetFont();
     ImVec2 extent = text_size(font, size, utf8);
     draw->AddText(font, size, centre - extent * 0.5f, colour, utf8);
+    wear_patch(draw, centre - extent * 0.5f, centre + extent * 0.5f, codepoint * 2654435761u);
 }
 
 void add_arc(Shape &shape, ImVec2 centre, float radius, float from, float to, int segments) {
@@ -641,6 +668,7 @@ Shape outset(const Shape &shape, float distance) {
 
 
 void draw_key(ImDrawList *draw, const Shape &shape, const ButtonStyle &style, bool pressed, float u) {
+    erase_colour = faded(mix(style.top, style.bottom, 0.55f), 0.9f);
     const int layers = 4;
     for (int layer = layers; layer >= 1; layer--) {
         int alpha = (int)(((pressed ? 10 : 18) + (layers - layer) * 4) * style.shadow);
@@ -755,6 +783,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     }
 
     {
+        erase_colour = faded(BEZEL, 0.9f);
         centred_text(draw, menu_centre - ImVec2(0, 39 * u), 15.0f * u, PRINT, "MENU");
         draw_recess(draw, circle(menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
         Shape shape = circle(menu_centre, fit_menu[2] * u);
@@ -764,6 +793,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     }
 
     {
+        erase_colour = faded(BEZEL, 0.9f);
         centred_text(draw, ImVec2(power_box.GetCenter().x, menu_centre.y - 39 * u), 15.0f * u, PRINT, "POWER");
         bool pressed;
         if (hit("key-power", power, pressed)) {
@@ -853,7 +883,8 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     draw->AddRectFilled(device_min + ImVec2(0, 4), device_max + ImVec2(0, 4), IM_COL32(0, 0, 0, 90), rounding);
     if (state.show_keys) shade_body(draw, device_min, device_max, rounding, image_min, image_max, u);
     else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
-    build_grime(renderer, (int)(device_size.x * framebuffer_scale), (int)(device_size.y * framebuffer_scale), framebuffer_scale * u);
+    build_grime(renderer, (int)(device_size.x * framebuffer_scale), (int)(device_size.y * framebuffer_scale), framebuffer_scale * u, state.wear);
+    wear_labels = state.wear;
     draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, device_min, device_max, ImVec2(0, 0), ImVec2(1, 1),
                           IM_COL32_WHITE, rounding);
     if (!state.show_keys) draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
@@ -889,7 +920,9 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     if (state.show_keys) {
         float brand = 24.0f * u;
         ImVec2 at = image_min + ImVec2(-4 * u, -50 * u);
+        erase_colour = faded(BEZEL, 0.9f);
         draw->AddText(text_font(), brand, at, PRINT, "POCKET");
+        wear_patch(draw, at, at + text_size(text_font(), brand, "POCKET"), 1);
         draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-239");
         draw_keys(draw, Frame{ image_min, image_max, u }, device_min, device_max, state);
     } else {
