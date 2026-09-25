@@ -203,15 +203,6 @@ void lcd_set_power(bool on) {
     force_compose = true;
 }
 static int contrast_level = 5;
-static float calibration[3] = { 1.0f, 1.0f, 1.0f };
-
-void lcd_set_calibration(float red, float green, float blue) {
-    if (calibration[0] == red && calibration[1] == green && calibration[2] == blue) return;
-    calibration[0] = red;
-    calibration[1] = green;
-    calibration[2] = blue;
-    force_compose = true;
-}
 
 void lcd_set_contrast(int level) {
     contrast_level = level < 0 ? 0 : level > 10 ? 10 : level;
@@ -469,9 +460,6 @@ bool lcd_compose(float seconds) {
                 b += panel->glass.b * glow * 0.5f;
             }
 
-            r *= calibration[0];
-            g *= calibration[1];
-            b *= calibration[2];
             out_row[x] = (uint32_t)to_byte(r) | (uint32_t)to_byte(g) << 8 | (uint32_t)to_byte(b) << 16 | 0xff000000u;
         }
     }

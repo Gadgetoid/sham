@@ -48,7 +48,6 @@ int       lcd_compose_height(void);
 void      lcd_set_backlight(bool on);
 bool      lcd_get_backlight(void);
 void      lcd_set_power(bool on);
-void      lcd_set_calibration(float red, float green, float blue);
 int       lcd_power_ons(void);
 void      lcd_set_response(float scale);
 void      lcd_set_contrast(int level);

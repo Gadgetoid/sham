@@ -58,7 +58,6 @@ struct Options {
     bool wear = false;
     bool touchscreen = false;
     std::string touch_display = "TETRA";
-    float touch_calibration[3] = { 0.53f, 0.75f, 0.92f };
     std::vector<int> menu_items;
 };
 
@@ -102,9 +101,6 @@ static void load_settings(const std::string &data, Options &options) {
         else if (name == "scratches") options.scratches = atoi(value) != 0;
         else if (name == "wear") options.wear = atoi(value) != 0;
         else if (name == "touchscreen") options.touchscreen = atoi(value) != 0;
-        else if (name == "touch_calibration") {
-            sscanf(value, "%f,%f,%f", &options.touch_calibration[0], &options.touch_calibration[1], &options.touch_calibration[2]);
-        }
         else if (name == "fps") options.fps = atoi(value);
         else if (name == "response") options.response = (float)atof(value);
         else if (name == "width") options.width = atoi(value);
@@ -727,8 +723,6 @@ int main(int argc, char **argv) {
             if (touch.active) push_mouse(event.kind, event.x, event.y);
         }
         device.touch = touch.active;
-        if (touch.active) lcd_set_calibration(options.touch_calibration[0], options.touch_calibration[1], options.touch_calibration[2]);
-        else lcd_set_calibration(1.0f, 1.0f, 1.0f);
         if (frame == 45) {
             for (int item : options.menu_items) menu_perform(item);
         }
