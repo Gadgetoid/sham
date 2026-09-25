@@ -27,7 +27,6 @@
 #include "runtime.h"
 #include "watch.h"
 
-static const uint64_t PERIOD_MS = 100;
 static uint64_t start_ticks = 0;
 static SDL_WindowID main_window_id = 0;
 
@@ -49,7 +48,8 @@ struct Options {
     bool dead_columns = false;
     bool show_repl = true;
     bool show_keys = true;
-    bool period_rate = false;
+    int fps = 0;
+    float response = 1.0f;
     std::vector<int> menu_items;
 };
 
@@ -57,7 +57,7 @@ static int menu_item_named(const std::string &name) {
     static const std::pair<const char *, int> names[] = {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
-        { "period", MENU_PERIOD_RATE }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
+        { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
         { "show-keys", MENU_SHOW_KEYS },
     };
     for (auto &entry : names) {
@@ -78,6 +78,8 @@ static void usage() {
         "  --no-repl           start with the REPL hidden\n"
         "  --no-keys           start without the device keys around the screen\n"
         "  --period            run the device at a period accurate 10 fps\n"
+        "  --fps=N             device frame rate, 0 for unlimited (default 0)\n"
+        "  --response=N        LCD response time scale, 0 instant, 1 normal, 4 very slow\n"
         "  --menu=ITEMS        trigger menu items after boot: reload, interrupt, show-repl,\n"
         "                      focus-repl, backlight, dead-columns, sound, key-click, period,\n"
         "                      show-keys\n"
@@ -113,7 +115,9 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (arg == "--dead-columns") options.dead_columns = true;
         else if (arg == "--no-repl") options.show_repl = false;
         else if (arg == "--no-keys") options.show_keys = false;
-        else if (arg == "--period") options.period_rate = true;
+        else if (arg == "--period") options.fps = 10;
+        else if (const char *v = value("--fps=")) options.fps = atoi(v);
+        else if (const char *v = value("--response=")) options.response = (float)atof(v);
         else if (const char *v = value("--menu=")) {
             std::string list = v;
             size_t start = 0;
@@ -402,7 +406,9 @@ int main(int argc, char **argv) {
     bool show_repl = options.show_repl;
     int restore_height = options.height;
     if (!show_repl) set_repl_visible(window, false, device.show_keys, restore_height);
-    bool period_rate = options.period_rate;
+    int fps = options.fps;
+    float response = options.response;
+    lcd_set_response(response);
     uint64_t last_device_ms = 0;
     int frame = 0;
 
@@ -439,6 +445,11 @@ int main(int argc, char **argv) {
         }
 
         for (int item = menu_poll(); item >= 0; item = menu_poll()) {
+            if (item >= MENU_FPS_FIRST && item < MENU_FPS_END) fps = MENU_FPS_VALUES[item - MENU_FPS_FIRST];
+            if (item >= MENU_RESPONSE_FIRST && item < MENU_RESPONSE_END) {
+                response = MENU_RESPONSE_VALUES[item - MENU_RESPONSE_FIRST];
+                lcd_set_response(response);
+            }
             switch (item) {
                 case MENU_RELOAD:       runtime_request_reload(); break;
                 case MENU_INTERRUPT:    runtime_interrupt(); break;
@@ -453,7 +464,6 @@ int main(int argc, char **argv) {
                     break;
                 case MENU_BACKLIGHT:    lcd_set_backlight(!lcd_get_backlight()); break;
                 case MENU_DEAD_COLUMNS: lcd_set_dead_columns(!lcd_get_dead_columns()); break;
-                case MENU_PERIOD_RATE:  period_rate = !period_rate; break;
                 case MENU_SOUND:        beeper_set_sound(!beeper_sound()); break;
                 case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 case MENU_SHOW_KEYS:
@@ -467,7 +477,10 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_SHOW_REPL, show_repl);
         menu_set_checked(MENU_BACKLIGHT, lcd_get_backlight());
         menu_set_checked(MENU_DEAD_COLUMNS, lcd_get_dead_columns());
-        menu_set_checked(MENU_PERIOD_RATE, period_rate);
+        for (int i = 0; i < MENU_FPS_END - MENU_FPS_FIRST; i++) menu_set_checked(MENU_FPS_FIRST + i, fps == MENU_FPS_VALUES[i]);
+        for (int i = 0; i < MENU_RESPONSE_END - MENU_RESPONSE_FIRST; i++) {
+            menu_set_checked(MENU_RESPONSE_FIRST + i, response == MENU_RESPONSE_VALUES[i]);
+        }
         menu_set_checked(MENU_SOUND, beeper_sound());
         menu_set_checked(MENU_KEY_CLICK, beeper_key_click());
         menu_set_checked(MENU_SHOW_KEYS, device.show_keys);
@@ -486,7 +499,7 @@ int main(int argc, char **argv) {
         }
         uint64_t now_ms = SDL_GetTicks();
         float compose_seconds = 0;
-        if (!period_rate || now_ms - last_device_ms >= PERIOD_MS) {
+        if (fps <= 0 || now_ms - last_device_ms >= (uint64_t)(1000 / fps)) {
             compose_seconds = last_device_ms ? (now_ms - last_device_ms) / 1000.0f : 1.0f / 60.0f;
             last_device_ms = now_ms;
             if (device.powered) runtime_step();
@@ -508,8 +521,11 @@ int main(int argc, char **argv) {
         if (show_repl) {
             ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
             ImGui::SameLine(ImGui::GetContentRegionMax().x - 200);
-            ImGui::TextDisabled("%s  %.0f fps%s", runtime_idle() ? "idle" : "running", io.Framerate,
-                                period_rate ? "  LCD 10 fps" : "");
+            if (fps > 0) {
+                ImGui::TextDisabled("%s  %.0f fps  LCD %d fps", runtime_idle() ? "idle" : "running", io.Framerate, fps);
+            } else {
+                ImGui::TextDisabled("%s  %.0f fps", runtime_idle() ? "idle" : "running", io.Framerate);
+            }
             ImGui::Separator();
             console_draw();
         }

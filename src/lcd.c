@@ -330,10 +330,15 @@ static void box_blur(float *grid, float *scratch, int radius) {
     }
 }
 
+static float response_scale = 1.0f;
+
+void lcd_set_response(float scale) {
+    response_scale = scale;
+}
+
 static bool settle_pixels(float seconds) {
-    float frames = seconds * 60.0f;
-    float darken = 1.0f - powf(1.0f - 0.55f, frames);
-    float lighten = 1.0f - powf(1.0f - 0.35f, frames);
+    float darken = response_scale > 0 ? 1.0f - expf(-seconds / (0.0209f * response_scale)) : 1.0f;
+    float lighten = response_scale > 0 ? 1.0f - expf(-seconds / (0.0387f * response_scale)) : 1.0f;
     bool changed = false;
     for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         float target = powered ? lcd_framebuffer[i] / 3.0f : 0.0f;

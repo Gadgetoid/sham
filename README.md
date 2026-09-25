@@ -23,7 +23,7 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 ./pocket --root=DIR --data=DIR
 ./pocket --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
 ./pocket --exec="ui.alert('hi')"
-./pocket --no-repl --period --menu=dead-columns
+./pocket --no-repl --fps=10 --response=2 --menu=dead-columns
 ```
 
 Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
@@ -48,7 +48,7 @@ Saving anything under the root restarts the VM and drops you back into the last 
 
 The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/My Programs and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
 
-The System menu also has Period Frame Rate, which runs the device at 10 fps while the window stays smooth.
+The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 
 ## Layout
 

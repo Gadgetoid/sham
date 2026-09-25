@@ -53,6 +53,14 @@ static void attach_menus(void) {
     }
 }
 
+static NSMenu *submenu(NSMenu *parent, NSString *title) {
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:title];
+    NSMenuItem *holder = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
+    holder.submenu = menu;
+    [parent addItem:holder];
+    return menu;
+}
+
 void menu_install(void) {
     target = [[PocketMenuTarget alloc] init];
 
@@ -72,7 +80,12 @@ void menu_install(void) {
     add_item(system, MENU_SOUND, @"Sound", @"", 0);
     add_item(system, MENU_KEY_CLICK, @"Key Click", @"", 0);
     [system addItem:[NSMenuItem separatorItem]];
-    add_item(system, MENU_PERIOD_RATE, @"Period Frame Rate (10 fps)", @"", 0);
+    NSMenu *rate = submenu(system, @"Frame Rate");
+    NSString *rates[] = { @"Unlimited", @"60 fps", @"30 fps", @"20 fps", @"15 fps", @"10 fps" };
+    for (int i = 0; i < MENU_FPS_END - MENU_FPS_FIRST; i++) add_item(rate, MENU_FPS_FIRST + i, rates[i], @"", 0);
+    NSMenu *response = submenu(system, @"Response Time");
+    NSString *responses[] = { @"Instant", @"Fast", @"Normal", @"Slow", @"Very Slow" };
+    for (int i = 0; i < MENU_RESPONSE_END - MENU_RESPONSE_FIRST; i++) add_item(response, MENU_RESPONSE_FIRST + i, responses[i], @"", 0);
     attach_menus();
 }
 

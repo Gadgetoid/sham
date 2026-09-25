@@ -15,9 +15,15 @@ enum {
     MENU_SOUND,
     MENU_KEY_CLICK,
     MENU_SHOW_KEYS,
-    MENU_PERIOD_RATE,
-    MENU_COUNT,
+    MENU_FPS_FIRST,
+    MENU_FPS_END = MENU_FPS_FIRST + 6,
+    MENU_RESPONSE_FIRST = MENU_FPS_END,
+    MENU_RESPONSE_END = MENU_RESPONSE_FIRST + 5,
+    MENU_COUNT = MENU_RESPONSE_END,
 };
+
+static const int MENU_FPS_VALUES[] = { 0, 60, 30, 20, 15, 10 };
+static const float MENU_RESPONSE_VALUES[] = { 0.0f, 0.5f, 1.0f, 2.0f, 4.0f };
 
 void menu_install(void);
 void menu_ensure(void);
