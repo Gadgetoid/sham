@@ -77,6 +77,8 @@ const unsigned ICON_UP = 0xe316;
 const unsigned ICON_DOWN = 0xe313;
 
 SDL_Texture *lcd_texture = nullptr;
+SDL_Texture *grime_texture = nullptr;
+int grime_w = 0, grime_h = 0;
 ImFont *label_font = nullptr;
 ImFont *icon_font = nullptr;
 
@@ -100,6 +102,54 @@ struct Frame {
 
 ImFont *text_font() {
     return label_font ? label_font : ImGui::GetFont();
+}
+
+uint32_t hash2(int x, int y, uint32_t seed) {
+    uint32_t h = (uint32_t)x * 0x8da6b343u ^ (uint32_t)y * 0xd8163841u ^ seed * 0xcb1ab31fu;
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16;
+    return h;
+}
+
+float unit_noise(int x, int y, uint32_t seed) {
+    return (hash2(x, y, seed) & 0xffff) / 65535.0f;
+}
+
+float smooth_noise(float x, float y, uint32_t seed) {
+    int ix = (int)floorf(x), iy = (int)floorf(y);
+    float fx = x - ix, fy = y - iy;
+    fx = fx * fx * (3 - 2 * fx);
+    fy = fy * fy * (3 - 2 * fy);
+    float top = unit_noise(ix, iy, seed) * (1 - fx) + unit_noise(ix + 1, iy, seed) * fx;
+    float bottom = unit_noise(ix, iy + 1, seed) * (1 - fx) + unit_noise(ix + 1, iy + 1, seed) * fx;
+    return top * (1 - fy) + bottom * fy;
+}
+
+void build_grime(SDL_Renderer *renderer, int w, int h, float scale) {
+    if (grime_texture && grime_w == w && grime_h == h) return;
+    if (grime_texture) SDL_DestroyTexture(grime_texture);
+    grime_w = w;
+    grime_h = h;
+    std::vector<uint32_t> pixels((size_t)w * h);
+    float smudge = 90.0f * scale;
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            float grain = unit_noise(x, y, 1) - 0.5f;
+            float blotch = smooth_noise(x / smudge, y / smudge, 2) * 0.6f + smooth_noise(x / (smudge * 0.35f), y / (smudge * 0.35f), 3) * 0.4f;
+            float dirt = std::max(0.0f, blotch - 0.62f) * 2.2f;
+            float speck = (hash2(x, y, 4) & 0x1fff) == 0 ? 0.55f : 0.0f;
+            float shade = grain * 0.10f - dirt * 0.10f - speck;
+            uint8_t value = shade >= 0 ? 255 : 0;
+            uint8_t alpha = (uint8_t)std::min(255.0f, fabsf(shade) * 255.0f);
+            pixels[(size_t)y * w + x] = (uint32_t)value | (uint32_t)value << 8 | (uint32_t)value << 16 | (uint32_t)alpha << 24;
+        }
+    }
+    grime_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, w, h);
+    SDL_SetTextureBlendMode(grime_texture, SDL_BLENDMODE_BLEND);
+    SDL_UpdateTexture(grime_texture, nullptr, pixels.data(), w * 4);
 }
 
 void upload_lcd(SDL_Renderer *renderer, float compose_seconds) {
@@ -776,6 +826,9 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     draw->AddRectFilled(device_min + ImVec2(0, 4), device_max + ImVec2(0, 4), IM_COL32(0, 0, 0, 90), rounding);
     if (state.show_keys) shade_body(draw, device_min, device_max, rounding, image_min, image_max, u);
     else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
+    build_grime(renderer, (int)(device_size.x * framebuffer_scale), (int)(device_size.y * framebuffer_scale), framebuffer_scale * u);
+    draw->AddImageRounded((ImTextureID)(intptr_t)grime_texture, device_min, device_max, ImVec2(0, 0), ImVec2(1, 1),
+                          IM_COL32_WHITE, rounding);
     if (!state.show_keys) draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
                                   IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 0));
     draw->AddRect(device_min, device_max, BEZEL_EDGE, rounding, 0, 2.0f);
@@ -826,4 +879,6 @@ void device_set_icon_font(ImFont *font) {
 void device_shutdown(void) {
     if (lcd_texture) SDL_DestroyTexture(lcd_texture);
     lcd_texture = nullptr;
+    if (grime_texture) SDL_DestroyTexture(grime_texture);
+    grime_texture = nullptr;
 }
