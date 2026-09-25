@@ -55,7 +55,7 @@ static int menu_item_named(const std::string &name) {
     static const std::pair<const char *, int> names[] = {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
-        { "period", MENU_PERIOD_RATE },
+        { "period", MENU_PERIOD_RATE }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -75,7 +75,7 @@ static void usage() {
         "  --no-repl           start with the REPL hidden\n"
         "  --period            run the device at a period accurate 10 fps\n"
         "  --menu=ITEMS        trigger menu items after boot: reload, interrupt, show-repl,\n"
-        "                      focus-repl, backlight, dead-columns, period (comma separated)\n"
+        "                      focus-repl, backlight, dead-columns, sound, key-click, period\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
@@ -488,6 +488,8 @@ int main(int argc, char **argv) {
                 case MENU_BACKLIGHT:    lcd_set_backlight(!lcd_get_backlight()); break;
                 case MENU_DEAD_COLUMNS: lcd_set_dead_columns(!lcd_get_dead_columns()); break;
                 case MENU_PERIOD_RATE:  period_rate = !period_rate; break;
+                case MENU_SOUND:        beeper_set_sound(!beeper_sound()); break;
+                case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 default: break;
             }
         }
@@ -496,6 +498,8 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_BACKLIGHT, lcd_get_backlight());
         menu_set_checked(MENU_DEAD_COLUMNS, lcd_get_dead_columns());
         menu_set_checked(MENU_PERIOD_RATE, period_rate);
+        menu_set_checked(MENU_SOUND, beeper_sound());
+        menu_set_checked(MENU_KEY_CLICK, beeper_key_click());
 
         if (options.watch && watch_poll()) {
             console_notice("change detected");

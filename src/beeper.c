@@ -22,6 +22,13 @@ static uint32_t remaining = 0;
 static float phase = 0, second_phase = 0, smoothed = 0;
 static SDL_Mutex *lock = NULL;
 static SDL_AudioStream *stream = NULL;
+static bool sound_on = true;
+static bool key_click_on = false;
+
+void beeper_set_sound(bool on) { sound_on = on; }
+bool beeper_sound(void) { return sound_on; }
+void beeper_set_key_click(bool on) { key_click_on = on; }
+bool beeper_key_click(void) { return key_click_on; }
 
 static float next_sample(void) {
     if (remaining == 0) {

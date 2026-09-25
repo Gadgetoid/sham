@@ -67,6 +67,9 @@ void menu_install(void) {
     add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
     add_item(system, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
     [system addItem:[NSMenuItem separatorItem]];
+    add_item(system, MENU_SOUND, @"Sound", @"", 0);
+    add_item(system, MENU_KEY_CLICK, @"Key Click", @"", 0);
+    [system addItem:[NSMenuItem separatorItem]];
     add_item(system, MENU_PERIOD_RATE, @"Period Frame Rate (10 fps)", @"", 0);
     attach_menus();
 }

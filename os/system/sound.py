@@ -1,6 +1,20 @@
 import host
 from system import prefs
 
+PREFS = (("sound", host.sound, True), ("click", host.key_click, False))
+
+
+def load_prefs():
+    for name, setting, default in PREFS:
+        setting(prefs.get(name, default))
+
+
+def save_prefs():
+    for name, setting, default in PREFS:
+        if prefs.get(name, default) != setting():
+            prefs.set(name, setting())
+
+
 NOTE_OFFSETS = {"C": -9, "D": -7, "E": -5, "F": -4, "G": -2, "A": 0, "B": 2}
 
 DTMF_ROWS = (697, 770, 852, 941)
@@ -9,7 +23,7 @@ DTMF_KEYS = ("123A", "456B", "789C", "*0#D")
 
 
 def enabled():
-    return prefs.get("sound", True)
+    return host.sound()
 
 
 def frequency(note):
@@ -38,7 +52,7 @@ def beep(hz=2000, ms=80):
 
 
 def click():
-    if prefs.get("click", False):
+    if host.key_click():
         tone(3200, 3)
 
 

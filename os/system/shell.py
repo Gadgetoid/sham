@@ -73,6 +73,7 @@ def group(apps):
 class Shell:
     def __init__(self):
         ui._shell = self
+        sound.load_prefs()
         self.apps = discover()
         self.entries, self.folders = group(self.apps)
         self.stack = []
@@ -216,6 +217,7 @@ class Shell:
                 for key in keys.poll():
                     self.handle(key)
                 alarms.check()
+                sound.save_prefs()
                 self.top().tick(host.ticks_ms())
                 minute = host.localtime()[4]
                 if minute != self.minute:

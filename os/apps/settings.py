@@ -2,7 +2,7 @@ import gc
 import sys
 
 import host
-from system import prefs, sound, ui
+from system import sound, ui
 
 TITLE = "Settings"
 ICON = "options_wrench"
@@ -20,16 +20,16 @@ def info():
 def launch():
     backlight = ui.Field("Backlight", "On" if host.backlight() else "Off", choices=["On", "Off"],
                          on_change=lambda value: host.backlight(value == "On"))
-    def toggle(name):
+    def toggle(setting):
         def apply(value):
-            prefs.set(name, value == "On")
+            setting(value == "On")
             sound.beep()
         return apply
 
-    sound_field = ui.Field("Sound", "On" if prefs.get("sound", True) else "Off", choices=["On", "Off"],
-                           on_change=toggle("sound"))
-    click_field = ui.Field("Key click", "On" if prefs.get("click", False) else "Off", choices=["On", "Off"],
-                           on_change=toggle("click"))
+    sound_field = ui.Field("Sound", "On" if host.sound() else "Off", choices=["On", "Off"],
+                           on_change=toggle(host.sound))
+    click_field = ui.Field("Key click", "On" if host.key_click() else "Off", choices=["On", "Off"],
+                           on_change=toggle(host.key_click))
     form = ui.Form([backlight, sound_field, click_field])
     details = ui.TextView(info())
     return ui.Screen("Settings", ui.Split(form, details, vertical=True))

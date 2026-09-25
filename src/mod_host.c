@@ -86,6 +86,18 @@ static mp_obj_t host_beep(size_t n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_beep_obj, 2, 3, host_beep);
 
+static mp_obj_t host_sound(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) beeper_set_sound(mp_obj_is_true(args[0]));
+    return mp_obj_new_bool(beeper_sound());
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_sound_obj, 0, 1, host_sound);
+
+static mp_obj_t host_key_click(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) beeper_set_key_click(mp_obj_is_true(args[0]));
+    return mp_obj_new_bool(beeper_key_click());
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_key_click_obj, 0, 1, host_key_click);
+
 static mp_obj_t host_beep_stop(void) {
     beeper_stop();
     return mp_const_none;
@@ -131,6 +143,8 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_resume),    MP_ROM_PTR(&host_resume_obj) },
     { MP_ROM_QSTR(MP_QSTR_backlight), MP_ROM_PTR(&host_backlight_obj) },
     { MP_ROM_QSTR(MP_QSTR_beep),      MP_ROM_PTR(&host_beep_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sound),     MP_ROM_PTR(&host_sound_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_click), MP_ROM_PTR(&host_key_click_obj) },
     { MP_ROM_QSTR(MP_QSTR_beep_stop), MP_ROM_PTR(&host_beep_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_beeping),   MP_ROM_PTR(&host_beeping_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_start), MP_ROM_PTR(&host_capture_start_obj) },
