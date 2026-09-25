@@ -461,7 +461,7 @@ void shade_body(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float ro
     add_arc(body, ImVec2(device_min.x + rounding, device_max.y - rounding), rounding, IM_PI * 0.5f, IM_PI, 16);
     add_arc(body, ImVec2(device_min.x + rounding, device_min.y + rounding), rounding, IM_PI, IM_PI * 1.5f, 16);
     int columns = std::max(16, (int)((device_max.x - device_min.x) / 3));
-    draw->PrimReserve(columns * 6, (columns + 1) * 2);
+    draw->PrimReserve(columns * 12, (columns + 1) * 3);
     ImDrawIdx base = (ImDrawIdx)draw->_VtxCurrentIdx;
     ImVec2 uv = draw->_Data->TexUvWhitePixel;
     int r = (BEZEL >> IM_COL32_R_SHIFT) & 0xff, g = (BEZEL >> IM_COL32_G_SHIFT) & 0xff, b = (BEZEL >> IM_COL32_B_SHIFT) & 0xff;
@@ -469,14 +469,21 @@ void shade_body(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float ro
         float x = device_min.x + (device_max.x - device_min.x) * column / columns;
         Span span = convex_span(body, std::max(device_min.x + 0.01f, std::min(device_max.x - 0.01f, x)));
         float k = bezel_brightness(x, lcd_min, lcd_max, u);
-        ImU32 colour = IM_COL32(std::min(255, (int)(r * k)), std::min(255, (int)(g * k)), std::min(255, (int)(b * k)), 255);
-        draw->PrimWriteVtx(ImVec2(x, span.top), uv, colour);
+        int cr = std::min(255, (int)(r * k)), cg = std::min(255, (int)(g * k)), cb = std::min(255, (int)(b * k));
+        const float sheen = 0.16f;
+        ImU32 top = IM_COL32(cr + (int)((255 - cr) * sheen), cg + (int)((255 - cg) * sheen), cb + (int)((255 - cb) * sheen), 255);
+        ImU32 colour = IM_COL32(cr, cg, cb, 255);
+        float middle = span.top + (device_max.y - device_min.y) * 0.45f;
+        draw->PrimWriteVtx(ImVec2(x, span.top), uv, top);
+        draw->PrimWriteVtx(ImVec2(x, std::min(middle, span.bottom)), uv, colour);
         draw->PrimWriteVtx(ImVec2(x, span.bottom), uv, colour);
     }
     for (int column = 0; column < columns; column++) {
-        ImDrawIdx i = (ImDrawIdx)(base + column * 2);
-        draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 2)); draw->PrimWriteIdx((ImDrawIdx)(i + 3));
-        draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 3)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
+        for (int row = 0; row < 2; row++) {
+            ImDrawIdx i = (ImDrawIdx)(base + column * 3 + row);
+            draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 3)); draw->PrimWriteIdx((ImDrawIdx)(i + 4));
+            draw->PrimWriteIdx(i); draw->PrimWriteIdx((ImDrawIdx)(i + 4)); draw->PrimWriteIdx((ImDrawIdx)(i + 1));
+        }
     }
 }
 
@@ -691,7 +698,7 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     draw->AddRectFilled(device_min + ImVec2(0, 4), device_max + ImVec2(0, 4), IM_COL32(0, 0, 0, 90), rounding);
     if (state.show_keys) shade_body(draw, device_min, device_max, rounding, image_min, image_max, u);
     else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
-    draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
+    if (!state.show_keys) draw->AddRectFilledMultiColor(device_min + ImVec2(rounding, 2), ImVec2(device_max.x - rounding, device_min.y + device_size.y * 0.45f),
                                   IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 40), IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 0));
     draw->AddRect(device_min, device_max, BEZEL_EDGE, rounding, 0, 2.0f);
     draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
