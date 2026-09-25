@@ -3,6 +3,7 @@ import sys
 
 CURSOR_GAP = 10.0
 CURSOR_WELL_MARGIN = 0.0
+CURSOR_WELL_DROP = 4.0
 
 KEY_BACKSPACE = 8
 KEY_ENTER = 13
@@ -74,7 +75,7 @@ def respace_cursor(keys, layout):
     cursor["up"]["y"] = down["y"] - pitch
     well = layout["recesses"][0]
     well["x"] = down["x"]
-    well["y"] = down["y"] - pitch / 2
+    well["y"] = down["y"] - pitch / 2 + CURSOR_WELL_DROP
     well["r"] = down["w"] + CURSOR_GAP / 2 + CURSOR_WELL_MARGIN
 
 

@@ -1232,7 +1232,8 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         bool latched = (key.action == KB_ACTION_SECOND && state.second) ||
                        (key.action == KB_ACTION_SHIFT && (state.shift || state.caps));
         bool down = pressed || latched;
-        ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 22 : 34, 1.6f, 1.0f, 0.7f };
+        ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 22 : 34, 1.6f, 1.0f,
+                              key.shape == KB_SHAPE_CURSOR ? 0.0f : 0.7f };
         draw_key(draw, shape, style, down, u);
         rub_mode = false;
         ImVec2 dip = down ? ImVec2(0, 1.2f * u) : ImVec2(0, 0);
