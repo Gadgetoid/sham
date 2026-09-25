@@ -28,6 +28,7 @@ const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
+const float SCREEN_MARGIN = 8.0f;
 const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 120);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
@@ -1305,8 +1306,10 @@ void draw_hinge(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float u)
 
 }
 
-float device_fit_height(float width, bool show_keys, bool show_keyboard) {
+float device_fit_height(float width, const DeviceState &state) {
+    bool show_keys = state.show_keys, show_keyboard = state.show_keyboard;
     float usable = width - 16.0f;
+    if (state.screen_only) return (usable - 2 * SCREEN_MARGIN) * GRID_H / GRID_W + 2 * SCREEN_MARGIN + 28.0f;
     if (show_keys) {
         float image_h = usable / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
         float lid = REFERENCE_LCD_H + TOP_EXTENT + BOTTOM_EXTENT + (show_keyboard ? keyboard_height_in_lid_units() : 0.0f);
@@ -1319,6 +1322,28 @@ float device_fit_height(float width, bool show_keys, bool show_keyboard) {
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state) {
     ImVec2 origin = ImGui::GetCursorScreenPos();
     float avail_w = ImGui::GetContentRegionAvail().x;
+    if (state.screen_only) {
+        float fit_h = std::min((avail_w - 2 * SCREEN_MARGIN) * GRID_H / GRID_W, height - 2 * SCREEN_MARGIN);
+        int cell = std::max(2, (int)floorf(fit_h * framebuffer_scale / GRID_H));
+        lcd_compose_setup(cell);
+        upload_lcd(renderer, compose_seconds);
+        ImVec2 size(cell * GRID_W / framebuffer_scale, cell * GRID_H / framebuffer_scale);
+        ImVec2 min = origin + ImVec2((avail_w - size.x) * 0.5f, (height - size.y) * 0.5f);
+        ImDrawList *draw = ImGui::GetWindowDrawList();
+        if (state.focused) draw->AddRect(min - ImVec2(3, 3), min + size + ImVec2(3, 3), IM_COL32(90, 200, 180, 160), 4.0f, 0, 2.0f);
+        if (lcd_texture) draw->AddImage((ImTextureID)(intptr_t)lcd_texture, min, min + size);
+        load_scratches(renderer);
+        if (scratch_texture && state.scratches) {
+            float band = std::min(1.0f, scratch_w / (GRID_W / GRID_H) / scratch_h);
+            draw->AddImage((ImTextureID)(intptr_t)scratch_texture, min, min + size, ImVec2(0, 0.5f - band * 0.5f),
+                           ImVec2(1, 0.5f + band * 0.5f), SCRATCH_TINT);
+        }
+        ImGui::SetCursorScreenPos(min);
+        ImGui::InvisibleButton("device", size);
+        ImGui::SetCursorScreenPos(origin + ImVec2(0, height));
+        ImGui::Dummy(ImVec2(0, 0));
+        return size.y;
+    }
 
     float image_h;
     bool has_keyboard = state.show_keys && state.show_keyboard;

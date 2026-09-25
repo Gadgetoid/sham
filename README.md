@@ -46,15 +46,15 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Cmd-B | Backlight (System menu) |
 | Cmd-D | Dead LCD columns, re-rolled each time (System > Realism) |
 
-The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
+The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Layout picks Screen Only, Screen & Frame, Screen & Buttons or Screen & Keyboard (Cmd-K cycles, `--layout=0..3`).
 
-System > Show Keyboard (Cmd-Shift-K) adds the ZQ-770 keyboard below the lid. Click keys to type. 2nd and Shift latch for one keypress, 2nd then Shift toggles CAPS, and 2nd sends each key's purple function. The layout lives in `tools/keyboard_layout.json`, and `make keyboard` regenerates `src/keyboard_layout.h`.
+The Screen & Keyboard layout adds the ZQ-770 keyboard below the lid. Click keys to type. 2nd and Shift latch for one keypress, 2nd then Shift toggles CAPS, and 2nd sends each key's purple function. The layout lives in `tools/keyboard_layout.json`, and `make keyboard` regenerates `src/keyboard_layout.h`.
 
 The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 
 System > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
 
-Menu settings (REPL, keys, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
 ## Layout
 

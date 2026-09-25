@@ -73,15 +73,18 @@ void menu_install(void) {
     add_item(run, MENU_FOCUS_REPL, @"Focus REPL", @"l", NSEventModifierFlagCommand);
 
     NSMenu *system = add_menu(@"System");
-    add_item(system, MENU_SHOW_KEYS, @"Show Keys", @"k", NSEventModifierFlagCommand);
-    add_item(system, MENU_SHOW_KEYBOARD, @"Show Keyboard", @"k", NSEventModifierFlagCommand | NSEventModifierFlagShift);
+    NSMenu *layout = submenu(system, @"Layout");
+    NSString *layouts[] = { @"Screen Only", @"Screen & Frame", @"Screen & Buttons", @"Screen & Keyboard" };
+    for (int i = 0; i < MENU_LAYOUT_END - MENU_LAYOUT_FIRST; i++) add_item(layout, MENU_LAYOUT_FIRST + i, layouts[i], @"", 0);
+    [layout addItem:[NSMenuItem separatorItem]];
+    add_item(layout, MENU_LAYOUT_NEXT, @"Next Layout", @"k", NSEventModifierFlagCommand);
     [system addItem:[NSMenuItem separatorItem]];
-    add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
     NSMenu *realism = submenu(system, @"Realism");
     add_item(realism, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
     add_item(realism, MENU_SCRATCHES, @"Scratches", @"", 0);
     add_item(realism, MENU_WEAR, @"Wear", @"", 0);
     [system addItem:[NSMenuItem separatorItem]];
+    add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
     add_item(system, MENU_SOUND, @"Sound", @"", 0);
     add_item(system, MENU_KEY_CLICK, @"Key Click", @"", 0);
     [system addItem:[NSMenuItem separatorItem]];
