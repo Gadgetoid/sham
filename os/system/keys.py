@@ -39,6 +39,7 @@ COPY = host.KEY_COPY
 PASTE = host.KEY_PASTE
 EDIT = host.KEY_EDIT
 SYNC = host.KEY_SYNC
+PICK = host.KEY_PICK
 
 SHIFT = host.MOD_SHIFT
 CTRL = host.MOD_CTRL

@@ -419,7 +419,7 @@ struct KeyScript {
             { "PGUP", HOST_KEY_PGUP }, { "PGDN", HOST_KEY_PGDN }, { "SPACE", ' ' },
             { "NEW", HOST_KEY_NEW }, { "SMBL", HOST_KEY_SMBL }, { "SEARCH", HOST_KEY_SEARCH }, { "CASE", HOST_KEY_CASE },
             { "CUT", HOST_KEY_CUT }, { "COPY", HOST_KEY_COPY }, { "PASTE", HOST_KEY_PASTE }, { "EDIT", HOST_KEY_EDIT },
-            { "SYNC", HOST_KEY_SYNC },
+            { "SYNC", HOST_KEY_SYNC }, { "PICK", HOST_KEY_PICK },
         };
         if (name.size() > 1 && name[0] == 'F' && isdigit((unsigned char)name[1])) {
             return HOST_KEY_F1 + atoi(name.c_str() + 1) - 1;

@@ -23,10 +23,11 @@ KEY_PASTE = 0x126
 KEY_EDIT = 0x127
 KEY_SYNC = 0x128
 KEY_CAPS = 0x129
+KEY_PICK = 0x12a
 
 FIXED_CODES = {
     "ESC": KEY_ESC, "DEL": KEY_BACKSPACE, "ENTER": KEY_ENTER, "SPACE": ord(" "), "MINUS": ord("-"),
-    "COMMA": ord(","), "PERIOD": ord("."), "MENU": KEY_TAB, "NEW": KEY_NEW, "SMBL": KEY_SMBL,
+    "COMMA": ord(","), "PERIOD": ord("."), "MENU": KEY_TAB, "NEW": KEY_NEW, "SMBL": KEY_PICK,
     "UP": KEY_UP, "DOWN": KEY_DOWN, "LEFT": KEY_LEFT, "RIGHT": KEY_RIGHT,
 }
 

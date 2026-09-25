@@ -93,6 +93,8 @@ class Agenda(ui.Stack):
             self.go(self.day + 7)
         elif key.char in ("t", "T"):
             self.go(dates.today())
+        elif key.code == keys.PICK:
+            ui.pick_date(self.day, self.go, title="Go to")
         else:
             return self.listing.key(key)
         return True
@@ -121,7 +123,7 @@ class Agenda(ui.Stack):
                 self.listing.select(self.listing.items.index(record))
 
         form = ui.Form([
-            ui.Field("Date", current["date"]),
+            ui.Field("Date", current["date"], picker=ui.date_picker(dates.parse_iso, dates.iso)),
             ui.Field("Time", current.get("time", "")),
             ui.Field("Title", current.get("title", "")),
             ui.Field("Alarm", "On" if current.get("alarm") else "Off", choices=["Off", "On"]),

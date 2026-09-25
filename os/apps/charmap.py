@@ -158,7 +158,7 @@ class CharMap(ui.View):
             self.preview()
         elif code == keys.SEARCH:
             self.search()
-        elif code == keys.SMBL:
+        elif code in (keys.SMBL, keys.PICK):
             self.choose_set()
         elif char and char.isalpha() and self.set_name != SINS:
             for step in range(1, len(self.entries) + 1):

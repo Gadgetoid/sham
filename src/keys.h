@@ -29,6 +29,7 @@ extern "C" {
 #define HOST_KEY_PASTE     0x126
 #define HOST_KEY_EDIT      0x127
 #define HOST_KEY_SYNC      0x128
+#define HOST_KEY_PICK      0x12a
 
 #define HOST_MOD_SHIFT 1
 #define HOST_MOD_CTRL  2

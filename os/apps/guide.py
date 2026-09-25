@@ -13,10 +13,11 @@ Ctrl-C interrupts the running app.
 MAIN always returns to the first page of the menu."""),
         ("Keyboard", """NEW, EDIT and SEARCH run the matching MENU entry.
 SEARCH in a list finds text.
-In text: 2nd+X, C and V cut, copy and paste. 2nd+F flips case. SMBL picks a symbol.
+In text: 2nd+X, C and V cut, copy and paste. 2nd+F flips case. 2nd+SMBL picks a symbol.
+The box-arrow key (under SMBL) pops up a calendar on date fields, and in Schedule jumps to a date.
 2nd and Shift latch for one keypress. 2nd then Shift toggles CAPS."""),
         ("Char Map", """SEARCH finds an icon by name across every set. Search again for the next match.
-SMBL picks a set. [ and ] step through sets.
+2nd+SMBL picks a set. [ and ] step through sets.
 Enter previews an icon and prints the code to use it."""),
     )),
     ("Games", "controller:gamepad", (

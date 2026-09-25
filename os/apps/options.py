@@ -18,6 +18,15 @@ def on_off(value):
     return "On" if value else "Off"
 
 
+def local_day(text):
+    date = timefmt.parse_numeric_date(text)
+    return dates.parse_iso("{:04d}-{:02d}-{:02d}".format(*date)) if date else None
+
+
+def local_label(day):
+    return timefmt.numeric_date(*dates.from_days(day))
+
+
 def clock_screen():
     t = host.localtime()
     cities = [city[0] for city in worldtime.CITIES]
@@ -25,7 +34,7 @@ def clock_screen():
         ui.Field("City", prefs.get("home_city", "London"), choices=cities),
         ui.Field("Time system", "24" if timefmt.use_24h() else "12", choices=["12", "24"],
                  on_change=lambda value: prefs.set("time_24h", value == "24")),
-        ui.Field("Local date", timefmt.numeric_date(t[0], t[1], t[2])),
+        ui.Field("Local date", timefmt.numeric_date(t[0], t[1], t[2]), picker=ui.date_picker(local_day, local_label)),
         ui.Field("Local time", timefmt.clock_label(t[3], t[4])),
     ]
 

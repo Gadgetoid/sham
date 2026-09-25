@@ -1,5 +1,5 @@
 import host
-from system import store, timefmt, ui
+from system import dates, store, timefmt, ui
 
 TITLE = "Expense"
 ICON = "shopping_prices"
@@ -43,7 +43,7 @@ def launch():
                 listing.select(0)
 
         form = ui.Form([
-            ui.Field("Date", timefmt.iso_date(host.localtime())),
+            ui.Field("Date", timefmt.iso_date(host.localtime()), picker=ui.date_picker(dates.parse_iso, dates.iso)),
             ui.Field("Amount", numeric=True),
             ui.Field("Category", choices=CATEGORIES),
             ui.Field("Note"),

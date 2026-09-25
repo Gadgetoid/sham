@@ -878,12 +878,13 @@ class Stack(View):
 
 
 class Field:
-    def __init__(self, label, value="", choices=None, numeric=False, name=None, on_change=None):
+    def __init__(self, label, value="", choices=None, numeric=False, name=None, on_change=None, picker=None):
         self.label = label
         self.name = name or label.lower().replace(" ", "_")
         self.choices = choices
         self.numeric = numeric
         self.on_change = on_change
+        self.picker = picker
         self.value = str(value) if value is not None else ""
         if choices and self.value not in choices:
             self.value = choices[0]
@@ -969,6 +970,9 @@ class Form(View):
     def edit_text(self, field, key):
         global _clipboard
         code, char = key.code, key.char
+        if code == keys.PICK and field.picker:
+            field.picker(field)
+            return True
         value, cursor = field.value, min(field.cursor, len(field.value))
         if char:
             if field.numeric and char not in "0123456789.-":
@@ -1176,3 +1180,97 @@ def choose(title, options, on_pick, label=str):
 
 def open_menu(entries):
     choose("Menu", entries, lambda entry, index: entry[1](), label=lambda entry: entry[0])
+
+
+class Calendar(View):
+    def __init__(self, day, on_pick):
+        super().__init__()
+        from system import dates
+        self.dates = dates
+        self.day = day
+        self.on_pick = on_pick
+
+    def month_start(self):
+        year, month, _ = self.dates.from_days(self.day)
+        return self.dates.to_days(year, month, 1)
+
+    def move(self, step):
+        self.day += step
+        invalidate()
+
+    def shift_month(self, step):
+        year, month, day = self.dates.from_days(self.day)
+        month += step
+        year += (month - 1) // 12
+        month = (month - 1) % 12 + 1
+        while day > 28 and self.dates.parse_iso("{:04d}-{:02d}-{:02d}".format(year, month, day)) is None:
+            day -= 1
+        self.day = self.dates.to_days(year, month, day)
+        invalidate()
+
+    def key(self, key):
+        code = key.code
+        steps = {keys.LEFT: -1, keys.RIGHT: 1, keys.UP: -7, keys.DOWN: 7}
+        if code in steps:
+            self.move(steps[code])
+        elif code in (keys.PGUP, keys.PGDN):
+            self.shift_month(-1 if code == keys.PGUP else 1)
+        elif key.char in ("t", "T"):
+            self.day = self.dates.today()
+            invalidate()
+        elif code in (keys.ENTER, keys.PICK):
+            pop()
+            self.on_pick(self.day)
+        else:
+            return False
+        return True
+
+    def draw(self):
+        from system import timefmt
+        first_weekday = timefmt.week_start()
+        start = self.month_start()
+        offset = (self.dates.weekday(start) - first_weekday) % 7
+        year, month, _ = self.dates.from_days(start)
+        next_start = self.dates.to_days(year + (month == 12), month % 12 + 1, 1)
+        length = next_start - start
+        weeks = (offset + length + 6) // 7
+        header_h = 10
+        cell_w = self.w // 7
+        cell_h = max(8, (self.h - header_h) // weeks)
+        left = (self.w - cell_w * 7) // 2
+        names = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+        for column in range(7):
+            name = names[(first_weekday + column) % 7]
+            self.text(name, left + column * cell_w + (cell_w - small.measure(name)) // 2, 0, MID)
+        lcd.hline(self.x + left, self.y + header_h - 2, cell_w * 7, LIGHT)
+        today = self.dates.today()
+        for index in range(length):
+            day = start + index
+            slot = offset + index
+            x = left + (slot % 7) * cell_w
+            y = header_h + (slot // 7) * cell_h
+            label = str(index + 1)
+            self.text(label, x + (cell_w - small.measure(label)) // 2, y + (cell_h - small.height) // 2)
+            if day == today:
+                self.rect(x + 2, y, cell_w - 4, cell_h, MID)
+            if day == self.day:
+                self.invert(x + 1, y, cell_w - 2, cell_h)
+
+
+def pick_date(day, on_pick, title="Date"):
+    from system import dates, timefmt
+    calendar = Calendar(day, on_pick)
+
+    def heading():
+        year, month, _ = dates.from_days(calendar.day)
+        return "{} {} {}".format(title, timefmt.MONTHS[month - 1], year)
+
+    push(Screen(heading, calendar, status="PgUp/PgDn: month"))
+
+
+def date_picker(parse, format):
+    def open_picker(field):
+        from system import dates
+        day = parse(field.value)
+        pick_date(day if day is not None else dates.today(), lambda chosen: field.set(format(chosen)))
+    return open_picker
