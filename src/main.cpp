@@ -373,6 +373,8 @@ int main(int argc, char **argv) {
     io.Fonts->AddFontDefault();
     const char *label_font = "/System/Library/Fonts/Supplemental/Arial Bold.ttf";
     if (access(label_font, R_OK) == 0) device_set_label_font(io.Fonts->AddFontFromFileTTF(label_font, 16.0f));
+    std::string icon_font = std::string(SDL_GetBasePath() ? SDL_GetBasePath() : "") + "assets/MaterialSymbolsKeys.ttf";
+    if (access(icon_font.c_str(), R_OK) == 0) device_set_icon_font(io.Fonts->AddFontFromFileTTF(icon_font.c_str(), 24.0f));
     ImGuiStyle &style = ImGui::GetStyle();
     style.FontSizeBase = 14.0f;
     style.Colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.11f, 0.12f, 1.0f);

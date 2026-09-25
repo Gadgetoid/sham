@@ -13,3 +13,4 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
 float device_fit_height(float width, bool show_keys);
 void  device_shutdown(void);
 void  device_set_label_font(ImFont *font);
+void  device_set_icon_font(ImFont *font);
