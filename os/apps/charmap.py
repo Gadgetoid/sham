@@ -100,6 +100,40 @@ class CharMap(ui.View):
             self.top = row - self.rows + 1
         self.refresh()
 
+    def choose_set(self):
+        ui.choose("Sets", list(range(len(self.sets))), lambda value, index: self.switch(index),
+                  label=lambda index: "{}  {}".format(set_title(self.sets[index]), self.set_size(index)))
+
+    def set_size(self, index):
+        name = self.sets[index]
+        return len(font_codepoints("/fonts/sins.ppf")) if name == SINS else len(CATEGORIES[name])
+
+    def search(self):
+        def find(text):
+            needle = text.strip().lower().replace(" ", "_")
+            if not needle:
+                return
+            order = [(self.set_index + step) % len(self.sets) for step in range(len(self.sets) + 1)]
+            for pass_index, set_index in enumerate(order):
+                name = self.sets[set_index]
+                if name == SINS:
+                    entries = [(chr(cp), "U+{:04X} {}".format(cp, chr(cp))) for cp in font_codepoints("/fonts/sins.ppf") if cp > 32]
+                else:
+                    entries = sorted(((char, label) for label, char in CATEGORIES[name].items()), key=lambda entry: entry[0])
+                start = self.index + 1 if pass_index == 0 else 0
+                if pass_index == len(order) - 1:
+                    entries, start = entries[:self.index + 1], 0
+                for position in range(start, len(entries)):
+                    char, label = entries[position]
+                    if needle in label.lower() or (name == SINS and text.strip() == char):
+                        if set_index != self.set_index:
+                            self.switch(set_index)
+                        self.select(position)
+                        return
+            ui.alert("No icon matching {}".format(text), title="Search")
+
+        ui.prompt("Search icons", find)
+
     def preview(self):
         entry = self.entries[self.index]
         print(usage(self.set_name, entry))
@@ -122,6 +156,10 @@ class CharMap(ui.View):
             self.switch(self.set_index + 1)
         elif code == keys.ENTER:
             self.preview()
+        elif code == keys.SEARCH:
+            self.search()
+        elif code == keys.SMBL:
+            self.choose_set()
         elif char and char.isalpha() and self.set_name != SINS:
             for step in range(1, len(self.entries) + 1):
                 candidate = (self.index + step) % len(self.entries)
@@ -163,7 +201,4 @@ def launch():
     view = CharMap()
     return ui.Screen("Char Map", view,
                      status=lambda: "{}  {}/{}".format(set_title(view.set_name), view.set_index + 1, len(view.sets)),
-                     menu=lambda: [("Choose set", lambda: ui.choose("Sets", list(range(len(view.sets))),
-                                                                   lambda value, index: view.switch(index),
-                                                                   label=lambda index: set_title(view.sets[index]))),
-                                   ("Preview", view.preview)])
+                     menu=lambda: [("Search", view.search), ("Choose set", view.choose_set), ("Preview", view.preview)])
