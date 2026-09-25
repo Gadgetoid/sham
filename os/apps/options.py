@@ -191,13 +191,42 @@ def data_usage():
     return files, total
 
 
-def memory_screen():
-    gc.collect()
-    files, total = data_usage()
-    text = "Data: {} files, {} bytes\nHeap free {} KB, used {} KB\nMicroPython {} on {}".format(
-        files, total, gc.mem_free() // 1024, gc.mem_alloc() // 1024,
-        ".".join(str(part) for part in sys.implementation.version[:3]), sys.platform)
+class MemoryView(ui.View):
+    def __init__(self):
+        super().__init__()
+        self.last = 0
+        self.measure()
 
+    def measure(self):
+        gc.collect()
+        self.free = gc.mem_free()
+        self.used = gc.mem_alloc()
+        self.files, self.bytes = data_usage()
+
+    def tick(self, now):
+        if now - self.last >= 1000:
+            self.last = now
+            self.measure()
+            self.refresh()
+
+    def bar(self, y, label, fraction, detail):
+        self.text(label, 2, y)
+        left = 40
+        width = self.w - left - 4
+        self.rect(left, y, width, 9)
+        self.fill(left + 1, y + 1, int((width - 2) * fraction), 7, MID)
+        self.text(detail, self.w - small.measure(detail) - 2, y + 11, MID)
+
+    def draw(self):
+        total = self.free + self.used
+        self.bar(2, "Heap", self.used / total if total else 0,
+                 "{} KB free of {} KB".format(self.free // 1024, total // 1024))
+        self.text("Data  {} files, {} KB".format(self.files, (self.bytes + 1023) // 1024), 2, 28)
+        version = ".".join(str(part) for part in sys.implementation.version[:3])
+        self.text("MicroPython {} on {}".format(version, sys.platform), 2, 40, MID)
+
+
+def memory_screen():
     def format_databank():
         def wipe():
             folders = ["/data"]
@@ -219,7 +248,7 @@ def memory_screen():
         ui.confirm("Do you really want to initialize the organizer's memory (this will delete all data)?", wipe,
                    title="MEMORY")
 
-    return ui.Screen("MEMORY", ui.TextView(text), menu=[("Format databank...", format_databank)])
+    return ui.Screen("MEMORY", MemoryView(), menu=[("Format databank...", format_databank)])
 
 
 PAGES = (
