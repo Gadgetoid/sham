@@ -35,6 +35,7 @@ const float ARROW_HALF_GAP = 6.8f;
 const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 15.0f;
+const float ARROW_GAP_CORNER = 4.0f;
 const float ARROW_WELL_TUCK = 3.0f;
 const float ARROW_WELL_FLAT = -91.06f;
 const float ARROW_KEY_FLAT = -86.06f;
@@ -302,14 +303,21 @@ float ease_flat(float x, float flat_x) {
     return flat_x + ARROW_SOFTNESS * logf(expf((x - flat_x) / ARROW_SOFTNESS) + 1.0f);
 }
 
-Shape arrow_region(bool up, float grow) {
+Shape arrow_region(bool up, float grow, float extend = 0) {
     Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + grow, 180);
-    float near_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP + grow : ARROW_GAP_Y + ARROW_HALF_GAP - grow;
+    float near_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP + grow + extend : ARROW_GAP_Y + ARROW_HALF_GAP - grow - extend;
     shape = clip(shape, ImVec2(0, near_y), ImVec2(0, up ? 1.0f : -1.0f));
     Shape edge = reference_circle(ImVec2(ARROW_EDGE_X + grow - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720);
     shape = clip_convex(shape, edge);
     for (ImVec2 &point : shape) point.x = ease_flat(point.x, ARROW_CENTRE.x + ARROW_KEY_FLAT);
     return shape;
+}
+
+Shape arrow_key(bool up) {
+    Shape shape = rounded(arrow_region(up, 0, ARROW_CORNER * 2), ARROW_CORNER);
+    float gap_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP : ARROW_GAP_Y + ARROW_HALF_GAP;
+    shape = clip(shape, ImVec2(0, gap_y), ImVec2(0, up ? 1.0f : -1.0f));
+    return rounded(shape, ARROW_GAP_CORNER);
 }
 
 Shape arrow_well() {
@@ -615,8 +623,8 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     Shape power = pill(frame.at(fit_power[0] - fit_power[2], fit_power[1] - fit_power[3], true),
                        frame.at(fit_power[0] + fit_power[2], fit_power[1] + fit_power[3], true));
     ImRect power_box = bounds(power);
-    Shape up_key = to_screen(frame, rounded(arrow_region(true, 0), ARROW_CORNER), true);
-    Shape down_key = to_screen(frame, rounded(arrow_region(false, 0), ARROW_CORNER), true);
+    Shape up_key = to_screen(frame, arrow_key(true), true);
+    Shape down_key = to_screen(frame, arrow_key(false), true);
 
     draw->PushClipRect(device_min, device_max, true);
     for (const char *name : side_names) {
