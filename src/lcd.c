@@ -189,12 +189,20 @@ static uint32_t *output = NULL;
 static float *vignette_x = NULL, *vignette_y = NULL;
 static float *grain = NULL;
 static int cell = 0, output_w = 0, output_h = 0;
+static bool force_compose = true;
 static bool backlight = true;
+static int contrast_level = 5;
+
+void lcd_set_contrast(int level) {
+    contrast_level = level < 0 ? 0 : level > 10 ? 10 : level;
+    force_compose = true;
+}
+
+int lcd_get_contrast(void) { return contrast_level; }
 
 enum { COLUMN_OK, COLUMN_OFF, COLUMN_ON, COLUMN_WEAK };
 static uint8_t column_fault[LCD_WIDTH];
 static bool dead_columns = false;
-static bool force_compose = true;
 
 static void fault_region(uint8_t fault) {
     int count = 3 + rand() % 4;
@@ -356,6 +364,8 @@ bool lcd_compose(float seconds) {
 
     const panel_t *panel = backlight ? &panel_lit : &panel_unlit;
     int gap = cell >= 4 ? max_int(1, cell / 7) : 1;
+    float gain = (0.55f + contrast_level * 0.06f) / 0.85f;
+    float off_bias = contrast_level > 6 ? (contrast_level - 6) * 0.035f : 0.0f;
     int shadow_offset = max_int(1, cell / 3);
     float soft_offset = 0.75f;
 
@@ -367,7 +377,7 @@ bool lcd_compose(float seconds) {
     }
 
     if (panel->bloom > 0) {
-        for (int i = 0; i < GRID_W * GRID_H; i++) glow_grid[i] = 1.0f - ink_grid[i] * panel->contrast;
+        for (int i = 0; i < GRID_W * GRID_H; i++) glow_grid[i] = 1.0f - fminf(1.0f, ink_grid[i] * panel->contrast * gain);
         box_blur(glow_grid, glow_scratch, 2);
         box_blur(glow_grid, glow_scratch, 2);
     }
@@ -416,7 +426,7 @@ bool lcd_compose(float seconds) {
             float soft_bottom = soft_grid[soft_y1 * GRID_W + soft_x0] * (1 - soft_fx) + soft_grid[soft_y1 * GRID_W + soft_x1] * soft_fx;
             light *= 1.0f - (soft_top * (1 - soft_fy) + soft_bottom * soft_fy) * panel->soft_shadow;
 
-            float coverage = ink * panel->contrast;
+            float coverage = fminf(1.0f, ink * panel->contrast * gain + (electrode ? off_bias : 0.0f));
             float r = panel->glass.r * light * (1.0f - coverage) + panel->ink.r * coverage;
             float g = panel->glass.g * light * (1.0f - coverage) + panel->ink.g * coverage;
             float b = panel->glass.b * light * (1.0f - coverage) + panel->ink.b * coverage;

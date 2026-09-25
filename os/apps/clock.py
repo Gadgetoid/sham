@@ -9,6 +9,11 @@ ORDER = 20
 REPEATS = ["Daily", "Once"]
 
 
+def show_time(text):
+    minute = dates.parse_time(text)
+    return timefmt.clock_label(minute // 60, minute % 60) if minute is not None else text
+
+
 class Clock(ui.View):
     def __init__(self):
         super().__init__()
@@ -22,18 +27,18 @@ class Clock(ui.View):
 
     def draw(self):
         t = host.localtime()
-        hour = t[3] % 12 or 12
-        digits = "{}:{:02d}:{:02d}".format(hour, t[4], t[5])
-        suffix = "AM" if t[3] < 12 else "PM"
-        width = large.measure(digits) + 4 + small.measure(suffix)
+        digits = "{}:{:02d}".format(timefmt.clock_label(t[3], t[4], suffix=False), t[5])
+        suffix = timefmt.meridiem(t[3])
+        width = large.measure(digits) + (4 + small.measure(suffix) if suffix else 0)
         x = (self.w - width) // 2
         x += self.text(digits, x, 5, INK, large) + 4
-        self.text(suffix, x, 5 + large.height - small.height)
+        if suffix:
+            self.text(suffix, x, 5 + large.height - small.height)
         date = timefmt.date_label(t)
         self.text(date, (self.w - small.measure(date)) // 2, 29, MID)
         upcoming = alarms.next_clock_alarm()
         if upcoming is not None:
-            label = "Alarm " + dates.format_time(upcoming)
+            label = "Alarm " + timefmt.clock_label(upcoming // 60, upcoming % 60)
             label_w = small.measure(label) + 19
             left = (self.w - label_w) // 2
             self.icon("clock_up", left, 39)
@@ -46,7 +51,7 @@ class Clock(ui.View):
 def alarm_screen():
     entries = store.load("alarms", [])
     listing = ui.List(entries,
-                      label=lambda a: "{}  {}".format(a["time"], a.get("label") or "Alarm"),
+                      label=lambda a: "{}  {}".format(show_time(a["time"]), a.get("label") or "Alarm"),
                       detail=lambda a: a.get("repeat", "Daily"),
                       icon=lambda a: "checkbox_done_todo" if a.get("on") else "checkbox_empty_todo",
                       empty="No alarms. MENU: new alarm")

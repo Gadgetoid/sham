@@ -12,6 +12,7 @@ void        runtime_request_reload(void);
 void        runtime_interrupt(void);
 bool        runtime_idle(void);
 bool        runtime_repl_busy(void);
+int         runtime_boots(void);
 const char *runtime_get_resume(void);
 void        runtime_set_resume(const char *name);
 void        runtime_deinit(void);

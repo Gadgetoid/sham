@@ -4,6 +4,7 @@ import host
 import lcd
 from system import dates, keys, prefs, sound, ui, worldtime
 from system.gfx import CLEAR, LIGHT, MID, INK, small, large
+from system import timefmt
 from system.timefmt import DAYS
 
 TITLE = "World"
@@ -139,9 +140,9 @@ class World(ui.View):
         name = small.fit(self.city[0], panel_w - 2)
         self.text(name, panel, 1)
         days, hour, minute = worldtime.local(self.city, utc)
-        clock = "{}:{:02d}".format(hour, minute)
+        clock = timefmt.clock_label(hour, minute, suffix=False)
         self.text(clock, panel + (panel_w - large.measure(clock)) // 2, 14, INK, large)
-        date = "{} {}".format(DAYS[dates.weekday(days)], dates.from_days(days)[2])
+        date = "{} {}  {}".format(DAYS[dates.weekday(days)], dates.from_days(days)[2], timefmt.meridiem(hour))
         self.text(date, panel, 36, MID)
         offset = worldtime.city_offset(self.city, utc)
         home_offset = worldtime.city_offset(worldtime.CITIES[self.home], utc)
@@ -156,6 +157,6 @@ class World(ui.View):
 
 def launch():
     view = World()
-    return ui.Screen("World", view, status=lambda: "UTC {:02d}:{:02d}".format(host.epoch() % 86400 // 3600,
-                                                                            host.epoch() % 3600 // 60),
+    return ui.Screen("World", view, status=lambda: "UTC " + timefmt.clock_label(host.epoch() % 86400 // 3600,
+                                                                               host.epoch() % 3600 // 60),
                      menu=[("Set as home", view.set_home)])

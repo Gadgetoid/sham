@@ -24,6 +24,10 @@ Period-accurate app ideas, grouped by what they need.
 
 ## Bigger
 
+- [ ] **WZD import:** read Sharp's `.wzd` add-ins. They're a tagged text container (`<SHARP WZD DATA>`, `<DATA TYPE>`, `<TITLE>`, `<CATEGORY>`, `<DESCRIPTION>`, `<DATA>`) wrapping "Sharp Download Data V1.0" CSV, with field codes per type (Memo: `TTL1`, `MEM1`, `DATE`...; Schedule: `TIM1`, `TIM2`, `ALRM`, `SRPT`...). The MEMO and SCHEDULE ones (holidays, paper sizes, dialling codes) map straight onto Memo and Schedule. Source: global.sharp ZQ-700 downloads.
+- [ ] **Sharp BASIC add-ins:** `DATA TYPE` `BASIC` files (Biorhythm, Pegs, CSM_Calc) carry `<BIN>` tokenised Sharp pocket-computer BASIC: 2-byte line number, length byte, `0xFE`-prefixed tokens, `*LABEL`s, and code that assumes a 239px-wide screen. A detokeniser plus a small interpreter could run the originals.
+- [ ] **Secret and Autorun:** the rest of the firmware Options menu. A password gates secret-flagged entries, with a lock organiser option. Autorun starts a program at power on.
+
 - [x] **Program editor ("My Programs"):** write and run Python apps on the device itself, like OPL's Program editor on the Psion. The REPL plumbing already exists.
 - [ ] **Infrared beaming:** send memos and contacts between two Pocket windows over localhost UDP, styled as IrDA with a "Receiving..." dialog.
 - [ ] **PC Sync:** mirror memos and Tel entries to a folder on the Mac, like the ZQ-770's PC SYNC key.

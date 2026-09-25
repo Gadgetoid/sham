@@ -1,4 +1,4 @@
-from system import dates, keys, store, ui
+from system import dates, keys, store, timefmt, ui
 from system.gfx import CLEAR, MID, INK, small
 
 TITLE = "Schedule"
@@ -7,6 +7,13 @@ ORDER = 15
 
 STRIP_H = 12
 DAY_NAMES = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+
+
+def show_time(text):
+    minute = dates.parse_time(text) if text else None
+    if minute is None:
+        return "--:--"
+    return timefmt.clock_label(minute // 60, minute % 60)
 
 
 def sort_key(event):
@@ -23,15 +30,17 @@ class Week(ui.View):
 
     def draw(self):
         selected = self.agenda.day
-        start = selected - dates.weekday(selected)
+        first = timefmt.week_start()
+        start = selected - (dates.weekday(selected) - first) % 7
         today = dates.today()
         busy = self.agenda.busy_days()
         cell_w = self.w // 7
         for index in range(7):
             day = start + index
             x = index * cell_w
-            label = "{} {}".format(DAY_NAMES[index], dates.from_days(day)[2])
-            self.text(label, x + (cell_w - small.measure(label)) // 2, 1, INK if index < 5 else MID)
+            weekday = dates.weekday(day)
+            label = "{} {}".format(DAY_NAMES[weekday], dates.from_days(day)[2])
+            self.text(label, x + (cell_w - small.measure(label)) // 2, 1, INK if weekday < 5 else MID)
             if day in busy:
                 self.fill(x + cell_w // 2 - 1, STRIP_H - 2, 2, 1, INK)
             if day == today:
@@ -52,7 +61,7 @@ class Agenda(ui.Stack):
         self.show()
 
     def label(self, event):
-        return "{}  {}".format(event.get("time") or "--:--", event["title"])
+        return "{}  {}".format(show_time(event.get("time")), event["title"])
 
     def busy_days(self):
         return {dates.parse_iso(event["date"]) for event in self.events}

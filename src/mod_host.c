@@ -21,8 +21,26 @@ static mp_obj_t host_ticks(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_ticks_obj, host_ticks);
 
+static int64_t clock_offset = 0;
+
+static time_t device_time(void) {
+    return time(NULL) + (time_t)clock_offset;
+}
+
+static mp_obj_t host_clock_offset(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) clock_offset = mp_obj_get_int(args[0]);
+    return mp_obj_new_int((mp_int_t)clock_offset);
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_clock_offset_obj, 0, 1, host_clock_offset);
+
+static mp_obj_t host_contrast(size_t n_args, const mp_obj_t *args) {
+    if (n_args == 1) lcd_set_contrast(mp_obj_get_int(args[0]));
+    return MP_OBJ_NEW_SMALL_INT(lcd_get_contrast());
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_contrast_obj, 0, 1, host_contrast);
+
 static mp_obj_t host_localtime(void) {
-    time_t now = time(NULL);
+    time_t now = device_time();
     struct tm local;
     localtime_r(&now, &local);
     mp_obj_t fields[8] = {
@@ -36,12 +54,12 @@ static mp_obj_t host_localtime(void) {
 static MP_DEFINE_CONST_FUN_OBJ_0(host_localtime_obj, host_localtime);
 
 static mp_obj_t host_epoch(void) {
-    return mp_obj_new_int((mp_int_t)time(NULL));
+    return mp_obj_new_int((mp_int_t)device_time());
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_epoch_obj, host_epoch);
 
 static mp_obj_t host_utc_offset(void) {
-    time_t now = time(NULL);
+    time_t now = device_time();
     struct tm local;
     localtime_r(&now, &local);
     return mp_obj_new_int((mp_int_t)local.tm_gmtoff);
@@ -125,6 +143,11 @@ static mp_obj_t host_capture_stop_fn(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_capture_stop_obj, host_capture_stop_fn);
 
+static mp_obj_t host_boots(void) {
+    return MP_OBJ_NEW_SMALL_INT(runtime_boots());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(host_boots_obj, host_boots);
+
 static mp_obj_t host_reload(void) {
     runtime_request_reload();
     return mp_const_none;
@@ -137,6 +160,8 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ticks_ms),  MP_ROM_PTR(&host_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&host_localtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_epoch),     MP_ROM_PTR(&host_epoch_obj) },
+    { MP_ROM_QSTR(MP_QSTR_clock_offset), MP_ROM_PTR(&host_clock_offset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_contrast),  MP_ROM_PTR(&host_contrast_obj) },
     { MP_ROM_QSTR(MP_QSTR_utc_offset), MP_ROM_PTR(&host_utc_offset_obj) },
     { MP_ROM_QSTR(MP_QSTR_key),       MP_ROM_PTR(&host_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_held),      MP_ROM_PTR(&host_held_obj) },
@@ -149,6 +174,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_beeping),   MP_ROM_PTR(&host_beeping_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_start), MP_ROM_PTR(&host_capture_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_stop),  MP_ROM_PTR(&host_capture_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boots),     MP_ROM_PTR(&host_boots_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_KEY_BACKSPACE), MP_ROM_INT(HOST_KEY_BACKSPACE) },

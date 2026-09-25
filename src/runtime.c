@@ -37,6 +37,7 @@ static bool running_repl = false;
 static bool idle = false;
 static int abort_steps = 0;
 static uint32_t resumed_at = 0;
+static int boots = 0;
 
 void host_yield_to_main(void) {
     mco_yield(mco_running());
@@ -57,6 +58,8 @@ void runtime_set_resume(const char *name) {
 bool runtime_idle(void) { return idle; }
 
 bool runtime_repl_busy(void) { return running_repl; }
+
+int runtime_boots(void) { return boots; }
 
 static mp_vfs_mount_t *new_mount(const char *point, const char *dir) {
     mp_obj_t args[] = { mp_obj_new_str(dir, strlen(dir)) };
@@ -152,6 +155,7 @@ static void fiber_entry(mco_coro *co) {
 }
 
 static bool start_fiber(void) {
+    boots++;
     reload_requested = false;
     running_repl = false;
     idle = false;

@@ -1,5 +1,5 @@
 import host
-from system import dates, keys, sound, store, ui
+from system import dates, keys, prefs, sound, store, timefmt, ui
 
 SNOOZE_MINUTES = 5
 RING_MS = 60000
@@ -16,15 +16,17 @@ def due(day, minute):
     labels = []
     alarms = clock_alarms()
     changed = False
+    daily_on = prefs.get("daily_alarm", True)
     for alarm in alarms:
-        if alarm.get("on") and dates.parse_time(alarm.get("time", "")) == minute:
+        if daily_on and alarm.get("on") and dates.parse_time(alarm.get("time", "")) == minute:
             labels.append(alarm.get("label") or "Alarm")
             if alarm.get("repeat") == "Once":
                 alarm["on"] = False
                 changed = True
     if changed:
         store.save("alarms", alarms)
-    for event in store.load("schedule", []):
+    events = store.load("schedule", []) if prefs.get("schedule_alarm", True) else []
+    for event in events:
         if (event.get("alarm") and dates.parse_iso(event.get("date", "")) == day
                 and dates.parse_time(event.get("time", "")) == minute):
             labels.append(event.get("title") or "Appointment")
@@ -66,7 +68,8 @@ def check():
 
 class Ringing(ui.Dialog):
     def __init__(self, labels, day, minute):
-        super().__init__("ALARM  " + dates.format_time(minute), ui.Message("\n".join(labels), "Enter: stop  S: snooze"))
+        super().__init__("ALARM  " + timefmt.clock_label(minute // 60, minute % 60),
+                         ui.Message("\n".join(labels), "Enter: stop  S: snooze"))
         self.labels = labels
         self.day = day
         self.minute = minute

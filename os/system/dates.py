@@ -65,5 +65,8 @@ def format_time(minutes):
 
 
 def short_label(days):
+    from system import timefmt
     year, month, day = from_days(days)
+    if timefmt.date_format() == "D.M.Y":
+        return "{} {}({})".format(day, MONTHS[month - 1], DAYS[weekday(days)])
     return "{} {}({})".format(MONTHS[month - 1], day, DAYS[weekday(days)])

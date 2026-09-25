@@ -3,14 +3,19 @@ import sys
 
 import host
 import lcd
-from system import alarms, keys, sound, timefmt, ui
+from system import alarms, keys, prefs, sound, timefmt, ui
 
-HOTKEYS = {
-    keys.TEL: "tel",
-    keys.CAL: "schedule",
-    keys.MEMO: "memo",
-    keys.PROGRAMS: "programs",
-}
+HOTKEY_BUTTONS = (
+    ("TEL", keys.TEL, "tel"),
+    ("CAL", keys.CAL, "schedule"),
+    ("MEMO", keys.MEMO, "memo"),
+    ("PROG", keys.PROGRAMS, "programs"),
+)
+
+
+def hotkeys():
+    assigned = prefs.get("hotkeys", {})
+    return {code: assigned.get(label, default) for label, code, default in HOTKEY_BUTTONS}
 
 FOLDER_ICONS = {
     "Games": "controller:gamepad",
@@ -70,10 +75,28 @@ def group(apps):
     return entries, folders
 
 
+class OwnerSplash(ui.Screen):
+    def __init__(self, owner):
+        body = ui.Message("\n".join(line for line in (owner.get("name"), owner.get("number"), owner.get("address")) if line),
+                          "Press any key")
+        super().__init__("OWNER INFORMATION", body)
+        self.started = host.ticks_ms()
+
+    def tick(self, now):
+        if now - self.started > 4000:
+            ui.pop()
+
+    def key(self, key):
+        ui.pop()
+        return True
+
+
 class Shell:
     def __init__(self):
         ui._shell = self
         sound.load_prefs()
+        host.contrast(prefs.get("contrast", 5))
+        host.clock_offset(prefs.get("clock_offset", 0))
         self.apps = discover()
         self.entries, self.folders = group(self.apps)
         self.stack = []
@@ -174,8 +197,8 @@ class Shell:
         sound.click()
         if code == keys.MAIN:
             self.go_home()
-        elif code in HOTKEYS:
-            self.launch(HOTKEYS[code])
+        elif code in hotkeys():
+            self.launch(hotkeys()[code])
         elif code == keys.LIGHT:
             host.backlight(not host.backlight())
         elif not self.top().key(key) and code == keys.ESC and self.stack:
@@ -212,6 +235,8 @@ class Shell:
         resume = host.resume()
         if resume:
             self.launch(resume)
+        if host.boots() == 1 and prefs.get("startup_owner", False) and prefs.get("owner", {}).get("name"):
+            self.push(OwnerSplash(prefs.get("owner", {})))
         while True:
             try:
                 for key in keys.poll():

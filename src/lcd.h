@@ -47,6 +47,8 @@ int       lcd_compose_width(void);
 int       lcd_compose_height(void);
 void      lcd_set_backlight(bool on);
 bool      lcd_get_backlight(void);
+void      lcd_set_contrast(int level);
+int       lcd_get_contrast(void);
 void      lcd_set_dead_columns(bool on);
 bool      lcd_get_dead_columns(void);
 
