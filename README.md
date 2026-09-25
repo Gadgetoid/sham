@@ -50,6 +50,8 @@ The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/My Programs and the b
 
 The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 
+Menu settings (REPL, keys, backlight, dead columns, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+
 ## Layout
 
 | Path | What |

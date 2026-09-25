@@ -50,8 +50,69 @@ struct Options {
     bool show_keys = true;
     int fps = 0;
     float response = 1.0f;
+    bool backlight = true;
     std::vector<int> menu_items;
 };
+
+struct Settings {
+    bool show_repl;
+    bool show_keys;
+    bool backlight;
+    bool dead_columns;
+    int fps;
+    float response;
+    int width;
+    int height;
+
+    bool operator==(const Settings &other) const {
+        return show_repl == other.show_repl && show_keys == other.show_keys && backlight == other.backlight &&
+               dead_columns == other.dead_columns && fps == other.fps && response == other.response &&
+               width == other.width && height == other.height;
+    }
+};
+
+static std::string settings_path(const std::string &data) {
+    return data + "/pocket.ini";
+}
+
+static void load_settings(const std::string &data, Options &options) {
+    FILE *file = fopen(settings_path(data).c_str(), "r");
+    if (!file) return;
+    char key[64];
+    char value[64];
+    while (fscanf(file, " %63[^=]=%63s", key, value) == 2) {
+        std::string name = key;
+        if (name == "show_repl") options.show_repl = atoi(value) != 0;
+        else if (name == "show_keys") options.show_keys = atoi(value) != 0;
+        else if (name == "backlight") options.backlight = atoi(value) != 0;
+        else if (name == "dead_columns") options.dead_columns = atoi(value) != 0;
+        else if (name == "fps") options.fps = atoi(value);
+        else if (name == "response") options.response = (float)atof(value);
+        else if (name == "width") options.width = atoi(value);
+        else if (name == "height") options.height = atoi(value);
+    }
+    fclose(file);
+}
+
+static void save_settings(const std::string &data, const Settings &settings) {
+    std::string path = settings_path(data);
+    std::string temporary = path + ".tmp";
+    FILE *file = fopen(temporary.c_str(), "w");
+    if (!file) return;
+    fprintf(file, "show_repl=%d\nshow_keys=%d\nbacklight=%d\ndead_columns=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
+            settings.show_repl, settings.show_keys, settings.backlight, settings.dead_columns, settings.fps,
+            settings.response, settings.width, settings.height);
+    fclose(file);
+    rename(temporary.c_str(), path.c_str());
+}
+
+static std::string data_argument(int argc, char **argv) {
+    std::string data = "data";
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "--data=", 7) == 0) data = argv[i] + 7;
+    }
+    return data;
+}
 
 static int menu_item_named(const std::string &name) {
     static const std::pair<const char *, int> names[] = {
@@ -344,6 +405,7 @@ static void save_screenshot(SDL_Renderer *renderer, const std::string &path) {
 
 int main(int argc, char **argv) {
     Options options;
+    load_settings(absolute(data_argument(argc, argv)), options);
     if (!parse_options(argc, argv, options)) return 1;
 
     options.root = absolute(options.root);
@@ -388,6 +450,7 @@ int main(int argc, char **argv) {
 
     srand((unsigned)SDL_GetTicks() ^ (unsigned)time(nullptr));
     if (options.dead_columns) lcd_set_dead_columns(true);
+    lcd_set_backlight(options.backlight);
 
     host_config_t config = { options.root.c_str(), options.data.c_str(), options.main.c_str() };
     if (!runtime_init(&config)) return 1;
@@ -471,6 +534,21 @@ int main(int argc, char **argv) {
                     if (!show_repl) set_repl_visible(window, false, device.show_keys, restore_height);
                     break;
                 default: break;
+            }
+        }
+        if (options.screenshot.empty() || getenv("POCKET_PERSIST")) {
+            static Settings saved = {};
+            static bool have_saved = false;
+            int window_w = 0, window_h = 0;
+            SDL_GetWindowSize(window, &window_w, &window_h);
+            Settings current = { show_repl, device.show_keys, lcd_get_backlight(), lcd_get_dead_columns(), fps, response,
+                                 window_w, show_repl ? window_h : restore_height };
+            if (!have_saved) {
+                saved = current;
+                have_saved = true;
+            } else if (!(current == saved)) {
+                save_settings(options.data, current);
+                saved = current;
             }
         }
         menu_ensure();
