@@ -913,6 +913,8 @@ const float KB_WIDTH_RATIO = 1.0f;
 const float KB_PAD_X = 16.0f;
 const float KEY_TRAVEL = 2.6f;
 const float KEY_SHOULDER = 4.0f;
+const float WELL_SQUASH = 0.9f;
+const float WELL_DEPTH = 3.5f;
 const float KB_PAD_TOP = 12.0f;
 const float KB_PAD_BOTTOM = 10.0f;
 const float KB_BOTTOM_MARGIN = 6.0f;
@@ -1222,11 +1224,11 @@ void draw_keybed(ImDrawList *draw, const KeyboardFrame &frame, bool wear) {
     ring_mesh(draw, face, offsets, [&](ImVec2 normal, int ring) {
         float facing_front = smoothstep(normal.y);
         ImU32 edge = mix(mix(KB_KEYBED, side_edge, fabsf(normal.x)), front_edge, facing_front);
-        if (normal.y < 0) edge = mix(KB_KEYBED, BEZEL_LIGHT, -normal.y * 0.5f);
+        if (normal.y < 0) edge = mix(KB_KEYBED, BEZEL_LIGHT, -normal.y * 0.22f);
         if (ring == 0) return edge & ~IM_COL32_A_MASK;
         float t = (float)(ring - 1) / lip_rings;
         ImU32 colour = mix(edge, KB_KEYBED, smoothstep(t));
-        float highlight = expf(-powf((t - 0.28f) / 0.12f, 2.0f)) * facing_front * 0.55f;
+        float highlight = expf(-powf((t - 0.28f) / 0.12f, 2.0f)) * facing_front * 0.25f;
         colour = mix(colour, KB_HIGHLIGHT, highlight);
         return faded(colour, 1.0f - smoothstep((t - 0.7f) / 0.3f));
     });
@@ -1235,7 +1237,22 @@ void draw_keybed(ImDrawList *draw, const KeyboardFrame &frame, bool wear) {
     draw_recess(draw, pill(frame.at(KB_FINGER_X - KB_FINGER_W * 0.5f, finger_y - KB_FINGER_H * 0.5f),
                            frame.at(KB_FINGER_X + KB_FINGER_W * 0.5f, finger_y + KB_FINGER_H * 0.5f)),
                 SCOOP_RECESS, k, Mask(), FINGER_SCOOP);
-    draw_recess(draw, circle(frame.at(KB_WELL_X, KB_WELL_Y), KB_WELL_R * k), CURSOR_WELL, k, Mask(), KEYBED_WELL);
+    {
+        ImVec2 centre = frame.at(KB_WELL_X, KB_WELL_Y);
+        Shape well;
+        for (int i = 0; i < 64; i++) {
+            float angle = 2 * IM_PI * i / 64;
+            well.push_back(centre + ImVec2(cosf(angle) * KB_WELL_R, sinf(angle) * KB_WELL_R * WELL_SQUASH) * k);
+        }
+        draw_recess(draw, well, CURSOR_WELL, k, Mask(), KEYBED_WELL);
+        Shape floor = translated(inset(well, WELL_DEPTH * 1.3f * k), ImVec2(0, WELL_DEPTH * k));
+        const int rings = 5;
+        for (int ring = 0; ring < rings; ring++) {
+            float t = (float)(ring + 1) / rings;
+            Shape layer = inset(floor, (rings - 1 - ring) * 0.8f * k);
+            fill(draw, layer, faded(KEYBED_WELL.bowl_top, 0.25f * t), faded(KEYBED_WELL.bowl_bottom, 0.35f * t));
+        }
+    }
 }
 
 void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, DeviceState &state) {
@@ -1250,7 +1267,6 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
     }
 
     for (const KeyboardKey &key : keyboard_keys) {
-        if (key.shape == KB_SHAPE_CURSOR) continue;
         draw_recess(draw, outset(keyboard_key_shape(frame, key), 2.0f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
     }
     for (const KeyboardKey &key : keyboard_keys) finger_grime(draw, keyboard_key_shape(frame, key), key.wear, k);
