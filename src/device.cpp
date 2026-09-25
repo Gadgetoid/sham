@@ -38,6 +38,7 @@ const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 7.5f;
 const float ARROW_WELL_CORNER = 12.0f;
 const float FLUTE_REACH = 0.9f;
+const float SIDE_KEY_CORNER = 6.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
 
@@ -149,6 +150,15 @@ Shape pill(ImVec2 a, ImVec2 b) {
     Shape shape;
     add_arc(shape, ImVec2(a.x + r, a.y + r), r, IM_PI * 0.5f, IM_PI * 1.5f, 20);
     add_arc(shape, ImVec2(b.x - r, a.y + r), r, IM_PI * 1.5f, IM_PI * 2.5f, 20);
+    return shape;
+}
+
+Shape side_key(ImVec2 a, ImVec2 b, float corner) {
+    float r = (b.y - a.y) * 0.5f;
+    Shape shape;
+    add_arc(shape, ImVec2(a.x + r, a.y + r), r, IM_PI * 0.5f, IM_PI * 1.5f, 32);
+    add_arc(shape, ImVec2(b.x - corner, a.y + corner), corner, IM_PI * 1.5f, IM_PI * 2.0f, 10);
+    add_arc(shape, ImVec2(b.x - corner, b.y - corner), corner, 0, IM_PI * 0.5f, 10);
     return shape;
 }
 
@@ -554,7 +564,8 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         { "key-prog", HOST_KEY_F1 + 4, nullptr, 0 },
     };
     for (int index = 0; index < 5; index++) {
-        Shape shape = traced(frame, side_names[index]);
+        ImRect box = bounds(traced(frame, side_names[index]));
+        Shape shape = side_key(box.Min, box.Max, SIDE_KEY_CORNER * u);
         bool pressed;
         if (hit(side[index].id, shape, pressed) && live) keys_push(side[index].code, 0);
         key(draw, shape, DARK_KEY, pressed, u);
@@ -570,8 +581,8 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     }
 
     {
-        Shape shape = traced(frame, "light");
-        ImRect box = bounds(shape);
+        ImRect box = bounds(traced(frame, "light"));
+        Shape shape = pill(box.Min, box.Max);
         recess(draw, pill(box.Min - ImVec2(WELL_MARGIN, WELL_MARGIN) * u, box.Max + ImVec2(WELL_MARGIN, WELL_MARGIN) * u), u);
         bool pressed;
         if (hit("key-light", shape, pressed)) lcd_set_backlight(!lcd_get_backlight());
