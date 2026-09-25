@@ -64,6 +64,8 @@ void menu_install(void) {
     add_item(run, MENU_FOCUS_REPL, @"Focus REPL", @"l", NSEventModifierFlagCommand);
 
     NSMenu *system = add_menu(@"System");
+    add_item(system, MENU_SHOW_KEYS, @"Show Keys", @"k", NSEventModifierFlagCommand);
+    [system addItem:[NSMenuItem separatorItem]];
     add_item(system, MENU_BACKLIGHT, @"Backlight", @"b", NSEventModifierFlagCommand);
     add_item(system, MENU_DEAD_COLUMNS, @"Dead Columns", @"d", NSEventModifierFlagCommand);
     [system addItem:[NSMenuItem separatorItem]];

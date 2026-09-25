@@ -26,7 +26,7 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 ./pocket --no-repl --period --menu=dead-columns
 ```
 
-Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{WAIT}` skips a step.
+Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
@@ -45,6 +45,8 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Cmd-L | Focus the REPL, Esc to return to the device |
 | Cmd-B | Backlight (System menu) |
 | Cmd-D | Dead LCD columns, re-rolled each time (System menu) |
+
+The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/My Programs and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
 
 The System menu also has Period Frame Rate, which runs the device at 10 fps while the window stays smooth.
 

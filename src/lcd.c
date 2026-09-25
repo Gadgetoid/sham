@@ -191,6 +191,12 @@ static float *grain = NULL;
 static int cell = 0, output_w = 0, output_h = 0;
 static bool force_compose = true;
 static bool backlight = true;
+static bool powered = true;
+
+void lcd_set_power(bool on) {
+    powered = on;
+    force_compose = true;
+}
 static int contrast_level = 5;
 
 void lcd_set_contrast(int level) {
@@ -330,8 +336,8 @@ static bool settle_pixels(float seconds) {
     float lighten = 1.0f - powf(1.0f - 0.35f, frames);
     bool changed = false;
     for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        float target = lcd_framebuffer[i] / 3.0f;
-        switch (column_fault[i % LCD_WIDTH]) {
+        float target = powered ? lcd_framebuffer[i] / 3.0f : 0.0f;
+        if (powered) switch (column_fault[i % LCD_WIDTH]) {
             case COLUMN_OFF:  target = 0.0f; break;
             case COLUMN_ON:   target = 1.0f; break;
             case COLUMN_WEAK: target *= 0.35f; break;
@@ -362,7 +368,7 @@ bool lcd_compose(float seconds) {
     force_compose = false;
     if (!changed) return false;
 
-    const panel_t *panel = backlight ? &panel_lit : &panel_unlit;
+    const panel_t *panel = backlight && powered ? &panel_lit : &panel_unlit;
     int gap = cell >= 4 ? max_int(1, cell / 7) : 1;
     float gain = (0.55f + contrast_level * 0.06f) / 0.85f;
     float off_bias = contrast_level > 6 ? (contrast_level - 6) * 0.035f : 0.0f;
