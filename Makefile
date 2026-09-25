@@ -10,7 +10,7 @@ CFLAGS  += -I. -Isrc -Ilib -I$(IMGUI) -I$(IMGUI)/backends -I$(EMBED_DIR) -I$(EMB
 CFLAGS  += -Wall -O2 -fno-common -MMD -MP
 CFLAGS  += $(shell pkg-config --cflags sdl3)
 
-LDFLAGS += $(shell pkg-config --libs sdl3) -framework CoreServices
+LDFLAGS += $(shell pkg-config --libs sdl3) -framework CoreServices -framework Cocoa
 
 CXXFLAGS = $(filter-out -std=c99,$(CFLAGS)) -std=c++17
 
@@ -23,6 +23,8 @@ SRC_APP = \
 	src/beeper.c \
 	src/mod_host.c \
 	src/mod_lcd.c
+
+SRC_OBJC = src/menu_macos.m
 
 SRC_APP_CXX = \
 	src/main.cpp \
@@ -41,9 +43,10 @@ SRC_EMBED = $(filter-out $(EMBED_DIR)/port/mphalport.c, \
 SRC_C   = $(SRC_APP) $(SRC_EXTMOD) $(SRC_EMBED)
 SRC_CXX = $(SRC_APP_CXX) $(SRC_IMGUI)
 
-OBJ  = $(addprefix $(BUILD)/,$(SRC_C:.c=.o) $(SRC_CXX:.cpp=.opp))
+OBJ  = $(addprefix $(BUILD)/,$(SRC_C:.c=.o) $(SRC_CXX:.cpp=.opp) $(SRC_OBJC:.m=.om))
 DEPS = $(OBJ:.o=.d)
 DEPS := $(DEPS:.opp=.d)
+DEPS := $(DEPS:.om=.d)
 
 GENHDR_QSTR = $(EMBED_DIR)/genhdr/qstrdefs.generated.h
 
@@ -54,6 +57,10 @@ $(BUILD)/%.o: %.c
 $(BUILD)/%.opp: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD)/%.om: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fobjc-arc -c -o $@ $<
 
 $(OBJ): $(GENHDR_QSTR)
 

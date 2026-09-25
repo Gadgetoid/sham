@@ -22,9 +22,11 @@
 #include "host.h"
 #include "keys.h"
 #include "lcd.h"
+#include "menu.h"
 #include "runtime.h"
 #include "watch.h"
 
+static const uint64_t PERIOD_MS = 100;
 static uint64_t start_ticks = 0;
 static SDL_WindowID main_window_id = 0;
 
@@ -44,7 +46,22 @@ struct Options {
     int height = 820;
     bool watch = true;
     bool dead_columns = false;
+    bool show_repl = true;
+    bool period_rate = false;
+    std::vector<int> menu_items;
 };
+
+static int menu_item_named(const std::string &name) {
+    static const std::pair<const char *, int> names[] = {
+        { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
+        { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
+        { "period", MENU_PERIOD_RATE },
+    };
+    for (auto &entry : names) {
+        if (name == entry.first) return entry.second;
+    }
+    return -1;
+}
 
 static void usage() {
     printf(
@@ -55,6 +72,10 @@ static void usage() {
         "  --size=WxH          window size (default 1040x820)\n"
         "  --no-watch          do not reload when files in root change\n"
         "  --dead-columns      simulate failed LCD column drivers\n"
+        "  --no-repl           start with the REPL hidden\n"
+        "  --period            run the device at a period accurate 10 fps\n"
+        "  --menu=ITEMS        trigger menu items after boot: reload, interrupt, show-repl,\n"
+        "                      focus-repl, backlight, dead-columns, period (comma separated)\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
@@ -85,6 +106,24 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (const char *v = value("--size=")) sscanf(v, "%dx%d", &options.width, &options.height);
         else if (arg == "--no-watch") options.watch = false;
         else if (arg == "--dead-columns") options.dead_columns = true;
+        else if (arg == "--no-repl") options.show_repl = false;
+        else if (arg == "--period") options.period_rate = true;
+        else if (const char *v = value("--menu=")) {
+            std::string list = v;
+            size_t start = 0;
+            while (start <= list.size()) {
+                size_t comma = list.find(',', start);
+                std::string name = list.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+                int item = menu_item_named(name);
+                if (item < 0) {
+                    usage();
+                    return false;
+                }
+                options.menu_items.push_back(item);
+                if (comma == std::string::npos) break;
+                start = comma + 1;
+            }
+        }
         else {
             usage();
             return false;
@@ -261,7 +300,7 @@ struct KeyScript {
 
 static SDL_Texture *lcd_texture = nullptr;
 
-static void upload_lcd(SDL_Renderer *renderer) {
+static void upload_lcd(SDL_Renderer *renderer, float compose_seconds) {
     int w = lcd_compose_width(), h = lcd_compose_height();
     bool recreated = false;
     if (!lcd_texture || lcd_texture->w != w || lcd_texture->h != h) {
@@ -270,12 +309,14 @@ static void upload_lcd(SDL_Renderer *renderer) {
         SDL_SetTextureScaleMode(lcd_texture, SDL_SCALEMODE_NEAREST);
         recreated = true;
     }
-    if (lcd_compose() || recreated) {
+    bool composed = compose_seconds > 0 && lcd_compose(compose_seconds);
+    if (composed || recreated) {
         SDL_UpdateTexture(lcd_texture, nullptr, lcd_compose_pixels(), w * 4);
     }
 }
 
-static void draw_device(SDL_Renderer *renderer, float framebuffer_scale, bool device_focused, float height) {
+static void draw_device(SDL_Renderer *renderer, float framebuffer_scale, bool device_focused, float height,
+                        float compose_seconds) {
     const float grid_w = LCD_WIDTH + 2 * LCD_MARGIN;
     const float grid_h = LCD_HEIGHT + 2 * LCD_MARGIN;
     const float bezel = 30.0f;
@@ -285,7 +326,7 @@ static void draw_device(SDL_Renderer *renderer, float framebuffer_scale, bool de
     float lcd_w = std::min(avail_w - 2 * bezel, (height - 2 * bezel) * grid_w / grid_h);
     int cell = std::max(2, (int)floorf(lcd_w * framebuffer_scale / grid_w));
     lcd_compose_setup(cell);
-    upload_lcd(renderer);
+    upload_lcd(renderer, compose_seconds);
 
     ImVec2 image_size(cell * grid_w / framebuffer_scale, cell * grid_h / framebuffer_scale);
     ImVec2 device_size = image_size + ImVec2(2 * bezel, 2 * bezel);
@@ -307,6 +348,25 @@ static void draw_device(SDL_Renderer *renderer, float framebuffer_scale, bool de
 
     ImGui::SetCursorScreenPos(origin);
     ImGui::InvisibleButton("device", ImVec2(avail_w, height));
+}
+
+static int device_only_height(int window_width) {
+    const float grid_w = LCD_WIDTH + 2 * LCD_MARGIN;
+    const float grid_h = LCD_HEIGHT + 2 * LCD_MARGIN;
+    const float bezel = 30.0f;
+    float lcd_w = window_width - 16 - 2 * bezel;
+    return (int)(lcd_w * grid_h / grid_w + 2 * bezel + 28);
+}
+
+static void set_repl_visible(SDL_Window *window, bool visible, int &restore_height) {
+    int width = 0, height = 0;
+    SDL_GetWindowSize(window, &width, &height);
+    if (visible) {
+        SDL_SetWindowSize(window, width, std::max(restore_height, device_only_height(width) + 200));
+    } else {
+        restore_height = height;
+        SDL_SetWindowSize(window, width, device_only_height(width));
+    }
 }
 
 static void save_screenshot(SDL_Renderer *renderer, const std::string &path) {
@@ -369,8 +429,15 @@ int main(int argc, char **argv) {
     KeyScript script;
     script.parse(options.keys);
 
+    menu_install();
+
     bool running = true;
     bool device_focused = true;
+    bool show_repl = options.show_repl;
+    int restore_height = options.height;
+    if (!show_repl) set_repl_visible(window, false, restore_height);
+    bool period_rate = options.period_rate;
+    uint64_t last_device_ms = 0;
     int frame = 0;
 
     while (running) {
@@ -383,10 +450,6 @@ int main(int argc, char **argv) {
             if (event.type == SDL_EVENT_KEY_DOWN) {
                 SDL_Keycode key = event.key.key;
                 SDL_Keymod mod = event.key.mod;
-                if ((mod & SDL_KMOD_GUI) && key == SDLK_R) { runtime_request_reload(); continue; }
-                if ((mod & SDL_KMOD_GUI) && key == SDLK_L) { console_focus(); continue; }
-                if ((mod & SDL_KMOD_GUI) && key == SDLK_B) { lcd_set_backlight(!lcd_get_backlight()); continue; }
-                if ((mod & SDL_KMOD_GUI) && key == SDLK_D) { lcd_set_dead_columns(!lcd_get_dead_columns()); continue; }
                 if ((mod & SDL_KMOD_CTRL) && key == SDLK_C) {
                     if (device_focused || runtime_repl_busy()) runtime_interrupt();
                     else console_cancel();
@@ -409,6 +472,31 @@ int main(int argc, char **argv) {
             }
         }
 
+        for (int item = menu_poll(); item >= 0; item = menu_poll()) {
+            switch (item) {
+                case MENU_RELOAD:       runtime_request_reload(); break;
+                case MENU_INTERRUPT:    runtime_interrupt(); break;
+                case MENU_SHOW_REPL:
+                    show_repl = !show_repl;
+                    set_repl_visible(window, show_repl, restore_height);
+                    break;
+                case MENU_FOCUS_REPL:
+                    if (!show_repl) set_repl_visible(window, true, restore_height);
+                    show_repl = true;
+                    console_focus();
+                    break;
+                case MENU_BACKLIGHT:    lcd_set_backlight(!lcd_get_backlight()); break;
+                case MENU_DEAD_COLUMNS: lcd_set_dead_columns(!lcd_get_dead_columns()); break;
+                case MENU_PERIOD_RATE:  period_rate = !period_rate; break;
+                default: break;
+            }
+        }
+        menu_ensure();
+        menu_set_checked(MENU_SHOW_REPL, show_repl);
+        menu_set_checked(MENU_BACKLIGHT, lcd_get_backlight());
+        menu_set_checked(MENU_DEAD_COLUMNS, lcd_get_dead_columns());
+        menu_set_checked(MENU_PERIOD_RATE, period_rate);
+
         if (options.watch && watch_poll()) {
             console_notice("change detected");
             runtime_request_reload();
@@ -416,7 +504,16 @@ int main(int argc, char **argv) {
         script.click_x = io.DisplaySize.x * 0.5f;
         script.click_y = io.DisplaySize.y * 0.25f;
         script.step(frame);
-        runtime_step();
+        if (frame == 45) {
+            for (int item : options.menu_items) menu_perform(item);
+        }
+        uint64_t now_ms = SDL_GetTicks();
+        float compose_seconds = 0;
+        if (!period_rate || now_ms - last_device_ms >= PERIOD_MS) {
+            compose_seconds = last_device_ms ? (now_ms - last_device_ms) / 1000.0f : 1.0f / 60.0f;
+            last_device_ms = now_ms;
+            runtime_step();
+        }
 
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
@@ -428,23 +525,17 @@ int main(int argc, char **argv) {
                                       ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
         float total_height = ImGui::GetContentRegionAvail().y;
-        draw_device(renderer, io.DisplayFramebufferScale.x, device_focused, std::max(220.0f, total_height * 0.52f));
+        float device_height = show_repl ? std::max(220.0f, total_height * 0.52f) : total_height;
+        draw_device(renderer, io.DisplayFramebufferScale.x, device_focused, device_height, compose_seconds);
 
-        if (ImGui::Button("Reload")) runtime_request_reload();
-        ImGui::SameLine();
-        if (ImGui::Button("Interrupt")) runtime_interrupt();
-        ImGui::SameLine();
-        bool backlight = lcd_get_backlight();
-        if (ImGui::Checkbox("Backlight", &backlight)) lcd_set_backlight(backlight);
-        ImGui::SameLine();
-        bool dead = lcd_get_dead_columns();
-        if (ImGui::Checkbox("Dead columns", &dead)) lcd_set_dead_columns(dead);
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
-        ImGui::SameLine(ImGui::GetContentRegionMax().x - 150);
-        ImGui::TextDisabled("%s  %.0f fps", runtime_idle() ? "idle" : "running", io.Framerate);
-        ImGui::Separator();
-        console_draw();
+        if (show_repl) {
+            ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
+            ImGui::SameLine(ImGui::GetContentRegionMax().x - 200);
+            ImGui::TextDisabled("%s  %.0f fps%s", runtime_idle() ? "idle" : "running", io.Framerate,
+                                period_rate ? "  LCD 10 fps" : "");
+            ImGui::Separator();
+            console_draw();
+        }
         ImGui::End();
 
         ImGui::Render();

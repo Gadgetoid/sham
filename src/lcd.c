@@ -316,7 +316,10 @@ static void box_blur(float *grid, float *scratch, int radius) {
     }
 }
 
-static bool settle_pixels(void) {
+static bool settle_pixels(float seconds) {
+    float frames = seconds * 60.0f;
+    float darken = 1.0f - powf(1.0f - 0.55f, frames);
+    float lighten = 1.0f - powf(1.0f - 0.35f, frames);
     bool changed = false;
     for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
         float target = lcd_framebuffer[i] / 3.0f;
@@ -330,7 +333,7 @@ static bool settle_pixels(void) {
         if (delta == 0.0f) continue;
         changed = true;
         if (fabsf(delta) < 0.01f) shown[i] = target;
-        else shown[i] += delta * (delta > 0 ? 0.55f : 0.35f);
+        else shown[i] += delta * (delta > 0 ? darken : lighten);
     }
     return changed;
 }
@@ -345,9 +348,9 @@ static inline bool is_electrode(int sub_x, int sub_y, int gap) {
     return sub_x < cell - gap && sub_y < cell - gap;
 }
 
-bool lcd_compose(void) {
+bool lcd_compose(float seconds) {
     if (!output) return false;
-    bool changed = settle_pixels() || force_compose;
+    bool changed = settle_pixels(seconds) || force_compose;
     force_compose = false;
     if (!changed) return false;
 

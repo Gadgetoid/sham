@@ -157,7 +157,7 @@ class Breakout(ui.View):
         if self.state != "playing":
             self.last = None
             return
-        dt = 0 if self.last is None else min(0.05, (now - self.last) / 1000)
+        dt = 0 if self.last is None else min(0.15, (now - self.last) / 1000)
         self.last = now
         direction = keys.held(keys.RIGHT) - keys.held(keys.LEFT)
         if direction:
