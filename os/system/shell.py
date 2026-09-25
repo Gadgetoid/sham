@@ -197,6 +197,7 @@ class Shell:
         sound.click()
         if code == keys.MAIN:
             self.go_home()
+            self.grid.select(0)
         elif code in hotkeys():
             self.launch(hotkeys()[code])
         elif code == keys.LIGHT:
