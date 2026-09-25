@@ -46,7 +46,7 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Cmd-B | Backlight (System menu) |
 | Cmd-D | Dead LCD columns, re-rolled each time (System menu) |
 
-The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/My Programs and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
+The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Show Keys (Cmd-K) hides them.
 
 The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 

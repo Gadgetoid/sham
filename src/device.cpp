@@ -651,7 +651,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     const SideKey side[] = {
         { "key-main", HOST_KEY_F1, "MAIN", 0 }, { "key-tel", HOST_KEY_F1 + 1, nullptr, ICON_CALL },
         { "key-cal", HOST_KEY_F1 + 2, nullptr, ICON_CALENDAR }, { "key-memo", HOST_KEY_F1 + 3, nullptr, ICON_NOTE },
-        { "key-prog", HOST_KEY_F1 + 4, nullptr, 0 },
+        { "key-prog", HOST_KEY_F1 + 4, "PROG", 0 },
     };
     for (int index = 0; index < 5; index++) {
         ImRect box = bounds(traced(frame, side_names[index]));
@@ -664,9 +664,6 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
             centred_text(draw, at, 17.0f * u, LABEL, side[index].text);
         } else if (side[index].glyph) {
             icon(draw, at, 44.0f * u, ICON_BLUE, side[index].glyph);
-        } else {
-            centred_text(draw, at - ImVec2(0, 7.5f * u), 13.0f * u, LABEL, "My");
-            centred_text(draw, at + ImVec2(0, 6.5f * u), 13.0f * u, LABEL, "Programs");
         }
     }
 
