@@ -952,6 +952,13 @@ class Field:
         if choices and self.value not in choices:
             self.value = choices[0]
         self.cursor = len(self.value)
+        self.anchor = None
+
+    @property
+    def selection(self):
+        if self.anchor is None or self.anchor == self.cursor:
+            return None
+        return min(self.anchor, self.cursor), max(self.anchor, self.cursor)
 
     def cycle(self, step):
         index = (self.choices.index(self.value) + step) % len(self.choices)
@@ -960,6 +967,7 @@ class Field:
     def set(self, value, cursor=None):
         self.value = value
         self.cursor = len(value) if cursor is None else max(0, min(cursor, len(value)))
+        self.anchor = None
         if self.on_change:
             self.on_change(value)
 
@@ -1039,6 +1047,35 @@ class Form(View):
             field.picker(field)
             return True
         value, cursor = field.value, min(field.cursor, len(field.value))
+        if code in (keys.LEFT, keys.RIGHT, keys.HOME, keys.END):
+            anchor = (cursor if field.anchor is None else field.anchor) if key.shift else None
+            if code == keys.LEFT:
+                field.cursor = max(0, cursor - 1)
+            elif code == keys.RIGHT:
+                field.cursor = min(len(value), cursor + 1)
+            elif code == keys.HOME:
+                field.cursor = 0
+            else:
+                field.cursor = len(value)
+            field.anchor = anchor if anchor != field.cursor else None
+            return True
+        selection = field.selection
+        if selection:
+            start, end = selection
+            if code in (keys.CUT, keys.COPY):
+                _clipboard = value[start:end]
+                if code == keys.CUT:
+                    field.set(value[:start] + value[end:], start)
+                field.anchor = None
+                return True
+            if char or code in (keys.BACKSPACE, keys.DELETE, keys.PASTE):
+                if char and field.numeric and char not in "0123456789.-":
+                    return True
+                field.set(value[:start] + value[end:], start)
+                if code in (keys.BACKSPACE, keys.DELETE):
+                    return True
+                value, cursor = field.value, field.cursor
+        field.anchor = None
         if char:
             if field.numeric and char not in "0123456789.-":
                 return True
@@ -1105,6 +1142,12 @@ class Form(View):
                 while shown and small.measure(shown) > value_w - 4:
                     shown = shown[:-1]
                 self.text(shown, self.label_w + 1, y + 1)
+                chosen = field.selection
+                if chosen:
+                    a, b = max(chosen[0], start), min(chosen[1], start + len(shown))
+                    if a < b:
+                        x0 = self.label_w + 1 + small.measure(value[start:a])
+                        self.invert(x0, y, small.measure(value[a:b]), ROW_H - 1)
                 if self.blink_on:
                     caret = self.label_w + 1 + small.measure(value[start:cursor])
                     self.fill(caret, y, 1, ROW_H - 1, INK)
