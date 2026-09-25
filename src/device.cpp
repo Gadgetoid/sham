@@ -1267,6 +1267,14 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
     }
 
     for (const KeyboardKey &key : keyboard_keys) {
+        if (key.shape == KB_SHAPE_CURSOR) {
+            Shape seat = keyboard_key_shape(frame, key);
+            for (int ring = 4; ring >= 1; ring--) {
+                int alpha = (int)((state.wear ? 34 : 24) * (1.0f - ring * 0.18f));
+                fill(draw, translated(outset(seat, ring * 1.0f * k), ImVec2(0, 1.2f * k)), IM_COL32(20, 26, 32, alpha), IM_COL32(20, 26, 32, alpha));
+            }
+            continue;
+        }
         draw_recess(draw, outset(keyboard_key_shape(frame, key), 2.0f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
     }
     for (const KeyboardKey &key : keyboard_keys) finger_grime(draw, keyboard_key_shape(frame, key), key.wear, k);
