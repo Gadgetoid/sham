@@ -887,13 +887,15 @@ class Field:
         self.value = str(value) if value is not None else ""
         if choices and self.value not in choices:
             self.value = choices[0]
+        self.cursor = len(self.value)
 
     def cycle(self, step):
         index = (self.choices.index(self.value) + step) % len(self.choices)
         self.set(self.choices[index])
 
-    def set(self, value):
+    def set(self, value, cursor=None):
         self.value = value
+        self.cursor = len(value) if cursor is None else max(0, min(cursor, len(value)))
         if self.on_change:
             self.on_change(value)
 
@@ -957,17 +959,53 @@ class Form(View):
                         break
             else:
                 return False
-        elif char:
-            if field.numeric and char not in "0123456789.-":
-                return True
-            field.set(field.value + char)
-        elif code == keys.BACKSPACE:
-            field.set(field.value[:-1])
-        else:
+        elif not self.edit_text(field, key):
             return False
         self.blink_on = True
         self.blink_at = host.ticks_ms()
         invalidate()
+        return True
+
+    def edit_text(self, field, key):
+        global _clipboard
+        code, char = key.code, key.char
+        value, cursor = field.value, min(field.cursor, len(field.value))
+        if char:
+            if field.numeric and char not in "0123456789.-":
+                return True
+            field.set(value[:cursor] + char + value[cursor:], cursor + 1)
+        elif code == keys.BACKSPACE:
+            if cursor:
+                field.set(value[:cursor - 1] + value[cursor:], cursor - 1)
+        elif code == keys.DELETE:
+            field.set(value[:cursor] + value[cursor + 1:], cursor)
+        elif code == keys.LEFT:
+            field.cursor = max(0, cursor - 1)
+        elif code == keys.RIGHT:
+            field.cursor = min(len(value), cursor + 1)
+        elif code == keys.HOME:
+            field.cursor = 0
+        elif code == keys.END:
+            field.cursor = len(value)
+        elif code in (keys.CUT, keys.COPY):
+            _clipboard = value
+            if code == keys.CUT:
+                field.set("", 0)
+        elif code == keys.PASTE:
+            field.set(value[:cursor] + _clipboard.replace("\n", " ") + value[cursor:], cursor + len(_clipboard))
+        elif code == keys.CASE:
+            if cursor:
+                letter = value[cursor - 1]
+                letter = letter.lower() if letter.isupper() else letter.upper()
+                field.set(value[:cursor - 1] + letter + value[cursor:], cursor)
+        elif code == keys.SMBL:
+            def insert(symbol, index):
+                current = min(field.cursor, len(field.value))
+                field.set(field.value[:current] + symbol + field.value[current:], current + 1)
+                invalidate()
+            choose("Symbol", SYMBOLS, insert)
+        else:
+            return False
         return True
 
     def tick(self, now):
@@ -990,12 +1028,17 @@ class Form(View):
             if field.choices and selected:
                 value = "< {} >".format(value)
             if not field.choices and selected:
-                shown = value
+                cursor = min(field.cursor, len(value))
+                start = 0
+                while start < cursor and small.measure(value[start:cursor]) > value_w - 6:
+                    start += 1
+                shown = value[start:]
                 while shown and small.measure(shown) > value_w - 4:
-                    shown = shown[1:]
-                end = self.label_w + 1 + self.text(shown, self.label_w + 1, y + 1)
+                    shown = shown[:-1]
+                self.text(shown, self.label_w + 1, y + 1)
                 if self.blink_on:
-                    self.fill(end, y, 1, ROW_H - 1, INK)
+                    caret = self.label_w + 1 + small.measure(value[start:cursor])
+                    self.fill(caret, y, 1, ROW_H - 1, INK)
             else:
                 self.text(small.fit(value, value_w - 2), self.label_w + 1, y + 1)
             if selected:
