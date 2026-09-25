@@ -13,7 +13,7 @@ Period-accurate app ideas, grouped by what they need.
 - [ ] **Data:** a card-file database with fields you define yourself, like Psion Data. It's mostly the existing Form plus List.
 - [ ] **Secret memos:** password-locked notes with a simple cipher, like the Wizard's "Secret" mode.
 - [ ] **Biorhythm:** three sine curves in three grey levels. Late-90s organiser software exactly.
-- [ ] **Char Map:** a browser for all 19 icon sets and the Sins glyphs, handy for app authors.
+- [x] **Char Map:** a browser for all 19 icon sets and the Sins glyphs, handy for app authors.
 - [x] **More games:** Reversi, Mastermind, Hangman, Sokoban, and Solitaire using the card icons in `boardgames`.
 
 ## Needs a small host addition
