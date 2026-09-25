@@ -10,6 +10,10 @@ BLINK_MS = 500
 
 _dirty = True
 _shell = None
+_clipboard = ""
+
+SYMBOLS = list("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~") + ["£", "€", "¥", "°", "±", "×", "÷", "§", "©", "®", "µ", "¿", "¡"]
+MENU_SHORTCUTS = {keys.NEW: ("new",), keys.EDIT: ("edit",), keys.SEARCH: ("search", "find", "go to")}
 
 
 def invalidate():
@@ -186,6 +190,11 @@ class Screen(View):
         if key.code == keys.MENU and self.menu:
             open_menu(_call(self.menu))
             return True
+        if key.code in MENU_SHORTCUTS and self.menu:
+            for label, action in _call(self.menu):
+                if label.lower().startswith(MENU_SHORTCUTS[key.code]):
+                    action()
+                    return True
         return False
 
     def tick(self, now):
@@ -293,7 +302,23 @@ class List(View):
                 return True
         return False
 
+    def search(self):
+        def find(text):
+            needle = text.lower()
+            count = len(self.items)
+            for step in range(count):
+                index = (self.index + step) % count
+                if needle in str(self.label(self.items[index])).lower():
+                    self.select(index)
+                    return
+            alert("No match for {}".format(text), title="Search")
+
+        prompt("Search", find)
+
     def key(self, key):
+        if key.code == keys.SEARCH and self.items:
+            self.search()
+            return True
         if not self.items:
             return False
         code = key.code
@@ -618,6 +643,33 @@ class TextEdit(View):
         return True
 
     def key(self, key):
+        global _clipboard
+        if key.code in (keys.CUT, keys.COPY):
+            start, end = self.spans[self.line_index]
+            _clipboard = self.value[start:end]
+            if key.code == keys.CUT:
+                cut_end = end + 1 if end < len(self.value) and self.value[end:end + 1] == "\n" else end
+                self.value = self.value[:start] + self.value[cut_end:]
+                self.cursor = start
+                self.edited()
+            invalidate()
+            return True
+        if key.code == keys.PASTE:
+            if _clipboard:
+                self.insert(_clipboard if self.multiline else _clipboard.replace("\n", " "))
+                invalidate()
+            return True
+        if key.code == keys.CASE:
+            if self.cursor > 0:
+                char = self.value[self.cursor - 1]
+                flipped = char.lower() if char.isupper() else char.upper()
+                self.value = self.value[:self.cursor - 1] + flipped + self.value[self.cursor:]
+                self.edited()
+                invalidate()
+            return True
+        if key.code == keys.SMBL:
+            choose("Symbol", SYMBOLS, lambda symbol, index: (self.insert(symbol), invalidate()))
+            return True
         code = key.code
         char = key.char
         keep_goal = False

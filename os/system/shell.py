@@ -201,6 +201,8 @@ class Shell:
             self.launch(hotkeys()[code])
         elif code == keys.LIGHT:
             host.backlight(not host.backlight())
+        elif code == keys.SYNC:
+            ui.alert("PC Sync isn't available yet.", title="PC SYNC")
         elif not self.top().key(key) and code == keys.ESC and self.stack:
             self.pop()
 
