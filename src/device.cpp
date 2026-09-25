@@ -500,6 +500,16 @@ Shape inset(const Shape &shape, float distance) {
     return result;
 }
 
+void flat_recess(ImDrawList *draw, const Shape &shape, float u) {
+    const ImU32 floor_colour = IM_COL32(162, 170, 175, 255);
+    fill(draw, shape, IM_COL32(140, 148, 154, 255), IM_COL32(214, 220, 224, 255));
+    const int steps = 5;
+    for (int step = 1; step <= steps; step++) {
+        float t = (float)step / steps;
+        fill(draw, inset(shape, t * 4.0f * u), faded(floor_colour, 0.25f + 0.75f * t), faded(floor_colour, 0.25f + 0.75f * t));
+    }
+}
+
 void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool pressed, float u) {
     const int layers = 4;
     for (int layer = layers; layer >= 1; layer--) {
@@ -635,7 +645,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         icon(draw, centroid(shape) + dip(pressed), 76.0f * u, LABEL, arrows[index].glyph);
     }
 
-    recess(draw, capsule(esc_centre, (fit_esc[2] + 5) * u, enter_centre, (fit_enter[2] + 5) * u), u);
+    flat_recess(draw, capsule(esc_centre, (fit_esc[2] + 6) * u, enter_centre, (fit_enter[2] + 6) * u), u);
     {
         Shape shape = circle(esc_centre, fit_esc[2] * u);
         bool pressed;
