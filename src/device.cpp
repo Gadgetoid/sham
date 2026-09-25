@@ -1245,6 +1245,8 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 60 : 34, 1.6f, 1.0f,
                               0.0f };
         float lift = down ? 0.0f : KEY_TRAVEL * k;
+        fill(draw, outset(shape, style.gap * u), IM_COL32(16, 20, 24, 215), IM_COL32(16, 20, 24, 170));
+        style.gap = 0;
         if (lift > 0) {
             ImU32 side_top = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.25f);
             ImU32 side_bottom = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.45f);
