@@ -564,9 +564,9 @@ const RecessPalette KEYBED_WELL = { IM_COL32(68, 76, 82, 255), IM_COL32(238, 242
 const RecessPalette FINGER_SCOOP = { IM_COL32(66, 76, 84, 255), IM_COL32(214, 224, 230, 255), IM_COL32(84, 96, 104, 255),
                                      IM_COL32(138, 150, 158, 255), IM_COL32(120, 132, 140, 255) };
 const RecessStyle CURSOR_WELL = { 1.4f, 7.0f, 0.1f };
-const RecessStyle KEY_HOLE = { 0.8f, 2.6f, 0.0f };
-const RecessPalette KEY_HOLE_PALETTE = { IM_COL32(40, 46, 52, 255), IM_COL32(244, 247, 249, 255), IM_COL32(52, 58, 64, 255),
-                                         IM_COL32(88, 96, 102, 255), IM_COL32(70, 78, 84, 255) };
+const RecessStyle KEY_HOLE = { 0.6f, 1.4f, 1.0f };
+const RecessPalette KEY_HOLE_PALETTE = { IM_COL32(112, 120, 124, 255), IM_COL32(236, 240, 242, 255), IM_COL32(150, 158, 160, 255),
+                                         IM_COL32(160, 166, 166, 255), IM_COL32(152, 160, 160, 255) };
 const RecessStyle SCOOP_RECESS = { 1.0f, 7.0f, 0.0f };
 
 ImU32 mix(ImU32 a, ImU32 b, float t) {
@@ -1222,7 +1222,7 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
 
     for (const KeyboardKey &key : keyboard_keys) {
         if (key.shape == KB_SHAPE_CURSOR) continue;
-        draw_recess(draw, outset(keyboard_key_shape(frame, key), 3.2f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
+        draw_recess(draw, outset(keyboard_key_shape(frame, key), 2.0f * k), KEY_HOLE, k, Mask(), KEY_HOLE_PALETTE);
     }
 
     int cursor_index = 0;
