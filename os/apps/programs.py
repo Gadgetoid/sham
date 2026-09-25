@@ -134,6 +134,7 @@ def read(name):
 
 
 def write(name, text):
+    host.watch_mute(1500)
     with open(path(name), "w") as f:
         f.write(text)
 
@@ -186,7 +187,17 @@ def run(name, edit):
                  "icons": icons, "keys": keys, "sound": sound, "store": store, "dates": dates}
         exec(code, scope)
         if callable(scope.get("launch")):
-            ui.push(scope["launch"]())
+            screen = scope["launch"]()
+            previous = screen.on_close
+
+            def closed():
+                host.resume("programs")
+                if previous:
+                    previous()
+
+            screen.on_close = closed
+            ui.push(screen)
+            host.resume("program:" + name)
     except Exception as error:
         line, message = describe(error, filename)
         if line:

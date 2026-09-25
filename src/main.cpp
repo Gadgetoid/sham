@@ -563,7 +563,12 @@ int main(int argc, char **argv) {
 
     host_config_t config = { options.root.c_str(), options.data.c_str(), options.main.c_str() };
     if (!runtime_init(&config)) return 1;
-    if (options.watch) watch_start(options.root.c_str());
+    if (options.watch) {
+        watch_start(options.root.c_str());
+        std::string programs = options.data + "/programs";
+        mkdir(programs.c_str(), 0755);
+        watch_add(programs.c_str());
+    }
 
     for (auto &line : options.exec) console_submit(line.c_str());
     KeyScript script;

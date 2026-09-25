@@ -148,6 +148,14 @@ static mp_obj_t host_power_ons(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_power_ons_obj, host_power_ons);
 
+void watch_mute(unsigned ms);
+
+static mp_obj_t host_watch_mute(mp_obj_t ms_in) {
+    watch_mute((unsigned)mp_obj_get_int(ms_in));
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(host_watch_mute_obj, host_watch_mute);
+
 static mp_obj_t host_boots(void) {
     return MP_OBJ_NEW_SMALL_INT(runtime_boots());
 }
@@ -180,6 +188,7 @@ static const mp_rom_map_elem_t host_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_capture_start), MP_ROM_PTR(&host_capture_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_capture_stop),  MP_ROM_PTR(&host_capture_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_power_ons), MP_ROM_PTR(&host_power_ons_obj) },
+    { MP_ROM_QSTR(MP_QSTR_watch_mute), MP_ROM_PTR(&host_watch_mute_obj) },
     { MP_ROM_QSTR(MP_QSTR_boots),     MP_ROM_PTR(&host_boots_obj) },
     { MP_ROM_QSTR(MP_QSTR_reload),    MP_ROM_PTR(&host_reload_obj) },
 

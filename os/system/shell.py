@@ -144,6 +144,12 @@ class Shell:
         if name.startswith("folder:"):
             self.open_folder(name[7:])
             return
+        if name.startswith("program:"):
+            self.launch("programs")
+            programs = sys.modules.get("apps.programs")
+            if programs and self.current and self.current.name == "programs":
+                programs.run(name[8:], lambda *args: None)
+            return
         app = self.find(name)
         if not app:
             return
