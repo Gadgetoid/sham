@@ -577,7 +577,8 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         shade_cut(draw, scoop, 0.85f, power_box.Max.x + reach, power_box.Max.x - power_box.GetHeight() * 0.2f);
     }
     {
-        shade_cut(draw, to_screen(frame, arrow_well(), true), 0.95f, 0, 0);
+        Shape well = to_screen(frame, arrow_well(), true);
+        shade_cut(draw, well, 0.95f, bounds(well).Max.x, frame.at(ARROW_EDGE_X - 12.0f, 0, true).x);
     }
     draw->PopClipRect();
 
