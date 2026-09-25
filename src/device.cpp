@@ -35,9 +35,10 @@ const float ARROW_HALF_GAP = 6.8f;
 const float ARROW_REACH = 79.2f;
 const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
-const float ARROW_CORNER = 7.5f;
-const float ARROW_WELL_CORNER = 12.0f;
-const float FLUTE_REACH = 0.9f;
+const float ARROW_CORNER = 15.0f;
+const float ARROW_WELL_TUCK = 3.0f;
+const float ARROW_WELL_CORNER = 18.0f;
+const float FLUTE_REACH = 0.45f;
 const float SIDE_KEY_CORNER = 6.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
@@ -306,6 +307,8 @@ Shape arrow_well() {
     Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + ARROW_WELL_MARGIN, 180);
     shape = clip(shape, ImVec2(0, ARROW_GAP_Y - ARROW_REACH - ARROW_WELL_MARGIN), ImVec2(0, -1.0f));
     shape = clip(shape, ImVec2(0, ARROW_GAP_Y + ARROW_REACH + ARROW_WELL_MARGIN), ImVec2(0, 1.0f));
+    float edge_x = ARROW_EDGE_X + ARROW_WELL_MARGIN + ARROW_WELL_TUCK;
+    shape = clip_convex(shape, reference_circle(ImVec2(edge_x - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720));
     return rounded(shape, ARROW_WELL_CORNER);
 }
 
@@ -423,7 +426,6 @@ void shade_cut(ImDrawList *draw, const Shape &shape, float opacity, float fade_f
 
 void recess(ImDrawList *draw, const Shape &shape, float u) {
     shade_cut(draw, shape, 1.0f, 0, 0);
-    stroke(draw, shape, IM_COL32(110, 118, 124, 70), 1.0f);
 }
 
 float bezel_brightness(float x, const ImVec2 &lcd_min, const ImVec2 &lcd_max, float u) {
@@ -478,6 +480,19 @@ void shade_body(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float ro
     }
 }
 
+ImU32 lighten(ImU32 colour, int amount) {
+    int r = std::min(255, (int)((colour >> IM_COL32_R_SHIFT) & 0xff) + amount);
+    int g = std::min(255, (int)((colour >> IM_COL32_G_SHIFT) & 0xff) + amount);
+    int b = std::min(255, (int)((colour >> IM_COL32_B_SHIFT) & 0xff) + amount);
+    return IM_COL32(r, g, b, 255);
+}
+
+Shape inset(const Shape &shape, float distance) {
+    Shape result = grown(shape, distance);
+    if (bounds(result).GetWidth() > bounds(shape).GetWidth()) result = grown(shape, -distance);
+    return result;
+}
+
 void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool pressed, float u) {
     const int layers = 4;
     for (int layer = layers; layer >= 1; layer--) {
@@ -485,13 +500,9 @@ void key(ImDrawList *draw, const Shape &shape, const KeyStyle &style, bool press
         fill(draw, translated(shape, ImVec2(0, layer * 0.8f * u)), IM_COL32(20, 26, 32, alpha), IM_COL32(20, 26, 32, alpha));
     }
     Shape body = translated(shape, ImVec2(0, pressed ? 1.2f * u : 0));
-    fill(draw, body, pressed ? style.bottom : style.top, style.bottom);
-    stroke(draw, body, IM_COL32(10, 14, 18, 110), 1.0f);
-    if (!pressed) {
-        stroke_band(draw, translated(body, ImVec2(0, 0.7f * u)), IM_COL32(255, 255, 255, 42), 1.6f * u, 0.0f, 0.35f);
-        stroke_band(draw, translated(body, ImVec2(0, 0.4f * u)), IM_COL32(255, 255, 255, 70), 0.9f * u, 0.0f, 0.18f);
-    }
-    stroke_band(draw, translated(body, ImVec2(0, -0.4f * u)), IM_COL32(255, 255, 255, 28), 1.0f, 0.75f, 1.0f);
+    ImU32 face_top = pressed ? style.bottom : style.top;
+    fill(draw, body, lighten(face_top, pressed ? 14 : 42), lighten(style.bottom, 16));
+    fill(draw, inset(body, 1.3f * u), face_top, style.bottom);
 }
 
 bool hit(const char *id, const Shape &shape, bool &pressed) {
@@ -549,12 +560,7 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
         shade_cut(draw, scoop, 0.85f, power_box.Max.x + reach, power_box.Max.x - power_box.GetHeight() * 0.2f);
     }
     {
-        Shape well = to_screen(frame, arrow_well(), true);
-        float keys_right = frame.at(ARROW_EDGE_X, 0, true).x;
-        shade_cut(draw, well, 0.95f, device_max.x - 2 * u, keys_right);
-        draw->PushClipRect(bounds(well).Min, ImVec2(keys_right, bounds(well).Max.y), true);
-        stroke(draw, well, IM_COL32(110, 118, 124, 70), 1.0f);
-        draw->PopClipRect();
+        shade_cut(draw, to_screen(frame, arrow_well(), true), 0.95f, 0, 0);
     }
     draw->PopClipRect();
 
