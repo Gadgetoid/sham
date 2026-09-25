@@ -58,7 +58,7 @@ struct Options {
     bool wear = false;
     bool touchscreen = false;
     std::string touch_display = "TETRA";
-    float touch_calibration[3] = { 0.45f, 0.75f, 0.97f };
+    float touch_calibration[3] = { 1.0f, 1.0f, 1.0f };
     std::vector<int> menu_items;
 };
 

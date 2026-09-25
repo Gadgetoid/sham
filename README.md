@@ -54,7 +54,7 @@ The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the dev
 
 System > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
 
-System > Layout > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal. The Tetra panel adds red and loses blue, so touchscreen mode applies an LCD colour calibration, `touch_calibration=0.45,0.75,0.97` (red, green, blue gains) in `pocket.ini`, which you can tune.
+System > Layout > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal. `touch_calibration=R,G,B` in `pocket.ini` applies per-channel LCD colour gains in touchscreen mode, neutral by default.
 
 Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
