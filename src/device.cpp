@@ -28,7 +28,7 @@ const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
 const float PLAIN_BEZEL = 30.0f;
-const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 72);
+const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 120);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
@@ -1240,7 +1240,7 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         bool latched = (key.action == KB_ACTION_SECOND && state.second) ||
                        (key.action == KB_ACTION_SHIFT && (state.shift || state.caps));
         bool down = pressed || latched;
-        ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 22 : 34, 1.6f, 1.0f,
+        ButtonStyle style = { KB_KEY_TOP[key.colour], KB_KEY_BOTTOM[key.colour], key.colour == KB_LIGHT ? 60 : 34, 1.6f, 1.0f,
                               0.0f };
         draw_key(draw, shape, style, down, u);
         rub_mode = false;

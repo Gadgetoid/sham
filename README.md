@@ -74,5 +74,5 @@ The Guide app on the device documents the SDK.
 - Sins 7 pixel font from Badgeware.
 - World map rasterised by `make worldmap` from Badgeware's `world.geo.json`.
 - Key icons: [Material Symbols](https://fonts.google.com/icons) (Apache-2.0, see `licences/`), subset into `assets/MaterialSymbolsKeys.ttf`.
-- LCD scratches: `assets/lcd_scratches.bin`, a softened top-right crop made by `tools/make_scratches.py --luminance --top-right 0.55` from a stock grunge scratch texture (the filename suggests Freepik). The licence is unverified, so check it or replace the texture before distributing.
+- LCD scratches: `assets/lcd_scratches.bin`, generated procedurally by `make scratches` (`tools/make_surface_scratches.py`, needs numpy). `tools/make_scratches.py` can still extract a mask from a scratch photo instead.
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT), [minicoro](https://github.com/edubart/minicoro) (public domain or MIT-0), [dmon](https://github.com/septag/dmon) (BSD-2-Clause).
