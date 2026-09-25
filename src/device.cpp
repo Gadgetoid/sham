@@ -1322,8 +1322,9 @@ void draw_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, Device
         ImU32 face = mix(style.top, style.bottom, 0.5f);
         if (key.homing) {
             Shape bar = pill(centre + ImVec2(-6.75f, 12.5f - 1.8f) * k, centre + ImVec2(6.75f, 12.5f + 1.8f) * k);
-            fill(draw, translated(bar, ImVec2(0, 0.8f * k)), IM_COL32(110, 112, 118, 200), IM_COL32(110, 112, 118, 200));
-            fill(draw, bar, lighten(style.top, 22), style.top);
+            ImU32 ridge_side = mix(style.bottom, IM_COL32(0, 0, 0, 255), 0.18f);
+            for (int step = 3; step >= 1; step--) fill(draw, translated(bar, ImVec2(0, step * 0.35f * k)), ridge_side, ridge_side);
+            fill(draw, bar, lighten(style.top, 6), mix(style.top, style.bottom, 0.45f));
         }
         ImU32 legend_colour = faded(KB_KEY_LEGEND[key.colour], KB_LEGEND_ALPHA);
         ImVec2 legend_centre = centre + ImVec2(0, key.legend_dy * k);
