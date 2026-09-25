@@ -355,7 +355,8 @@ int main(int argc, char **argv) {
     start_ticks = SDL_GetTicks();
 
     SDL_Window *window = SDL_CreateWindow("Pocket", options.width, options.height,
-                                          SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+                                          SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY |
+                                          (options.screenshot.empty() ? 0 : SDL_WINDOW_HIDDEN));
     SDL_Renderer *renderer = window ? SDL_CreateRenderer(window, nullptr) : nullptr;
     if (!renderer) {
         SDL_Log("window/renderer failed: %s", SDL_GetError());

@@ -537,8 +537,9 @@ void draw_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImVec2 d
     for (const char *name : side_names) {
         ImRect box = bounds(traced(frame, name));
         float reach = box.GetHeight() * FLUTE_REACH;
-        Shape scoop = pill(ImVec2(box.Min.x - reach, box.Min.y - FLUTE_MARGIN * u),
-                           ImVec2(box.Max.x + FLUTE_MARGIN * u, box.Max.y + FLUTE_MARGIN * u));
+        Shape scoop = side_key(ImVec2(box.Min.x - reach, box.Min.y - FLUTE_MARGIN * u),
+                               ImVec2(box.Max.x + FLUTE_MARGIN * u, box.Max.y + FLUTE_MARGIN * u),
+                               (SIDE_KEY_CORNER + FLUTE_MARGIN) * u);
         shade_cut(draw, scoop, 0.85f, box.Min.x - reach, box.Min.x + box.GetHeight() * 0.2f);
     }
     {
