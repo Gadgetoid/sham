@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-enum { KB_SHAPE_PILL, KB_SHAPE_CURSOR };
+enum { KB_SHAPE_PILL, KB_SHAPE_CURSOR, KB_SHAPE_SQUARE_END };
 enum { KB_LIGHT, KB_DARK, KB_BLUE };
 enum { KB_GREY, KB_PURPLE, KB_BADGE };
 enum { KB_ICON_NONE, KB_ICON_BACKSPACE, KB_ICON_RETURN, KB_ICON_SHIFT, KB_ICON_BOX_DOWN, KB_ICON_TRIANGLE,
@@ -105,7 +105,7 @@ static const KeyboardKey keyboard_keys[] = {
     { "k", 685.38f, 138.10f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "K", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x6b, 0x4b, 0xb4, KB_ACTION_KEY, true, false, false, 0.25f, 1, { { "´", KB_PURPLE, 22.00f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "l", 769.19f, 138.10f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "L", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x6c, 0x4c, 0x7e, KB_ACTION_KEY, true, false, false, 0.47f, 1, { { "~", KB_PURPLE, 17.00f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "enter_wide", 894.23f, 138.10f, 137.70f, 36.90f, KB_SHAPE_PILL, 0, KB_DARK, nullptr, KB_ICON_RETURN, 19.50f, -1.00f, 1.00f, 0xd, 0x0, 0x0, KB_ACTION_KEY, false, false, false, 0.80f, 0, { { nullptr, 0, 0.0f, 0.0f, 0 }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
-    { "shift_left", 57.80f, 187.30f, 62.20f, 36.60f, KB_SHAPE_PILL, 0, KB_DARK, nullptr, KB_ICON_SHIFT, 19.50f, -1.00f, 1.00f, 0x0, 0x0, 0x129, KB_ACTION_SHIFT, false, false, false, 0.35f, 1, { { "CAPS", KB_PURPLE, 9.50f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
+    { "shift_left", 57.80f, 187.30f, 62.20f, 36.60f, KB_SHAPE_SQUARE_END, 2, KB_DARK, nullptr, KB_ICON_SHIFT, 19.50f, -1.00f, 1.00f, 0x0, 0x0, 0x129, KB_ACTION_SHIFT, false, false, false, 0.35f, 1, { { "CAPS", KB_PURPLE, 9.50f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "z", 139.78f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "Z", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x7a, 0x5a, 0x0, KB_ACTION_KEY, true, false, false, 0.21f, 0, { { nullptr, 0, 0.0f, 0.0f, 0 }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "x", 223.81f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "X", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x78, 0x58, 0x124, KB_ACTION_KEY, true, false, false, 0.21f, 1, { { "CUT", KB_PURPLE, 9.50f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "c", 307.84f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "C", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x63, 0x43, 0x125, KB_ACTION_KEY, true, false, false, 0.39f, 1, { { "COPY", KB_PURPLE, 9.50f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
@@ -115,7 +115,7 @@ static const KeyboardKey keyboard_keys[] = {
     { "m", 643.96f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, "M", KB_ICON_NONE, 23.50f, -1.20f, 1.00f, 0x6d, 0x4d, 0xe7, KB_ACTION_KEY, true, false, false, 0.36f, 1, { { "ç", KB_PURPLE, 13.00f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "comma", 727.99f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, ",", KB_ICON_NONE, 30.00f, -1.20f, 1.00f, 0x2c, 0x27, 0xdf, KB_ACTION_KEY, false, false, false, 0.35f, 2, { { "ß", KB_PURPLE, 12.00f, -13.50f, KB_ICON_NONE }, { "'", KB_GREY, 14.00f, 10.00f, KB_ICON_NONE } } },
     { "period", 812.02f, 187.30f, 63.50f, 36.60f, KB_SHAPE_PILL, 0, KB_LIGHT, ".", KB_ICON_NONE, 30.00f, -1.20f, 1.00f, 0x2e, 0x3a, 0x20ac, KB_ACTION_KEY, false, false, false, 0.35f, 2, { { "€", KB_PURPLE, 13.00f, -15.50f, KB_ICON_NONE }, { ":", KB_GREY, 13.00f, 10.00f, KB_ICON_NONE } } },
-    { "shift_right", 944.80f, 187.30f, 62.20f, 36.60f, KB_SHAPE_PILL, 0, KB_DARK, nullptr, KB_ICON_SHIFT, 19.50f, -1.00f, 1.00f, 0x0, 0x0, 0x0, KB_ACTION_SHIFT, false, false, false, 0.35f, 0, { { nullptr, 0, 0.0f, 0.0f, 0 }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
+    { "shift_right", 944.80f, 187.30f, 62.20f, 36.60f, KB_SHAPE_SQUARE_END, 0, KB_DARK, nullptr, KB_ICON_SHIFT, 19.50f, -1.00f, 1.00f, 0x0, 0x0, 0x0, KB_ACTION_SHIFT, false, false, false, 0.35f, 0, { { nullptr, 0, 0.0f, 0.0f, 0 }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "fn_2nd", 63.16f, 237.20f, 63.00f, 35.00f, KB_SHAPE_PILL, 0, KB_DARK, "2nd", KB_ICON_NONE, 19.50f, -1.00f, 1.00f, 0x0, 0x0, 0x0, KB_ACTION_SECOND, false, true, false, 0.90f, 0, { { nullptr, 0, 0.0f, 0.0f, 0 }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "menu", 146.92f, 237.20f, 63.00f, 35.00f, KB_SHAPE_PILL, 0, KB_DARK, "MENU", KB_ICON_NONE, 18.50f, -1.00f, 0.95f, 0x9, 0x0, 0x128, KB_ACTION_KEY, false, false, false, 0.85f, 1, { { "PC SYNC", KB_BADGE, 9.60f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },
     { "new", 240.80f, 237.20f, 82.60f, 35.00f, KB_SHAPE_PILL, 0, KB_DARK, "NEW", KB_ICON_NONE, 18.50f, -1.00f, 1.00f, 0x120, 0x0, 0x127, KB_ACTION_KEY, false, false, false, 0.35f, 1, { { "EDIT", KB_PURPLE, 9.50f, 0.00f, KB_ICON_NONE }, { nullptr, 0, 0.0f, 0.0f, 0 } } },

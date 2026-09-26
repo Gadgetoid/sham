@@ -965,6 +965,7 @@ const float KB_WIDTH_RATIO = 1.0f;
 const float KB_PAD_X = 16.0f;
 const float KEY_TRAVEL = 2.6f;
 const float KEY_SHOULDER = 4.0f;
+const float KB_SQUARE_CORNER = 0.22f;
 const float WELL_SQUASH = 0.9f;
 const float WELL_DEPTH = 3.5f;
 const float KB_PAD_TOP = 12.0f;
@@ -1099,7 +1100,16 @@ Shape keyboard_key_shape(const KeyboardFrame &frame, const KeyboardKey &key) {
         for (ImVec2 &point : local) point = ImVec2(point.x * c - point.y * s, point.x * s + point.y * c);
         return frame.local(local, key.x, key.y);
     }
-    return pill(frame.at(key.x - key.w * 0.5f, key.y - key.h * 0.5f), frame.at(key.x + key.w * 0.5f, key.y + key.h * 0.5f));
+    ImVec2 a = frame.at(key.x - key.w * 0.5f, key.y - key.h * 0.5f), b = frame.at(key.x + key.w * 0.5f, key.y + key.h * 0.5f);
+    if (key.shape == KB_SHAPE_SQUARE_END) {
+        Shape shape = side_key(a, b, KB_SQUARE_CORNER * (b.y - a.y));
+        if (key.round_side == 2) {
+            for (ImVec2 &point : shape) point.x = a.x + b.x - point.x;
+            std::reverse(shape.begin(), shape.end());
+        }
+        return shape;
+    }
+    return pill(a, b);
 }
 
 void keyboard_press(const KeyboardKey &key, DeviceState &state) {

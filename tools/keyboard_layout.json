@@ -75,7 +75,7 @@
    "h": 36.9
   },
   "shift": {
-   "shape": "pill",
+   "shape": "square_end",
    "w": 62.2,
    "h": 36.6
   },
@@ -1871,7 +1871,8 @@
    "id": "shift_left",
    "row": 4,
    "kind": "shift",
-   "shape": "pill",
+   "shape": "square_end",
+   "square_side": "left",
    "x": 57.8,
    "y": 187.3,
    "w": 62.2,
@@ -2166,7 +2167,8 @@
    "id": "shift_right",
    "row": 4,
    "kind": "shift",
-   "shape": "pill",
+   "shape": "square_end",
+   "square_side": "right",
    "x": 944.8,
    "y": 187.3,
    "w": 62.2,
