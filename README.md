@@ -32,7 +32,7 @@ On first run, the bundled `os/` is copied to `os/` in the per-user directory: `$
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
-Install > Install .py (Cmd-I) or `--install=FILE` copies a Python file into My Programs (`programs/` in the data directory), replacing one of the same name.
+Install > Install Program (Cmd-I) or `--install=FILE` copies a Python file into My Programs (`programs/` in the data directory), or a Sharp OZ/ZQ `.wzd` into Sharp BASIC (`wzd/`), replacing one of the same name.
 
 ## Keys
 
@@ -61,6 +61,12 @@ View > Realism groups Dead Columns, Scratches and Wear, which weathers the case 
 View > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal.
 
 Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `sham.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+
+## Sharp BASIC
+
+The Sharp BASIC app runs BASIC programs for the Sharp OZ-7xx and ZQ-7xx organisers straight from their `.wzd` files, without the Sharp firmware. The interpreter (`os/system/sharpbasic/`) reads the tokenised listing and draws into a 239x70 area in the Sharp's own font (`os/fonts/sharp.ppf`, captured from the firmware's output). Files opened as `E:NAME` live in `sharp/` in the data directory. Machine code programs (a `CALL` stub followed by Z80 code) are refused.
+
+It was checked against the firmware running in the zq77x-emu emulator: token names, key codes, error numbers, number formatting, `DATE$`/`TIME$` and text widths come from programs run there.
 
 ## Layout
 
