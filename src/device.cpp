@@ -50,6 +50,8 @@ const float ROUND_KEY_X = 82.0f;
 const float SCREEN_FRAME_TOP = 12.0f;
 const float SCREEN_FRAME_BOTTOM = 14.0f;
 const float ROUND_KEY_RECESS = 26.35f;
+const float MAIN_KEY_TOP = -22.56f;
+const float SCREEN_FRAME_MID_Y = (REFERENCE_LCD_H + SCREEN_GROW_BOTTOM + SCREEN_FRAME_BOTTOM - SCREEN_GROW_TOP - SCREEN_FRAME_TOP) * 0.5f;
 const float ARROW_HALF_GAP = 4.0f;
 const float ARROW_BAND_HALF = 33.0f;
 const float ARROW_SPLIT_X = 128.0f;
@@ -839,8 +841,9 @@ LidLayout lid_layout(const Frame &frame) {
     }
     lid.light_box = bounds(traced(frame, "light"));
     lid.light = pill(lid.light_box.Min, lid.light_box.Max);
-    lid.menu_centre = frame.at(ROUND_KEY_X, REFERENCE_LCD_H + SCREEN_GROW_BOTTOM + SCREEN_FRAME_BOTTOM - ROUND_KEY_RECESS, true);
-    lid.power_centre = frame.at(ROUND_KEY_X, -SCREEN_GROW_TOP - SCREEN_FRAME_TOP + ROUND_KEY_RECESS, true);
+    float power_y = MAIN_KEY_TOP + fit_menu[2];
+    lid.menu_centre = frame.at(ROUND_KEY_X, 2 * SCREEN_FRAME_MID_Y - power_y, true);
+    lid.power_centre = frame.at(ROUND_KEY_X, power_y, true);
     lid.menu = circle(lid.menu_centre, fit_menu[2] * u);
     lid.power = circle(lid.power_centre, fit_menu[2] * u);
     lid.esc = to_screen(frame, band_key(false), true);
