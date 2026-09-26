@@ -28,6 +28,13 @@ const float LEFT_EXTENT = 202.0f;
 const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
+const float SCREEN_GROW_LEFT = -6.0f;
+const float SCREEN_GROW_RIGHT = 6.0f;
+const float SCREEN_GROW_TOP = 16.0f;
+const float SCREEN_GROW_BOTTOM = 6.0f;
+const float LCD_H_UNITS = REFERENCE_LCD_H + SCREEN_GROW_TOP + SCREEN_GROW_BOTTOM;
+const float SIDE_UNITS = LEFT_EXTENT + RIGHT_EXTENT - SCREEN_GROW_LEFT - SCREEN_GROW_RIGHT;
+const float CAP_UNITS = TOP_EXTENT + BOTTOM_EXTENT - SCREEN_GROW_TOP - SCREEN_GROW_BOTTOM;
 const float PLAIN_BEZEL = 30.0f;
 const float SCREEN_MARGIN = 8.0f;
 const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 120);
@@ -1412,7 +1419,7 @@ void paint_keyboard(ImDrawList *draw, const KeyboardFrame &frame, float u, const
 }
 
 float lid_width_units() {
-    return LEFT_EXTENT + RIGHT_EXTENT + REFERENCE_LCD_H * GRID_W / GRID_H;
+    return SIDE_UNITS + LCD_H_UNITS * GRID_W / GRID_H;
 }
 
 float keyboard_unit_in_lid_units() {
@@ -1436,7 +1443,7 @@ void draw_hinge(ImDrawList *draw, ImVec2 device_min, ImVec2 device_max, float u)
 
 
 struct DeviceLayout {
-    ImVec2 device_min, device_max, image_min, image_max;
+    ImVec2 device_min, device_max, image_min, image_max, keys_min, keys_max;
     float u;
     float rounding;
     bool has_keyboard;
@@ -1471,6 +1478,7 @@ KeyboardFrame keyboard_frame(const DeviceLayout &layout) {
 void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_scale, const DeviceLayout &layout, const DeviceState &state,
                   const uint8_t *down) {
     ImVec2 device_min = layout.device_min, device_max = layout.device_max, image_min = layout.image_min, image_max = layout.image_max;
+    ImVec2 keys_min = layout.keys_min, keys_max = layout.keys_max;
     ImVec2 device_size = device_max - device_min;
     float u = layout.u, rounding = layout.rounding;
     if (layout.has_keyboard) draw_hinge(draw, device_min, device_max, u);
@@ -1478,7 +1486,7 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
         draw->AddRect(device_min - ImVec2(3, 3), device_max + ImVec2(3, 3), IM_COL32(90, 200, 180, 160), rounding + 4, 0, 2.0f);
     }
     draw->AddRectFilled(device_min + ImVec2(0, 4), device_max + ImVec2(0, 4), IM_COL32(0, 0, 0, 90), rounding);
-    if (state.show_keys) shade_body(draw, device_min, device_max, rounding, image_min, image_max, u);
+    if (state.show_keys) shade_body(draw, device_min, device_max, rounding, keys_min, keys_max, u);
     else draw->AddRectFilled(device_min, device_max, BEZEL, rounding);
     build_grime(renderer, (int)(device_size.x * framebuffer_scale), (int)(device_size.y * framebuffer_scale), framebuffer_scale * u, state.wear);
     wear_labels = state.wear;
@@ -1502,13 +1510,13 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
     draw->AddRect(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(210, 216, 220, 255), 5.0f, 0, 1.0f);
     if (state.show_keys) {
         float brand = 24.0f * u;
-        ImVec2 at = image_min + ImVec2(-4 * u, -50 * u);
+        ImVec2 at = ImVec2(image_min.x - 4 * u, keys_min.y - 62 * u);
         erase_colour = faded(BEZEL, 0.9f);
         rub_mode = false;
         draw->AddText(text_font(), brand, at, PRINT, "POCKET");
         wear_patch(draw, at, at + text_size(text_font(), brand, "POCKET"), 1);
         draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-299");
-        paint_lid_keys(draw, Frame{ image_min, image_max, u }, device_min, device_max, down);
+        paint_lid_keys(draw, Frame{ keys_min, keys_max, u }, device_min, device_max, down);
         if (layout.has_keyboard) paint_keyboard(draw, keyboard_frame(layout), u, state, down + LID_KEY_COUNT);
     } else {
         draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-299");
@@ -1524,9 +1532,9 @@ float device_fit_height(float width, const DeviceState &state) {
     float usable = width - 16.0f;
     if (state.screen_only) return (usable - 2 * SCREEN_MARGIN) * GRID_H / GRID_W + 2 * SCREEN_MARGIN + 28.0f;
     if (show_keys) {
-        float image_h = usable / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
-        float lid = REFERENCE_LCD_H + TOP_EXTENT + BOTTOM_EXTENT + (show_keyboard ? keyboard_height_in_lid_units() : 0.0f);
-        return image_h * lid / REFERENCE_LCD_H + 24.0f;
+        float image_h = usable / (GRID_W / GRID_H + SIDE_UNITS / LCD_H_UNITS);
+        float lid = LCD_H_UNITS + CAP_UNITS + (show_keyboard ? keyboard_height_in_lid_units() : 0.0f);
+        return image_h * lid / LCD_H_UNITS + 24.0f;
     }
     float lcd_w = usable - 2 * PLAIN_BEZEL;
     return lcd_w * GRID_H / GRID_W + 2 * PLAIN_BEZEL + 28.0f;
@@ -1562,8 +1570,8 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     bool has_keyboard = state.show_keys && state.show_keyboard;
     float extra_units = has_keyboard ? keyboard_height_in_lid_units() : 0.0f;
     if (state.show_keys) {
-        float by_width = avail_w / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
-        float by_height = height / (1.0f + (TOP_EXTENT + BOTTOM_EXTENT + extra_units) / REFERENCE_LCD_H);
+        float by_width = avail_w / (GRID_W / GRID_H + SIDE_UNITS / LCD_H_UNITS);
+        float by_height = height / (1.0f + (CAP_UNITS + extra_units) / LCD_H_UNITS);
         image_h = std::min(by_width, by_height);
     } else {
         image_h = std::min((avail_w - 2 * PLAIN_BEZEL) * GRID_H / GRID_W, height - 2 * PLAIN_BEZEL);
@@ -1573,9 +1581,11 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     upload_lcd(renderer, compose_seconds);
 
     ImVec2 image_size(cell * GRID_W / framebuffer_scale, cell * GRID_H / framebuffer_scale);
-    float u = image_size.y / REFERENCE_LCD_H;
-    ImVec2 pad_min = state.show_keys ? ImVec2(LEFT_EXTENT, TOP_EXTENT) * u : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
-    ImVec2 pad_max = state.show_keys ? ImVec2(RIGHT_EXTENT, BOTTOM_EXTENT) * u : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
+    float u = image_size.y / LCD_H_UNITS;
+    ImVec2 grow_min = state.show_keys ? ImVec2(SCREEN_GROW_LEFT, SCREEN_GROW_TOP) * u : ImVec2(0, 0);
+    ImVec2 grow_max = state.show_keys ? ImVec2(SCREEN_GROW_RIGHT, SCREEN_GROW_BOTTOM) * u : ImVec2(0, 0);
+    ImVec2 pad_min = state.show_keys ? ImVec2(LEFT_EXTENT, TOP_EXTENT) * u - grow_min : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
+    ImVec2 pad_max = state.show_keys ? ImVec2(RIGHT_EXTENT, BOTTOM_EXTENT) * u - grow_max : ImVec2(PLAIN_BEZEL, PLAIN_BEZEL);
     ImVec2 device_size = image_size + pad_min + pad_max;
     float total_height = device_size.y + extra_units * u;
     ImVec2 device_min = origin + ImVec2((avail_w - device_size.x) * 0.5f, (height - total_height) * 0.5f);
@@ -1584,12 +1594,14 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     ImVec2 image_max = image_min + image_size;
     float rounding = state.show_keys ? 34.0f * u : 18.0f;
 
-    DeviceLayout layout = { device_min, device_max, image_min, image_max, u, rounding, has_keyboard };
+    ImVec2 keys_min = image_min + grow_min, keys_max = image_max - grow_max;
+
+    DeviceLayout layout = { device_min, device_max, image_min, image_max, keys_min, keys_max, u, rounding, has_keyboard };
     ImGui::SetCursorScreenPos(image_min);
     ImGui::InvisibleButton("device", image_size);
     std::vector<uint8_t> down(LID_KEY_COUNT + KEYBOARD_KEY_COUNT, 0);
     if (state.show_keys) {
-        input_lid_keys(Frame{ image_min, image_max, u }, state, down.data());
+        input_lid_keys(Frame{ keys_min, keys_max, u }, state, down.data());
         if (has_keyboard) input_keyboard(keyboard_frame(layout), state, down.data() + LID_KEY_COUNT);
     }
 
