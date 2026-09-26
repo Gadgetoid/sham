@@ -520,14 +520,12 @@ Shape notched_frame(ImVec2 min, ImVec2 max, float rounding, ImVec2 cut_centre, f
     add_arc(shape, ImVec2(min.x + rounding, min.y + rounding), rounding, IM_PI, IM_PI * 1.5f);
     add_arc(shape, ImVec2(max.x - rounding, min.y + rounding), rounding, IM_PI * 1.5f, IM_PI * 2.0f);
     float reach = max.x - cut_centre.x;
-    float notch_x = max.x;
-    if (fabsf(reach) < cut_radius && cut_centre.y < max.y) {
-        float hit_y = cut_centre.y - sqrtf(cut_radius * cut_radius - reach * reach);
-        add_arc(shape, cut_centre, cut_radius, atan2f(hit_y - cut_centre.y, reach) + IM_PI * 2.0f, IM_PI);
-        notch_x = cut_centre.x - cut_radius;
+    if (fabsf(reach) < cut_radius) {
+        float half = sqrtf(cut_radius * cut_radius - reach * reach);
+        float from = atan2f(-half, reach) + IM_PI * 2.0f, to = atan2f(half, reach);
+        add_arc(shape, cut_centre, cut_radius, from, to);
     }
-    float corner = std::min(rounding, (max.y - cut_centre.y) * 0.5f);
-    add_arc(shape, ImVec2(notch_x - corner, max.y - corner), corner, 0.0f, IM_PI * 0.5f);
+    add_arc(shape, ImVec2(max.x - rounding, max.y - rounding), rounding, 0.0f, IM_PI * 0.5f);
     add_arc(shape, ImVec2(min.x + rounding, max.y - rounding), rounding, IM_PI * 0.5f, IM_PI);
     return shape;
 }
