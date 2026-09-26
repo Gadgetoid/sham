@@ -1501,13 +1501,13 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
     draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
 
     if (state.show_keys) {
-        ImVec2 frame_min = image_min - ImVec2(20, 18) * u, frame_max = image_max + ImVec2(20, 20) * u;
+        ImVec2 frame_min = image_min - ImVec2(14, 12) * u, frame_max = image_max + ImVec2(14, 14) * u;
         draw->AddRectFilled(frame_min, frame_max, FRAME, 12.0f * u);
         draw->AddRect(frame_min, frame_max, BEZEL_LIGHT, 12.0f * u, 0, 1.5f);
         draw->AddRect(frame_min + ImVec2(1, 1), frame_max + ImVec2(1, 1), BEZEL_EDGE, 12.0f * u, 0, 1.0f);
     }
-    draw->AddRectFilled(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(58, 64, 68, 255), 5.0f);
-    draw->AddRect(image_min - ImVec2(5, 5), image_max + ImVec2(5, 5), IM_COL32(210, 216, 220, 255), 5.0f, 0, 1.0f);
+    draw->AddRectFilled(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(58, 64, 68, 255), 3.0f);
+    draw->AddRect(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(210, 216, 220, 255), 3.0f, 0, 1.0f);
     if (state.show_keys) {
         float brand = 24.0f * u;
         ImVec2 at = ImVec2(image_min.x - 4 * u, keys_min.y - 62 * u);
