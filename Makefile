@@ -87,6 +87,7 @@ screenshot: $(PROG)
 	./$(PROG) --root=os --data=data --screenshot=$(BUILD)/screenshot.bmp
 
 WORLD_GEOJSON ?= ../../badgeware/tufty2350/firmware/assets/world.geo.json
+MATERIAL_SYMBOLS ?= ../tetra-command/py/fonts/MaterialSymbolsOutlined.ttf
 
 keyboard:
 	python3 tools/make_keyboard.py tools/keyboard_layout.json src/keyboard_layout.h
@@ -97,6 +98,9 @@ scratches:
 worldmap:
 	python3 tools/make_worldmap.py $(WORLD_GEOJSON) os/assets/worldmap.bin
 
+keyicons:
+	python3 tools/make_key_icons.py $(MATERIAL_SYMBOLS) assets/MaterialSymbolsKeys.ttf
+
 check: $(PROG)
 	python3 tools/check.py --smoke
 
@@ -105,4 +109,4 @@ clean:
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot keyboard scratches worldmap check clean rebuild
+.PHONY: embed embed-clean run screenshot keyboard scratches worldmap keyicons check clean rebuild
