@@ -30,6 +30,8 @@ Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and r
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
+Install > Install .py (Cmd-I) or `--install=FILE` copies a Python file into My Programs (`programs/` in the data directory), replacing one of the same name.
+
 ## Keys
 
 | Key | Device |

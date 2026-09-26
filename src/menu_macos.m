@@ -19,7 +19,7 @@ static NSMenuItem *items[MENU_COUNT];
 @end
 
 static PocketMenuTarget *target = nil;
-static NSMenuItem *holders[4];
+static NSMenuItem *holders[5];
 static int holder_count = 0;
 
 static void add_item(NSMenu *menu, int tag, NSString *title, NSString *key, NSEventModifierFlags modifiers) {
@@ -69,6 +69,9 @@ void menu_install(void) {
     NSMenu *run = add_menu(@"Run");
     add_item(run, MENU_RELOAD, @"Reload", @"r", NSEventModifierFlagCommand);
     add_item(run, MENU_INTERRUPT, @"Interrupt (Ctrl-C)", @"", 0);
+
+    NSMenu *install = add_menu(@"Install");
+    add_item(install, MENU_INSTALL_PY, @"Install .py…", @"i", NSEventModifierFlagCommand);
 
     NSMenu *view = add_menu(@"View");
     NSString *layouts[] = { @"Screen Only", @"Screen & Frame", @"Screen & Buttons", @"Screen & Keyboard" };

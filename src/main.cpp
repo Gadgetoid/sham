@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,6 +35,51 @@ static const int STARTUP_FRAMES = 150;
 static const int TOUCH_RETRY_MS = 2000;
 
 static uint64_t start_ticks = 0;
+static std::mutex install_lock;
+static std::vector<std::string> pending_installs;
+
+static void SDLCALL install_chosen(void *userdata, const char *const *files, int filter) {
+    (void)userdata;
+    (void)filter;
+    if (!files) return;
+    std::lock_guard<std::mutex> guard(install_lock);
+    for (int i = 0; files[i]; i++) pending_installs.push_back(files[i]);
+}
+
+static bool install_program(const std::string &data, const std::string &source) {
+    size_t slash = source.find_last_of('/');
+    std::string name = slash == std::string::npos ? source : source.substr(slash + 1);
+    std::string message;
+    if (name.size() < 4 || name.compare(name.size() - 3, 3, ".py") != 0) {
+        message = "install: " + name + " is not a .py file";
+        console_notice(message.c_str());
+        return false;
+    }
+    std::string folder = data + "/programs";
+    mkdir(folder.c_str(), 0755);
+    std::string destination = folder + "/" + name;
+    std::string temporary = destination + ".tmp";
+    FILE *in = fopen(source.c_str(), "rb");
+    FILE *out = in ? fopen(temporary.c_str(), "wb") : nullptr;
+    bool ok = in && out;
+    char buffer[8192];
+    for (size_t count; ok && (count = fread(buffer, 1, sizeof buffer, in)) > 0;) ok = fwrite(buffer, 1, count, out) == count;
+    if (in) ok = ok && !ferror(in);
+    if (in) fclose(in);
+    if (out) ok = fclose(out) == 0 && ok;
+    struct stat existing;
+    bool replaced = stat(destination.c_str(), &existing) == 0;
+    if (ok) ok = rename(temporary.c_str(), destination.c_str()) == 0;
+    if (!ok) {
+        unlink(temporary.c_str());
+        message = "install: could not copy " + source;
+        console_notice(message.c_str());
+        return false;
+    }
+    message = (replaced ? "replaced " : "installed ") + name + " in My Programs";
+    console_notice(message.c_str());
+    return true;
+}
 static SDL_WindowID main_window_id = 0;
 
 extern "C" uint32_t host_ticks_ms(void) {
@@ -47,6 +93,7 @@ struct Options {
     std::string screenshot;
     std::string keys;
     std::vector<std::string> exec;
+    std::vector<std::string> install;
     int frames = 120;
     int width = 1400;
     int height = 900;
@@ -170,6 +217,7 @@ static void usage() {
         "                      show-keys\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
+        "  --install=FILE      copy a .py into My Programs, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
         "  --frames=N          frames before the screenshot (default 120)\n");
 }
@@ -195,6 +243,7 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (const char *v = value("--frames=")) options.frames = atoi(v);
         else if (const char *v = value("--keys=")) options.keys = v;
         else if (const char *v = value("--exec=")) options.exec.push_back(v);
+        else if (const char *v = value("--install=")) options.install.push_back(v);
         else if (const char *v = value("--size=")) sscanf(v, "%dx%d", &options.width, &options.height);
         else if (arg == "--no-watch") options.watch = false;
         else if (arg == "--dead-columns") options.dead_columns = true;
@@ -578,6 +627,7 @@ int main(int argc, char **argv) {
         watch_add(programs.c_str());
     }
 
+    for (auto &path : options.install) install_program(options.data, absolute(path));
     for (auto &line : options.exec) console_submit(line.c_str());
     KeyScript script;
     script.parse(options.keys);
@@ -682,6 +732,11 @@ int main(int argc, char **argv) {
                     touch.reported_missing = false;
                     set_touchscreen(window, touch, want_touchscreen, options.touch_display);
                     break;
+                case MENU_INSTALL_PY: {
+                    static const SDL_DialogFileFilter filters[] = { { "Python programs", "py" } };
+                    SDL_ShowOpenFileDialog(install_chosen, nullptr, window, filters, 1, nullptr, true);
+                    break;
+                }
                 case MENU_LAYOUT_NEXT:
                     layout = (layout + 1) % 4;
                     apply_layout();
@@ -705,6 +760,14 @@ int main(int argc, char **argv) {
                 save_settings(options.data, current);
                 saved = current;
             }
+        }
+        {
+            std::lock_guard<std::mutex> guard(install_lock);
+            for (auto &path : pending_installs) {
+                had_event = true;
+                if (install_program(options.data, path) && !options.watch) runtime_request_reload();
+            }
+            pending_installs.clear();
         }
         menu_ensure();
         menu_set_checked(MENU_SHOW_REPL, show_repl);
