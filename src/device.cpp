@@ -42,21 +42,22 @@ const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 150);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
-const ImVec2 ARROW_CENTRE(181.1f, 113.5f);
-const float ARROW_R = 80.5f;
-const float ARROW_GAP_Y = 113.5f;
-const float ARROW_HALF_GAP = 6.8f;
+const ImVec2 ARROW_CENTRE(181.1f, 150.0f);
+const float ARROW_R = 106.0f;
+const float ARROW_GAP_Y = 150.0f;
+const float ARROW_HALF_GAP = 4.0f;
+const float ARROW_BAND_HALF = 33.0f;
+const float ARROW_SPLIT_X = 128.0f;
 const float ARROW_EDGE_X = 179.2f;
 const float ARROW_EDGE_R = 560.0f;
 const float ARROW_CORNER = 11.0f;
-const float ARROW_GAP_CORNER = 6.0f;
+const float ARROW_GAP_CORNER = 5.0f;
 const float ARROW_WELL_TUCK = 3.0f;
-const float ARROW_WELL_FLAT = -91.06f;
-const float ARROW_KEY_FLAT = -86.06f;
+const float ARROW_WELL_FLAT = -120.0f;
+const float ARROW_KEY_FLAT = -115.0f;
 const float ARROW_SOFTNESS = 6.0f;
 const float ARROW_WELL_CORNER = 12.0f;
 const float FLUTE_REACH = 0.45f;
-const float FRAME_CUT_MARGIN = 3.0f;
 const float SIDE_KEY_CORNER = 6.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
@@ -88,6 +89,9 @@ const unsigned ICON_CALENDAR = 0xebcc;
 const unsigned ICON_NOTE = 0xf1fc;
 const unsigned ICON_LIGHT = 0xe518;
 const unsigned ICON_POWER = 0xe8ac;
+const unsigned ICON_MENU = 0xe5d2;
+const unsigned ICON_ESC = 0xe5cd;
+const unsigned ICON_ENTER = 0xe5ca;
 
 SDL_Texture *lcd_texture = nullptr;
 SDL_Texture *grime_texture = nullptr;
@@ -317,19 +321,6 @@ Shape side_key(ImVec2 a, ImVec2 b, float corner) {
     return shape;
 }
 
-Shape capsule(ImVec2 from, float from_r, ImVec2 to, float to_r) {
-    ImVec2 axis = to - from;
-    float distance = sqrtf(axis.x * axis.x + axis.y * axis.y);
-    float theta = atan2f(axis.y, axis.x);
-    float phi = asinf((from_r - to_r) / distance);
-    float alpha = theta + IM_PI * 0.5f - phi;
-    float beta = theta - IM_PI * 0.5f + phi;
-    Shape shape;
-    add_arc(shape, from, from_r, alpha, beta + 2 * IM_PI, 48);
-    add_arc(shape, to, to_r, beta + 2 * IM_PI, alpha + 2 * IM_PI, 48);
-    return shape;
-}
-
 Shape smooth(const Shape &shape, int passes) {
     Shape result = shape;
     for (int pass = 0; pass < passes; pass++) {
@@ -451,21 +442,41 @@ float ease_flat(float x, float flat_x) {
     return flat_x + ARROW_SOFTNESS * logf(expf((x - flat_x) / ARROW_SOFTNESS) + 1.0f);
 }
 
-Shape arrow_region(bool up, float grow, float extend = 0) {
-    Shape shape = reference_circle(ARROW_CENTRE, ARROW_R + grow, 180);
-    float near_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP + grow + extend : ARROW_GAP_Y + ARROW_HALF_GAP - grow - extend;
-    shape = clip(shape, ImVec2(0, near_y), ImVec2(0, up ? 1.0f : -1.0f));
-    Shape edge = reference_circle(ImVec2(ARROW_EDGE_X + grow - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720);
-    shape = clip_convex(shape, edge);
-    for (ImVec2 &point : shape) point.x = ease_flat(point.x, ARROW_CENTRE.x + ARROW_KEY_FLAT);
+struct Cuts {
+    float top = -FLT_MAX, bottom = FLT_MAX, left = -FLT_MAX, right = FLT_MAX;
+};
+
+Shape cut(Shape shape, const Cuts &cuts, float extend) {
+    if (cuts.top > -FLT_MAX) shape = clip(shape, ImVec2(0, cuts.top - extend), ImVec2(0, -1.0f));
+    if (cuts.bottom < FLT_MAX) shape = clip(shape, ImVec2(0, cuts.bottom + extend), ImVec2(0, 1.0f));
+    if (cuts.left > -FLT_MAX) shape = clip(shape, ImVec2(cuts.left - extend, 0), ImVec2(-1.0f, 0));
+    if (cuts.right < FLT_MAX) shape = clip(shape, ImVec2(cuts.right + extend, 0), ImVec2(1.0f, 0));
     return shape;
 }
 
-Shape arrow_key(bool up) {
-    Shape shape = rounded(arrow_region(up, 0, ARROW_CORNER * 2), ARROW_CORNER);
-    float gap_y = up ? ARROW_GAP_Y - ARROW_HALF_GAP : ARROW_GAP_Y + ARROW_HALF_GAP;
-    shape = clip(shape, ImVec2(0, gap_y), ImVec2(0, up ? 1.0f : -1.0f));
+Shape cluster_key(const Cuts &cuts) {
+    Shape shape = cut(reference_circle(ARROW_CENTRE, ARROW_R, 180), cuts, ARROW_CORNER * 2);
+    Shape edge = reference_circle(ImVec2(ARROW_EDGE_X - ARROW_EDGE_R, ARROW_GAP_Y), ARROW_EDGE_R, 720);
+    shape = clip_convex(shape, edge);
+    for (ImVec2 &point : shape) point.x = ease_flat(point.x, ARROW_CENTRE.x + ARROW_KEY_FLAT);
+    shape = cut(rounded(shape, ARROW_CORNER), cuts, 0);
     return rounded(shape, ARROW_GAP_CORNER);
+}
+
+Shape arrow_key(bool up) {
+    Cuts cuts;
+    if (up) cuts.bottom = ARROW_GAP_Y - ARROW_BAND_HALF - ARROW_HALF_GAP;
+    else cuts.top = ARROW_GAP_Y + ARROW_BAND_HALF + ARROW_HALF_GAP;
+    return cluster_key(cuts);
+}
+
+Shape band_key(bool enter) {
+    Cuts cuts;
+    cuts.top = ARROW_GAP_Y - ARROW_BAND_HALF + ARROW_HALF_GAP;
+    cuts.bottom = ARROW_GAP_Y + ARROW_BAND_HALF - ARROW_HALF_GAP;
+    if (enter) cuts.left = ARROW_SPLIT_X + ARROW_HALF_GAP;
+    else cuts.right = ARROW_SPLIT_X - ARROW_HALF_GAP;
+    return cluster_key(cuts);
 }
 
 Shape arrow_well() {
@@ -506,29 +517,6 @@ ImRect bounds(const Shape &shape) {
     return box;
 }
 
-
-void add_arc(Shape &shape, ImVec2 centre, float radius, float from, float to) {
-    int steps = std::max(2, (int)ceilf(fabsf(to - from) / (IM_PI / 16)));
-    for (int i = 0; i <= steps; i++) {
-        float angle = from + (to - from) * i / steps;
-        shape.push_back(centre + ImVec2(cosf(angle), sinf(angle)) * radius);
-    }
-}
-
-Shape notched_frame(ImVec2 min, ImVec2 max, float rounding, ImVec2 cut_centre, float cut_radius) {
-    Shape shape;
-    add_arc(shape, ImVec2(min.x + rounding, min.y + rounding), rounding, IM_PI, IM_PI * 1.5f);
-    add_arc(shape, ImVec2(max.x - rounding, min.y + rounding), rounding, IM_PI * 1.5f, IM_PI * 2.0f);
-    float reach = max.x - cut_centre.x;
-    if (fabsf(reach) < cut_radius) {
-        float half = sqrtf(cut_radius * cut_radius - reach * reach);
-        float from = atan2f(-half, reach) + IM_PI * 2.0f, to = atan2f(half, reach);
-        add_arc(shape, cut_centre, cut_radius, from, to);
-    }
-    add_arc(shape, ImVec2(max.x - rounding, max.y - rounding), rounding, 0.0f, IM_PI * 0.5f);
-    add_arc(shape, ImVec2(min.x + rounding, max.y - rounding), rounding, IM_PI * 0.5f, IM_PI);
-    return shape;
-}
 
 void fill(ImDrawList *draw, const Shape &shape, ImU32 top, ImU32 bottom) {
     ImRect box = bounds(shape);
@@ -588,7 +576,6 @@ struct Mask {
 
 const RecessStyle FLUTE_RECESS = { 1.4f, 7.0f, 0.15f };
 const RecessStyle KEY_WELL = { 1.1f, 5.5f, 0.3f };
-const RecessStyle FLAT_WELL = { 0.9f, 4.5f, 1.0f };
 
 struct RecessPalette {
     ImU32 shade;
@@ -834,9 +821,8 @@ struct LidLayout {
     Shape side[5];
     ImRect light_box;
     Shape light;
-    ImVec2 menu_centre, esc_centre, enter_centre;
+    ImVec2 menu_centre, power_centre;
     Shape menu, esc, enter, power, up, down;
-    ImRect power_box;
 };
 
 LidLayout lid_layout(const Frame &frame) {
@@ -849,14 +835,11 @@ LidLayout lid_layout(const Frame &frame) {
     lid.light_box = bounds(traced(frame, "light"));
     lid.light = pill(lid.light_box.Min, lid.light_box.Max);
     lid.menu_centre = frame.at(fit_menu[0], fit_menu[1], true);
-    lid.esc_centre = frame.at(fit_esc[0], fit_esc[1], true);
-    lid.enter_centre = frame.at(fit_enter[0], fit_enter[1], true);
+    lid.power_centre = frame.at(fit_power[0], fit_menu[1], true);
     lid.menu = circle(lid.menu_centre, fit_menu[2] * u);
-    lid.esc = circle(lid.esc_centre, fit_esc[2] * u);
-    lid.enter = circle(lid.enter_centre, fit_enter[2] * u);
-    lid.power = pill(frame.at(fit_power[0] - fit_power[2], fit_power[1] - fit_power[3], true),
-                     frame.at(fit_power[0] + fit_power[2], fit_power[1] + fit_power[3], true));
-    lid.power_box = bounds(lid.power);
+    lid.power = circle(lid.power_centre, fit_menu[2] * u);
+    lid.esc = to_screen(frame, band_key(false), true);
+    lid.enter = to_screen(frame, band_key(true), true);
     lid.up = to_screen(frame, arrow_key(true), true);
     lid.down = to_screen(frame, arrow_key(false), true);
     return lid;
@@ -914,12 +897,6 @@ void paint_lid_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImV
         draw_recess(draw, scoop, FLUTE_RECESS, u, Mask{ box.Min.x - reach, box.Min.x + box.GetHeight() * 0.2f });
     }
     {
-        float reach = lid.power_box.GetHeight() * FLUTE_REACH;
-        Shape scoop = pill(lid.power_box.Min - ImVec2(FLUTE_MARGIN, FLUTE_MARGIN) * u,
-                           ImVec2(lid.power_box.Max.x + reach, lid.power_box.Max.y + FLUTE_MARGIN * u));
-        draw_recess(draw, scoop, FLUTE_RECESS, u, Mask{ lid.power_box.Max.x + reach, lid.power_box.Max.x - lid.power_box.GetHeight() * 0.2f });
-    }
-    {
         Shape well = to_screen(frame, arrow_well(), true);
         draw_recess(draw, well, KEY_WELL, u, Mask{ bounds(well).Max.x, frame.at(ARROW_EDGE_X - 4.0f, 0, true).x });
     }
@@ -947,17 +924,13 @@ void paint_lid_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImV
     draw_key(draw, lid.light, TEAL_KEY, down[LID_LIGHT], u);
     icon(draw, lid.light_box.GetCenter() + dip(down[LID_LIGHT]), 34.0f * u, LABEL, ICON_LIGHT);
 
-    erase_colour = faded(BEZEL, 0.9f);
-    rub_mode = false;
-    centred_text(draw, lid.menu_centre - ImVec2(0, 39 * u), 15.0f * u, PRINT, "MENU");
     draw_recess(draw, circle(lid.menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
     draw_key(draw, lid.menu, DARK_DOMED_KEY, down[LID_MENU], u);
+    icon(draw, lid.menu_centre + dip(down[LID_MENU]), 30.0f * u, LABEL, ICON_MENU);
 
-    erase_colour = faded(BEZEL, 0.9f);
-    rub_mode = false;
-    centred_text(draw, ImVec2(lid.power_box.GetCenter().x, lid.menu_centre.y - 39 * u), 15.0f * u, PRINT, "POWER");
+    draw_recess(draw, circle(lid.power_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
     draw_key(draw, lid.power, TEAL_KEY, down[LID_POWER], u);
-    icon(draw, lid.power_box.GetCenter() + dip(down[LID_POWER]), 32.0f * u, LABEL, ICON_POWER);
+    icon(draw, lid.power_centre + dip(down[LID_POWER]), 30.0f * u, LABEL, ICON_POWER);
 
     for (int index = 0; index < 2; index++) {
         const Shape &shape = index == 0 ? lid.up : lid.down;
@@ -971,11 +944,10 @@ void paint_lid_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImV
         draw->AddPolyline(chevron, 3, IM_COL32(222, 228, 234, 235), 0, 2.6f * u);
     }
 
-    draw_recess(draw, capsule(lid.esc_centre, (fit_esc[2] + 6) * u, lid.enter_centre, (fit_enter[2] + 6) * u), FLAT_WELL, u);
     draw_key(draw, lid.esc, DARK_KEY, down[LID_ESC], u);
-    centred_text(draw, lid.esc_centre + dip(down[LID_ESC]), 15.0f * u, LABEL, "ESC");
+    icon(draw, bounds(lid.esc).GetCenter() + dip(down[LID_ESC]), 30.0f * u, LABEL, ICON_ESC);
     draw_key(draw, lid.enter, DARK_KEY, down[LID_ENTER], u);
-    centred_text(draw, lid.enter_centre + dip(down[LID_ENTER]), 16.0f * u, LABEL, "ENTER");
+    icon(draw, bounds(lid.enter).GetCenter() + dip(down[LID_ENTER]), 34.0f * u, LABEL, ICON_ENTER);
 }
 
 const float HINGE = 30.0f;
@@ -1526,12 +1498,9 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
 
     if (state.show_keys) {
         ImVec2 frame_min = image_min - ImVec2(14, 12) * u, frame_max = image_max + ImVec2(14, 14) * u;
-        ImVec2 esc = Frame{ keys_min, keys_max, u }.at(fit_esc[0], fit_esc[1], true);
-        Shape frame = notched_frame(frame_min, frame_max, 12.0f * u, esc, (fit_esc[2] + 6 + FRAME_CUT_MARGIN) * u);
-        draw->AddConcavePolyFilled(frame.data(), (int)frame.size(), FRAME);
-        draw->AddPolyline(frame.data(), (int)frame.size(), BEZEL_LIGHT, ImDrawFlags_Closed, 1.5f);
-        Shape edge = translated(frame, ImVec2(1, 1));
-        draw->AddPolyline(edge.data(), (int)edge.size(), BEZEL_EDGE, ImDrawFlags_Closed, 1.0f);
+        draw->AddRectFilled(frame_min, frame_max, FRAME, 12.0f * u);
+        draw->AddRect(frame_min, frame_max, BEZEL_LIGHT, 12.0f * u, 0, 1.5f);
+        draw->AddRect(frame_min + ImVec2(1, 1), frame_max + ImVec2(1, 1), BEZEL_EDGE, 12.0f * u, 0, 1.0f);
     }
     draw->AddRectFilled(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(58, 64, 68, 255), 3.0f);
     draw->AddRect(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(210, 216, 220, 255), 3.0f, 0, 1.0f);
