@@ -202,7 +202,7 @@ class Interpreter:
 
     def at_end(self):
         token = self.peek()
-        return token is None or (token[0] == SYMBOL and token[1] == ":") or (token[0] == KEYWORD and token[1] == T.ELSE)
+        return token is None or (token[0] == SYMBOL and token[1] == ":") or (token[0] == KEYWORD and token[1] in (T.ELSE, T.THEN))
 
     def run(self, now, budget_ms=12):
         if self.finished:
@@ -272,7 +272,7 @@ class Interpreter:
             if token is None:
                 self.next_line()
                 continue
-            if token[0] == SYMBOL and token[1] == ":":
+            if (token[0] == SYMBOL and token[1] == ":") or (token[0] == KEYWORD and token[1] == T.THEN):
                 self.position += 1
                 continue
             if token[0] == KEYWORD and token[1] == T.ELSE:
@@ -358,9 +358,12 @@ class Interpreter:
         return offset
 
     def assign(self):
-        target = self.variable()
-        self.expect("=")
-        self.store(target, self.expression())
+        while True:
+            target = self.variable()
+            self.expect("=")
+            self.store(target, self.expression())
+            if not self.accept(","):
+                return
 
     def integer(self):
         value = self.expression()
