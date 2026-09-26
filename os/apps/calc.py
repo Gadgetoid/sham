@@ -61,11 +61,11 @@ class Calculator(ui.View):
         shown = self.expression or "0"
         while large.measure(shown) > self.w - 8 and len(shown) > 1:
             shown = shown[1:]
-        self.text(shown, self.w - 4 - large.measure(shown), 17, INK, large)
+        self.text(shown, self.w - 4 - large.measure(shown), 24, INK, large)
         if self.result != self.expression:
             text = "= " + self.result
-            self.text(text, self.w - 4 - small.measure(text), 42)
-        self.text("Enter: =   Esc: clear", 3, 56, MID)
+            self.text(text, self.w - 4 - small.measure(text), 52)
+        self.text("Enter: =   Esc: clear", 3, self.h - small.height - 3, MID)
 
 
 def launch():
