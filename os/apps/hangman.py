@@ -63,44 +63,49 @@ class Hangman(ui.View):
             return True
         return False
 
+    def scaled(self, value):
+        return int(value * (self.h - 7) / 57 + 0.5)
+
     def draw_gallows(self):
+        s = self.scaled
         base_y = self.h - 4
-        self.line(4, base_y, 40, base_y)
-        self.line(12, base_y, 12, 3)
-        self.line(12, 3, 36, 3)
-        self.line(12, 11, 20, 3)
-        self.line(36, 3, 36, 10)
+        self.line(s(4), base_y, s(40), base_y)
+        self.line(s(12), base_y, s(12), s(3))
+        self.line(s(12), s(3), s(36), s(3))
+        self.line(s(12), s(11), s(20), s(3))
+        self.line(s(36), s(3), s(36), s(10))
         misses = self.misses
         if misses > 0:
-            self.rect(32, 10, 9, 9, INK)
+            self.rect(s(32), s(10), s(9), s(9), INK)
         if misses > 1:
-            self.line(36, 19, 36, 36)
+            self.line(s(36), s(19), s(36), s(36))
         if misses > 2:
-            self.line(36, 23, 29, 30)
+            self.line(s(36), s(23), s(29), s(30))
         if misses > 3:
-            self.line(36, 23, 43, 30)
+            self.line(s(36), s(23), s(43), s(30))
         if misses > 4:
-            self.line(36, 36, 30, 46)
+            self.line(s(36), s(36), s(30), s(46))
         if misses > 5:
-            self.line(36, 36, 42, 46)
-            self.pixel(34, 13)
-            self.pixel(38, 13)
+            self.line(s(36), s(36), s(42), s(46))
+            self.pixel(s(34), s(13))
+            self.pixel(s(38), s(13))
 
     def draw(self):
         self.draw_gallows()
         reveal = self.state == "lost"
-        x = 56
+        left = self.scaled(40) + 16
+        x = left
         for letter in self.word:
             shown = letter in self.guessed or reveal
             if shown:
                 colour = MID if reveal and letter not in self.guessed else INK
-                self.text(letter, x + (12 - large.measure(letter)) // 2 + 1, 6, colour, large)
-            self.fill(x, 26, 11, 2, INK)
+                self.text(letter, x + (12 - large.measure(letter)) // 2 + 1, 12, colour, large)
+            self.fill(x, 32, 11, 2, INK)
             x += 15
         alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for index, letter in enumerate(alphabet):
-            px = 56 + (index % 13) * 13
-            py = 38 + (index // 13) * 12
+            px = left + (index % 13) * 13
+            py = 48 + (index // 13) * 14
             if letter in self.guessed:
                 colour = LIGHT if letter not in self.word else MID
             else:
