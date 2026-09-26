@@ -8,7 +8,7 @@ from collections import deque
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OS_DIR = os.path.join(ROOT, "os")
 APPS_DIR = os.path.join(OS_DIR, "apps")
-FRAMEWORK_METHODS = {"layout", "draw", "key", "tick", "focus", "paint", "step"}
+FRAMEWORK_METHODS = {"layout", "draw", "key", "tick", "pause", "focus", "paint", "step"}
 
 
 def python_files():
