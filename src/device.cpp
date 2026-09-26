@@ -1507,11 +1507,11 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
         rub_mode = false;
         draw->AddText(text_font(), brand, at, PRINT, "POCKET");
         wear_patch(draw, at, at + text_size(text_font(), brand, "POCKET"), 1);
-        draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-239");
+        draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-299");
         paint_lid_keys(draw, Frame{ image_min, image_max, u }, device_min, device_max, down);
         if (layout.has_keyboard) paint_keyboard(draw, keyboard_frame(layout), u, state, down + LID_KEY_COUNT);
     } else {
-        draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-239");
+        draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-299");
     }
 
 }

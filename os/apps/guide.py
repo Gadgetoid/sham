@@ -86,7 +86,7 @@ Char Map browses every icon."""),
 sound.play("C5 E5 G5:2") plays notes, :2 doubles a note's length.
 sound.dtmf("555") dials tones."""),
         ("REPL", """The REPL shares main.py's globals.
-Try shell.stack, ui.alert("hi") or lcd.invert(0, 0, 239, 80)."""),
+Try shell.stack, ui.alert("hi") or lcd.invert(0, 0, 299, 100)."""),
     )),
 )
 

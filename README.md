@@ -1,6 +1,6 @@
 # Pocket
 
-A fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 239x80 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
+A fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x100 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
 
 ## Build
 

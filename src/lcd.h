@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-#define LCD_WIDTH  239
-#define LCD_HEIGHT 80
+#define LCD_WIDTH  299
+#define LCD_HEIGHT 100
 #define LCD_MARGIN 3
 
 typedef struct {
