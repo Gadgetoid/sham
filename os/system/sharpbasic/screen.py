@@ -126,10 +126,10 @@ class Screen:
                 self.pset(x, y)
             previous = (x, y)
 
-    def column(self, x, y, bits):
+    def row(self, x, y, bits):
         for bit in range(8):
-            if bits & (1 << bit):
-                self.pset(x, y + bit)
+            if bits & (0x80 >> bit):
+                self.pset(x + bit, y)
 
     def beep(self, count):
         sound.play(" ".join(["C6:1"] * count), 60)

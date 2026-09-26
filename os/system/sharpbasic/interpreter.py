@@ -48,7 +48,7 @@ def format_number(value):
     exponent = int(power)
     mantissa = mantissa.replace(".", "").rstrip("0") or "0"
     if 0 <= exponent < 10 and len(mantissa) <= 10:
-        whole = mantissa[:exponent + 1].ljust(exponent + 1, "0")
+        whole = (mantissa + "0" * exponent)[:exponent + 1]
         fraction = mantissa[exponent + 1:]
         return sign + whole + "." + fraction
     if -10 < exponent < 0 and len(mantissa) - exponent <= 10:
@@ -65,18 +65,18 @@ def string_of(value):
 def format_using(value, pattern):
     if isinstance(value, str):
         width = pattern.count("&")
-        return value[:width].ljust(width) if width else value
+        return (value + " " * width)[:width] if width else value
     if "#" not in pattern:
         return format_number(value)
     point = pattern.find(".")
     decimals = len(pattern) - point - 1 if point >= 0 else 0
     width = len(pattern)
-    text = "{:.{}f}".format(value, decimals)
+    text = ("{:." + str(decimals) + "f}").format(value)
     if point >= 0 and decimals == 0:
         text += "."
     if len(text) > width:
         return "%" + text
-    return text.rjust(width)
+    return " " * (width - len(text)) + text
 
 
 class File:
@@ -1214,12 +1214,12 @@ def statement_gprint(interp):
             continue
         value = interp.expression()
         if isinstance(value, str):
-            columns = [int(value[i:i + 2], 16) for i in range(0, len(value) - 1, 2)]
+            rows = [int(value[i:i + 2], 16) for i in range(0, len(value) - 1, 2)]
         else:
-            columns = [int(value) & 0xFF]
-        for column in columns:
-            interp.screen.column(interp.graphic_x, interp.graphic_y, column)
-            interp.graphic_x += 1
+            rows = [int(value) & 0xFF]
+        for row in rows:
+            interp.screen.row(interp.graphic_x, interp.graphic_y, row)
+            interp.graphic_y += 1
 
 
 def statement_open(interp):

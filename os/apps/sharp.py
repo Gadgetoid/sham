@@ -35,7 +35,11 @@ def sharp_code(key):
         return KEY_CODES[code]
     char = key.char
     if char and len(char) == 1 and ord(char) < 256:
-        return ord(char.swapcase()) if char.isalpha() else ord(char)
+        if "a" <= char <= "z":
+            return ord(char) - 32
+        if "A" <= char <= "Z":
+            return ord(char) + 32
+        return ord(char)
     return None
 
 
@@ -108,4 +112,12 @@ def launch():
     listing = ui.List(programs(), label=lambda name: name[:-4], icon=lambda name: "save_disk",
                       empty="No .wzd files. Install > Install .wzd")
     listing.on_select = lambda name, index: run(FOLDER + "/" + name)
-    return ui.Screen("Sharp BASIC", listing, status="Enter: run")
+
+    def delete():
+        name = listing.selected
+        if name:
+            ui.confirm("Delete {}?".format(name[:-4]), lambda: (os.remove(FOLDER + "/" + name), listing.set_items(programs())))
+
+    return ui.Screen("Sharp BASIC", listing, status="Enter: run",
+                     menu=lambda: [("Run", lambda: listing.selected and run(FOLDER + "/" + listing.selected)),
+                                   ("Delete", delete)] if listing.selected else [])
