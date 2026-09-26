@@ -118,15 +118,15 @@ class Contrast(ui.View):
         level = host.contrast()
         left = 40
         cell = (self.w - 2 * left) // 11
-        self.text("LIGHT", 2, 10, MID)
-        self.text("DARK", self.w - small.measure("DARK") - 2, 10, MID)
+        self.text("LIGHT", 2, 14, MID)
+        self.text("DARK", self.w - small.measure("DARK") - 2, 14, MID)
         for index in range(11):
             x = left + index * cell
             height = 4 + index
-            self.fill(x, 20 - height, cell - 2, height, INK if index <= level else LIGHT)
-        self.rect(left + level * cell - 2, 3, cell + 2, 20, INK)
-        self.text("Press [UP] for darker, [DOWN] for lighter.", 2, 32)
-        self.text("Press [ENTER] to continue.", 2 + (self.w - small.measure("Press [ENTER] to continue.")) // 2 - 2, 46, MID)
+            self.fill(x, 26 - height, cell - 2, height, INK if index <= level else LIGHT)
+        self.rect(left + level * cell - 2, 7, cell + 2, 22, INK)
+        self.text("Press [UP] for darker, [DOWN] for lighter.", 2, 44)
+        self.text("Press [ENTER] to continue.", 2 + (self.w - small.measure("Press [ENTER] to continue.")) // 2 - 2, 62, MID)
 
 
 def contrast_screen():
@@ -219,11 +219,11 @@ class MemoryView(ui.View):
 
     def draw(self):
         total = self.free + self.used
-        self.bar(2, "Heap", self.used / total if total else 0,
+        self.bar(6, "Heap", self.used / total if total else 0,
                  "{} KB free of {} KB".format(self.free // 1024, total // 1024))
-        self.text("Data  {} files, {} KB".format(self.files, (self.bytes + 1023) // 1024), 2, 28)
+        self.text("Data  {} files, {} KB".format(self.files, (self.bytes + 1023) // 1024), 2, 36)
         version = ".".join(str(part) for part in sys.implementation.version[:3])
-        self.text("MicroPython {} on {}".format(version, sys.platform), 2, 40, MID)
+        self.text("MicroPython {} on {}".format(version, sys.platform), 2, 50, MID)
 
 
 def memory_screen():
