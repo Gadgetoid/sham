@@ -8,12 +8,13 @@ ICON = "boardgames:cards"
 CATEGORY = "Games"
 ORDER = 78
 
-CARD_W = 23
-CARD_H = 20
+CARD_W = 30
+CARD_H = 26
 COLUMN_X = 2
-COLUMN_STEP = 26
-RIGHT_X = 186
-RIGHT_STEP = 26
+COLUMN_STEP = 33
+RIGHT_X = 233
+RIGHT_STEP = 33
+ROW_STEP = 30
 DOWN_STEP = 3
 UP_STEP = 9
 
@@ -223,7 +224,7 @@ class Solitaire(ui.View):
     def draw_slot(self, x, y, suit=None):
         self.rect(x, y, CARD_W, CARD_H, LIGHT)
         if suit is not None:
-            self.sprite(SUITS[suit], x + 9, y + 7, LIGHT)
+            self.sprite(SUITS[suit], x + (CARD_W - 5) // 2, y + (CARD_H - 5) // 2, LIGHT)
 
     def column_steps(self, column):
         pile = self.tableau[column]
@@ -255,7 +256,7 @@ class Solitaire(ui.View):
             column, row = slots[kind]
         else:
             column, row = index % 2, 1 + index // 2
-        return RIGHT_X + column * RIGHT_STEP, row * 23, CARD_H
+        return RIGHT_X + column * RIGHT_STEP, row * ROW_STEP, CARD_H
 
     def card_y_end(self, column):
         pile = self.tableau[column]
