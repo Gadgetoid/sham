@@ -31,6 +31,6 @@ Period-accurate app ideas, grouped by what they need.
 - [ ] **Secret and Autorun:** the rest of the firmware Options menu. A password gates secret-flagged entries, with a lock organiser option. Autorun starts a program at power on.
 
 - [x] **Program editor ("My Programs"):** write and run Python apps on the device itself, like OPL's Program editor on the Psion. The REPL plumbing already exists.
-- [ ] **Infrared beaming:** send memos and contacts between two Pocket windows over localhost UDP, styled as IrDA with a "Receiving..." dialog.
+- [ ] **Infrared beaming:** send memos and contacts between two SHAM windows over localhost UDP, styled as IrDA with a "Receiving..." dialog.
 - [ ] **PC Sync:** mirror memos and Tel entries to a folder on the Mac, like the ZQ-770's PC SYNC key.
 - [ ] **Sheet:** a tiny spreadsheet with a cell grid and formulas, like Psion Sheet. It stretches the SDK well at 239x80.

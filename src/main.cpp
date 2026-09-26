@@ -135,7 +135,7 @@ struct Settings {
 };
 
 static std::string settings_path(const std::string &data) {
-    return data + "/pocket.ini";
+    return data + "/sham.ini";
 }
 
 static void load_settings(const std::string &data, Options &options) {
@@ -176,13 +176,13 @@ static void save_settings(const std::string &data, const Settings &settings) {
 
 static std::string user_directory() {
     const char *xdg = getenv("XDG_DATA_HOME");
-    if (xdg && xdg[0] == '/') return std::string(xdg) + "/pocket";
+    if (xdg && xdg[0] == '/') return std::string(xdg) + "/sham";
     const char *home = getenv("HOME");
     std::string base = home && home[0] ? home : ".";
 #ifdef __APPLE__
-    return base + "/Library/Application Support/Pocket";
+    return base + "/Library/Application Support/SHAM";
 #else
-    return base + "/.local/share/pocket";
+    return base + "/.local/share/sham";
 #endif
 }
 
@@ -247,7 +247,7 @@ static int menu_item_named(const std::string &name) {
 
 static void usage() {
     printf(
-        "usage: pocket [options]\n"
+        "usage: sham [options]\n"
         "  --root=DIR          OS directory, mounted as / (default: a per-user copy of the bundled os/)\n"
         "  --data=DIR          writable directory, mounted as /data (default: per-user)\n"
         "  --main=PATH         entry point within root (default /main.py)\n"
@@ -636,7 +636,7 @@ int main(int argc, char **argv) {
     }
     start_ticks = SDL_GetTicks();
 
-    SDL_Window *window = SDL_CreateWindow("Pocket", options.width, options.height,
+    SDL_Window *window = SDL_CreateWindow("SHAM", options.width, options.height,
                                           SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                           (options.screenshot.empty() ? 0 : SDL_WINDOW_HIDDEN));
     SDL_Renderer *renderer = window ? SDL_CreateRenderer(window, nullptr) : nullptr;

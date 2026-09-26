@@ -6,7 +6,7 @@ CATEGORY = "System"
 ORDER = 90
 
 GUIDE = (
-    ("Using Pocket", "hardware_keyboard_text_input", (
+    ("Using SHAM", "hardware_keyboard_text_input", (
         ("Keys", """F1 MAIN, F2 Tel, F3 Schedule, F4 Memo, F5 Programs, F6 backlight.
 Tab is MENU. Esc goes back. Arrows move, Enter picks.
 Ctrl-C interrupts the running app.

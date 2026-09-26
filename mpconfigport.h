@@ -8,7 +8,7 @@
 #define MICROPY_ENABLE_GC               (1)
 #define MICROPY_PY_GC                   (1)
 #define MICROPY_PY_SYS                  (1)
-#define MICROPY_PY_SYS_PLATFORM         "pocket"
+#define MICROPY_PY_SYS_PLATFORM         "sham"
 #define MICROPY_PY_TIME                 (0)
 #define MICROPY_FLOAT_IMPL              (MICROPY_FLOAT_IMPL_DOUBLE)
 #define MICROPY_ERROR_REPORTING         (MICROPY_ERROR_REPORTING_NORMAL)

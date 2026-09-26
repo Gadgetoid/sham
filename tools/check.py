@@ -162,7 +162,7 @@ def main():
     check_icons(problems)
     check_crates(problems)
     if "--smoke" in sys.argv:
-        check_smoke(problems, os.path.join(ROOT, "pocket"))
+        check_smoke(problems, os.path.join(ROOT, "sham"))
     for problem in problems:
         print(problem)
     print("{} problem(s)".format(len(problems)))

@@ -1,4 +1,4 @@
-PROG      = pocket
+PROG      = sham
 
 .DEFAULT_GOAL := $(PROG)
 MPY_TOP   = micropython

@@ -1519,13 +1519,13 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
         ImVec2 at = ImVec2(image_min.x - 4 * u, keys_min.y - 68 * u);
         erase_colour = faded(BEZEL, 0.9f);
         rub_mode = false;
-        draw->AddText(text_font(), brand, at, PRINT, "POCKET");
-        wear_patch(draw, at, at + text_size(text_font(), brand, "POCKET"), 1);
-        draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "POCKET").x + 18 * u, 5 * u), PRINT, "PZ-299");
+        draw->AddText(text_font(), brand, at, PRINT, "SHAM");
+        wear_patch(draw, at, at + text_size(text_font(), brand, "SHAM"), 1);
+        draw->AddText(ImGui::GetFont(), 17.0f * u, at + ImVec2(text_size(text_font(), brand, "SHAM").x + 18 * u, 5 * u), PRINT, "PZ-299");
         paint_lid_keys(draw, Frame{ keys_min, keys_max, u }, device_min, device_max, down);
         if (layout.has_keyboard) paint_keyboard(draw, keyboard_frame(layout), u, state, down + LID_KEY_COUNT);
     } else {
-        draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "POCKET  PZ-299");
+        draw->AddText(device_min + ImVec2(PLAIN_BEZEL, 8), IM_COL32(60, 66, 72, 255), "SHAM  PZ-299");
     }
 
 }

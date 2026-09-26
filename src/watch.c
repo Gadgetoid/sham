@@ -38,7 +38,7 @@ bool watch_start(const char *root) {
     running = true;
     dmon_watch_id id = dmon_watch(root, on_change, DMON_WATCHFLAGS_RECURSIVE, NULL);
     if (id.id == 0) {
-        fprintf(stderr, "pocket: cannot watch %s\n", root);
+        fprintf(stderr, "sham: cannot watch %s\n", root);
         return false;
     }
     return true;

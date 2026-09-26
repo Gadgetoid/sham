@@ -171,11 +171,11 @@ static bool start_fiber(void) {
 bool runtime_init(const host_config_t *cfg) {
     config = cfg;
     if (!realpath(cfg->root_path, root_abs)) {
-        fprintf(stderr, "pocket: cannot resolve root %s\n", cfg->root_path);
+        fprintf(stderr, "sham: cannot resolve root %s\n", cfg->root_path);
         return false;
     }
     if (!realpath(cfg->data_path, data_abs)) {
-        fprintf(stderr, "pocket: cannot resolve data %s\n", cfg->data_path);
+        fprintf(stderr, "sham: cannot resolve data %s\n", cfg->data_path);
         return false;
     }
     gc_heap = malloc(GC_HEAP_SIZE);

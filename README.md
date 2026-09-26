@@ -1,6 +1,6 @@
-# Pocket
+# SHAM
 
-A fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x100 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
+Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x100 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
 
 ## Build
 
@@ -19,16 +19,16 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 ## Run
 
 ```
-./pocket                      # boots a per-user copy of os/
-./pocket --root=os --data=data # the repo's os/ and data/, as make run does
-./pocket --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
-./pocket --exec="ui.alert('hi')"
-./pocket --no-repl --fps=10 --response=2 --menu=dead-columns
+./sham                       # boots a per-user copy of os/
+./sham --root=os --data=data  # the repo's os/ and data/, as make run does
+./sham --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
+./sham --exec="ui.alert('hi')"
+./sham --no-repl --fps=10 --response=2 --menu=dead-columns
 ```
 
 Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
 
-On first run, the bundled `os/` is copied to `os/` in the per-user directory: `$XDG_DATA_HOME/pocket`, else `~/Library/Application Support/Pocket` on macOS or `~/.local/share/pocket` elsewhere. It's never updated after that, so delete it to pick up a newer OS. Writable data and settings live in `data/` beside it. `--root` and `--data` override both.
+On first run, the bundled `os/` is copied to `os/` in the per-user directory: `$XDG_DATA_HOME/sham`, else `~/Library/Application Support/SHAM` on macOS or `~/.local/share/sham` elsewhere. It's never updated after that, so delete it to pick up a newer OS. Writable data and settings live in `data/` beside it. `--root` and `--data` override both.
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
@@ -60,7 +60,7 @@ View > Realism groups Dead Columns, Scratches and Wear, which weathers the case 
 
 View > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal.
 
-Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `sham.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
 ## Layout
 

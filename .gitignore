@@ -1,7 +1,7 @@
 build/
 build-embed/
 micropython_embed/
-/pocket
+/sham
 /data/
 imgui.ini
 __pycache__/
