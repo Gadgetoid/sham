@@ -438,8 +438,8 @@ class Grid(View):
             self.select(self.index + self.per_page)
         elif code == keys.ENTER and self.items and self.on_select:
             self.on_select(self.items[self.index], self.index)
-        elif key.char and key.char.isdigit() and key.char != "0":
-            index = self.page * self.per_page + int(key.char) - 1
+        elif key.char and key.char.isdigit():
+            index = self.page * self.per_page + (int(key.char) - 1) % 10
             if index < len(self.items):
                 self.select(index)
                 if self.on_select:
@@ -459,7 +459,7 @@ class Grid(View):
             x = (position // self.rows) * cell_w + 2
             y = (position % self.rows) * ICON_ROW_H + 1
             self.fill(x, y + 2, 9, small.height + 2, INK)
-            number = str(position + 1)
+            number = str((position + 1) % 10)
             self.text(number, x + (10 - small.measure(number)) // 2, y + 3, CLEAR)
             if self.icon_for:
                 self.icon(self.icon_for(item), x + 12, y)
