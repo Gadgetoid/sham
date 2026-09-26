@@ -10,7 +10,7 @@ ORDER = 73
 
 COLUMNS = 10
 ROWS = 20
-CELL = 3
+CELL = 4
 KICKS = ((0, 0), (-1, 0), (1, 0), (0, -1), (-2, 0), (2, 0))
 LINE_POINTS = (0, 100, 300, 500, 800)
 SOFT_DROP_MS = 40
@@ -246,16 +246,16 @@ class Blocks(ui.View):
         left = self.board_x - 60
         self.text("HOLD", left, 2, MID)
         if self.held_piece:
-            self.preview(self.held_piece, left, 14)
-        self.text("LINES {}".format(self.lines), left, 36, MID)
-        self.text("LEVEL {}".format(self.level), left, 48, MID)
+            self.preview(self.held_piece, left, 16)
+        self.text("LINES {}".format(self.lines), left, 44, MID)
+        self.text("LEVEL {}".format(self.level), left, 58, MID)
 
         right = self.board_x + board_w + 12
         self.text("NEXT", right, 2, MID)
         for index, name in enumerate(self.queue[:2]):
-            self.preview(name, right + index * 16, 14)
-        self.text("BEST {}".format(self.best), right, 36, MID)
-        self.text("P pause", right, 48, MID)
+            self.preview(name, right + index * (4 * CELL + 4), 16)
+        self.text("BEST {}".format(self.best), right, 44, MID)
+        self.text("P pause", right, 58, MID)
 
         if self.state == "ready":
             self.banner("Enter to start", "Up/X Z rotate", "Space drop C hold")
