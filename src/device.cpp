@@ -46,7 +46,7 @@ const float SCREEN_MID_Y = (REFERENCE_LCD_H + SCREEN_GROW_BOTTOM - SCREEN_GROW_T
 const ImVec2 ARROW_CENTRE(181.1f, SCREEN_MID_Y);
 const float ARROW_R = 106.0f;
 const float ARROW_GAP_Y = SCREEN_MID_Y;
-const float ROUND_KEY_X = 82.0f;
+const float ROUND_KEY_X = 102.0f;
 const float SCREEN_FRAME_TOP = 12.0f;
 const float SCREEN_FRAME_BOTTOM = 14.0f;
 const float ROUND_KEY_RECESS = 26.35f;
