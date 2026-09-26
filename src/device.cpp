@@ -42,9 +42,14 @@ const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 150);
 const float FLUTE_MARGIN = 3.5f;
 const float WELL_MARGIN = 4.0f;
 const float ARROW_WELL_MARGIN = 4.0f;
-const ImVec2 ARROW_CENTRE(181.1f, 150.0f);
+const float SCREEN_MID_Y = (REFERENCE_LCD_H + SCREEN_GROW_BOTTOM - SCREEN_GROW_TOP) * 0.5f;
+const ImVec2 ARROW_CENTRE(181.1f, SCREEN_MID_Y);
 const float ARROW_R = 106.0f;
-const float ARROW_GAP_Y = 150.0f;
+const float ARROW_GAP_Y = SCREEN_MID_Y;
+const float ROUND_KEY_X = 82.0f;
+const float SCREEN_FRAME_TOP = 12.0f;
+const float SCREEN_FRAME_BOTTOM = 14.0f;
+const float ROUND_KEY_RECESS = 26.35f;
 const float ARROW_HALF_GAP = 4.0f;
 const float ARROW_BAND_HALF = 33.0f;
 const float ARROW_SPLIT_X = 128.0f;
@@ -834,8 +839,8 @@ LidLayout lid_layout(const Frame &frame) {
     }
     lid.light_box = bounds(traced(frame, "light"));
     lid.light = pill(lid.light_box.Min, lid.light_box.Max);
-    lid.menu_centre = frame.at(fit_menu[0], fit_menu[1], true);
-    lid.power_centre = frame.at(fit_power[0], fit_menu[1], true);
+    lid.menu_centre = frame.at(ROUND_KEY_X, REFERENCE_LCD_H + SCREEN_GROW_BOTTOM + SCREEN_FRAME_BOTTOM - ROUND_KEY_RECESS, true);
+    lid.power_centre = frame.at(ROUND_KEY_X, -SCREEN_GROW_TOP - SCREEN_FRAME_TOP + ROUND_KEY_RECESS, true);
     lid.menu = circle(lid.menu_centre, fit_menu[2] * u);
     lid.power = circle(lid.power_centre, fit_menu[2] * u);
     lid.esc = to_screen(frame, band_key(false), true);
@@ -924,11 +929,11 @@ void paint_lid_keys(ImDrawList *draw, const Frame &frame, ImVec2 device_min, ImV
     draw_key(draw, lid.light, TEAL_KEY, down[LID_LIGHT], u);
     icon(draw, lid.light_box.GetCenter() + dip(down[LID_LIGHT]), 34.0f * u, LABEL, ICON_LIGHT);
 
-    draw_recess(draw, circle(lid.menu_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
+    draw_recess(draw, circle(lid.menu_centre, ROUND_KEY_RECESS * u), KEY_WELL, u);
     draw_key(draw, lid.menu, DARK_DOMED_KEY, down[LID_MENU], u);
     icon(draw, lid.menu_centre + dip(down[LID_MENU]), 30.0f * u, LABEL, ICON_MENU);
 
-    draw_recess(draw, circle(lid.power_centre, (fit_menu[2] + WELL_MARGIN + 2.5f) * u), KEY_WELL, u);
+    draw_recess(draw, circle(lid.power_centre, ROUND_KEY_RECESS * u), KEY_WELL, u);
     draw_key(draw, lid.power, TEAL_KEY, down[LID_POWER], u);
     icon(draw, lid.power_centre + dip(down[LID_POWER]), 30.0f * u, LABEL, ICON_POWER);
 
@@ -1497,7 +1502,7 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
     draw->AddRect(device_min + ImVec2(2, 2), device_max - ImVec2(2, 2), BEZEL_LIGHT, rounding - 2, 0, 1.0f);
 
     if (state.show_keys) {
-        ImVec2 frame_min = image_min - ImVec2(14, 12) * u, frame_max = image_max + ImVec2(14, 14) * u;
+        ImVec2 frame_min = image_min - ImVec2(14, SCREEN_FRAME_TOP) * u, frame_max = image_max + ImVec2(14, SCREEN_FRAME_BOTTOM) * u;
         draw->AddRectFilled(frame_min, frame_max, FRAME, 12.0f * u);
         draw->AddRect(frame_min, frame_max, BEZEL_LIGHT, 12.0f * u, 0, 1.5f);
         draw->AddRect(frame_min + ImVec2(1, 1), frame_max + ImVec2(1, 1), BEZEL_EDGE, 12.0f * u, 0, 1.0f);

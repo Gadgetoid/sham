@@ -50,7 +50,7 @@ Install > Install .py (Cmd-I) or `--install=FILE` copies a Python file into My P
 | Cmd-B | Backlight (Simulation menu) |
 | Cmd-D | Dead LCD columns, re-rolled each time (View > Realism) |
 
-The bezel carries clickable keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU and POWER top right, and a split disc of up, ESC, ENTER and down below them. The View menu picks Screen Only, Screen & Frame, Screen & Buttons or Screen & Keyboard (Cmd-K cycles, `--layout=0..3`).
+The bezel carries clickable keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, and on the right a split disc of up, ESC, ENTER and down centred on the screen, with POWER above and MENU below. The View menu picks Screen Only, Screen & Frame, Screen & Buttons or Screen & Keyboard (Cmd-K cycles, `--layout=0..3`).
 
 The Screen & Keyboard layout adds the ZQ-770 keyboard below the lid. Click keys to type. 2nd and Shift latch for one keypress, 2nd then Shift toggles CAPS, and 2nd sends each key's purple function. The layout lives in `tools/keyboard_layout.json`, and `make keyboard` regenerates `src/keyboard_layout.h`.
 
