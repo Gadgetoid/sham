@@ -28,10 +28,10 @@ const float LEFT_EXTENT = 202.0f;
 const float RIGHT_EXTENT = 214.0f;
 const float TOP_EXTENT = 91.0f;
 const float BOTTOM_EXTENT = 48.0f;
-const float SCREEN_GROW_LEFT = -6.0f;
-const float SCREEN_GROW_RIGHT = 6.0f;
-const float SCREEN_GROW_TOP = 16.0f;
-const float SCREEN_GROW_BOTTOM = 6.0f;
+const float SCREEN_GROW_LEFT = 18.0f;
+const float SCREEN_GROW_RIGHT = 30.0f;
+const float SCREEN_GROW_TOP = 24.0f;
+const float SCREEN_GROW_BOTTOM = 14.0f;
 const float LCD_H_UNITS = REFERENCE_LCD_H + SCREEN_GROW_TOP + SCREEN_GROW_BOTTOM;
 const float SIDE_UNITS = LEFT_EXTENT + RIGHT_EXTENT - SCREEN_GROW_LEFT - SCREEN_GROW_RIGHT;
 const float CAP_UNITS = TOP_EXTENT + BOTTOM_EXTENT - SCREEN_GROW_TOP - SCREEN_GROW_BOTTOM;
@@ -56,6 +56,7 @@ const float ARROW_KEY_FLAT = -86.06f;
 const float ARROW_SOFTNESS = 6.0f;
 const float ARROW_WELL_CORNER = 12.0f;
 const float FLUTE_REACH = 0.45f;
+const float FRAME_CUT_MARGIN = 3.0f;
 const float SIDE_KEY_CORNER = 6.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
@@ -505,6 +506,31 @@ ImRect bounds(const Shape &shape) {
     return box;
 }
 
+
+void add_arc(Shape &shape, ImVec2 centre, float radius, float from, float to) {
+    int steps = std::max(2, (int)ceilf(fabsf(to - from) / (IM_PI / 16)));
+    for (int i = 0; i <= steps; i++) {
+        float angle = from + (to - from) * i / steps;
+        shape.push_back(centre + ImVec2(cosf(angle), sinf(angle)) * radius);
+    }
+}
+
+Shape notched_frame(ImVec2 min, ImVec2 max, float rounding, ImVec2 cut_centre, float cut_radius) {
+    Shape shape;
+    add_arc(shape, ImVec2(min.x + rounding, min.y + rounding), rounding, IM_PI, IM_PI * 1.5f);
+    add_arc(shape, ImVec2(max.x - rounding, min.y + rounding), rounding, IM_PI * 1.5f, IM_PI * 2.0f);
+    float reach = max.x - cut_centre.x;
+    float notch_x = max.x;
+    if (fabsf(reach) < cut_radius && cut_centre.y < max.y) {
+        float hit_y = cut_centre.y - sqrtf(cut_radius * cut_radius - reach * reach);
+        add_arc(shape, cut_centre, cut_radius, atan2f(hit_y - cut_centre.y, reach) + IM_PI * 2.0f, IM_PI);
+        notch_x = cut_centre.x - cut_radius;
+    }
+    float corner = std::min(rounding, (max.y - cut_centre.y) * 0.5f);
+    add_arc(shape, ImVec2(notch_x - corner, max.y - corner), corner, 0.0f, IM_PI * 0.5f);
+    add_arc(shape, ImVec2(min.x + rounding, max.y - rounding), rounding, IM_PI * 0.5f, IM_PI);
+    return shape;
+}
 
 void fill(ImDrawList *draw, const Shape &shape, ImU32 top, ImU32 bottom) {
     ImRect box = bounds(shape);
@@ -1502,15 +1528,18 @@ void paint_device(ImDrawList *draw, SDL_Renderer *renderer, float framebuffer_sc
 
     if (state.show_keys) {
         ImVec2 frame_min = image_min - ImVec2(14, 12) * u, frame_max = image_max + ImVec2(14, 14) * u;
-        draw->AddRectFilled(frame_min, frame_max, FRAME, 12.0f * u);
-        draw->AddRect(frame_min, frame_max, BEZEL_LIGHT, 12.0f * u, 0, 1.5f);
-        draw->AddRect(frame_min + ImVec2(1, 1), frame_max + ImVec2(1, 1), BEZEL_EDGE, 12.0f * u, 0, 1.0f);
+        ImVec2 esc = Frame{ keys_min, keys_max, u }.at(fit_esc[0], fit_esc[1], true);
+        Shape frame = notched_frame(frame_min, frame_max, 12.0f * u, esc, (fit_esc[2] + 6 + FRAME_CUT_MARGIN) * u);
+        draw->AddConcavePolyFilled(frame.data(), (int)frame.size(), FRAME);
+        draw->AddPolyline(frame.data(), (int)frame.size(), BEZEL_LIGHT, ImDrawFlags_Closed, 1.5f);
+        Shape edge = translated(frame, ImVec2(1, 1));
+        draw->AddPolyline(edge.data(), (int)edge.size(), BEZEL_EDGE, ImDrawFlags_Closed, 1.0f);
     }
     draw->AddRectFilled(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(58, 64, 68, 255), 3.0f);
     draw->AddRect(image_min - ImVec2(3, 3), image_max + ImVec2(3, 3), IM_COL32(210, 216, 220, 255), 3.0f, 0, 1.0f);
     if (state.show_keys) {
         float brand = 24.0f * u;
-        ImVec2 at = ImVec2(image_min.x - 4 * u, keys_min.y - 62 * u);
+        ImVec2 at = ImVec2(image_min.x - 4 * u, keys_min.y - 68 * u);
         erase_colour = faded(BEZEL, 0.9f);
         rub_mode = false;
         draw->AddText(text_font(), brand, at, PRINT, "POCKET");

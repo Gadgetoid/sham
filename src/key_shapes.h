@@ -427,7 +427,7 @@ static const float traced_enter[] = {
     181.57f, 243.00f, 181.85f, 244.28f, 182.11f, 245.56f, 182.32f, 246.86f, 182.53f, 248.16f, 182.71f, 249.47f,
 };
 
-static const float fit_menu[] = { 71.22f, -4.86f, 19.85f };
+static const float fit_menu[] = { 85.22f, -4.86f, 19.85f };
 static const float fit_esc[] = { 71.93f, 209.54f, 27.18f };
 static const float fit_enter[] = { 141.56f, 252.60f, 41.21f };
 static const float fit_power[] = { 148.35f, -6.57f, 26.55f, 18.41f };
