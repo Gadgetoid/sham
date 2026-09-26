@@ -71,7 +71,7 @@ void menu_install(void) {
     add_item(run, MENU_INTERRUPT, @"Interrupt (Ctrl-C)", @"", 0);
 
     NSMenu *install = add_menu(@"Install");
-    add_item(install, MENU_INSTALL_PY, @"Install .py…", @"i", NSEventModifierFlagCommand);
+    add_item(install, MENU_INSTALL_PY, @"Install Program…", @"i", NSEventModifierFlagCommand);
 
     NSMenu *view = add_menu(@"View");
     NSString *layouts[] = { @"Screen Only", @"Screen & Frame", @"Screen & Buttons", @"Screen & Keyboard" };

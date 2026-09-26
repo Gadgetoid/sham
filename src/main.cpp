@@ -51,12 +51,15 @@ static bool install_program(const std::string &data, const std::string &source) 
     size_t slash = source.find_last_of('/');
     std::string name = slash == std::string::npos ? source : source.substr(slash + 1);
     std::string message;
-    if (name.size() < 4 || name.compare(name.size() - 3, 3, ".py") != 0) {
-        message = "install: " + name + " is not a .py file";
+    std::string extension = name.size() > 4 ? name.substr(name.size() - 4) : "";
+    for (char &c : extension) c = (char)tolower((unsigned char)c);
+    bool sharp = extension == ".wzd";
+    if (!sharp && (name.size() < 4 || name.compare(name.size() - 3, 3, ".py") != 0)) {
+        message = "install: " + name + " is not a .py or .wzd file";
         console_notice(message.c_str());
         return false;
     }
-    std::string folder = data + "/programs";
+    std::string folder = data + (sharp ? "/wzd" : "/programs");
     mkdir(folder.c_str(), 0755);
     std::string destination = folder + "/" + name;
     std::string temporary = destination + ".tmp";
@@ -77,7 +80,7 @@ static bool install_program(const std::string &data, const std::string &source) 
         console_notice(message.c_str());
         return false;
     }
-    message = (replaced ? "replaced " : "installed ") + name + " in My Programs";
+    message = (replaced ? "replaced " : "installed ") + name + (sharp ? " in Sharp BASIC" : " in My Programs");
     console_notice(message.c_str());
     return true;
 }
@@ -268,7 +271,7 @@ static void usage() {
         "                      show-keys\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
-        "  --install=FILE      copy a .py into My Programs, repeatable\n"
+        "  --install=FILE      copy a .py into My Programs or a .wzd into Sharp BASIC, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
         "  --frames=N          frames before the screenshot (default 120)\n");
 }
@@ -681,9 +684,11 @@ int main(int argc, char **argv) {
     if (!runtime_init(&config)) return 1;
     if (options.watch) {
         watch_start(options.root.c_str());
-        std::string programs = options.data + "/programs";
-        mkdir(programs.c_str(), 0755);
-        watch_add(programs.c_str());
+        for (const char *folder : { "/programs", "/wzd" }) {
+            std::string path = options.data + folder;
+            mkdir(path.c_str(), 0755);
+            watch_add(path.c_str());
+        }
     }
 
     for (auto &path : options.install) install_program(options.data, absolute(path));
@@ -792,7 +797,7 @@ int main(int argc, char **argv) {
                     set_touchscreen(window, touch, want_touchscreen, options.touch_display);
                     break;
                 case MENU_INSTALL_PY: {
-                    static const SDL_DialogFileFilter filters[] = { { "Python programs", "py" } };
+                    static const SDL_DialogFileFilter filters[] = { { "Programs", "py;wzd" } };
                     SDL_ShowOpenFileDialog(install_chosen, nullptr, window, filters, 1, nullptr, true);
                     break;
                 }
