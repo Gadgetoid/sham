@@ -12,7 +12,7 @@ PEGS = 4
 SYMBOLS = 6
 TURNS = 10
 COLUMN_W = 13
-SLOT_H = 10
+SLOT_H = 12
 
 SHAPES = (
     (".###.", "#####", "#####", "#####", ".###."),
@@ -104,7 +104,7 @@ class Codebreaker(ui.View):
         marks = ["exact"] * exact + ["near"] * near
         for index in range(PEGS):
             px = x + 1 + (index % 2) * 4
-            py = 45 + (index // 2) * 4
+            py = 54 + (index // 2) * 4
             if index < len(marks):
                 if marks[index] == "exact":
                     self.fill(px, py, 3, 3, INK)
@@ -125,22 +125,22 @@ class Codebreaker(ui.View):
                 self.draw_pegs(self.current, x, self.slot)
             else:
                 self.draw_pegs([None] * PEGS, x)
-            self.text(str(turn + 1), x + (7 - small.measure(str(turn + 1))) // 2, 57, MID)
+            self.text(str(turn + 1), x + (7 - small.measure(str(turn + 1))) // 2, 70, MID)
 
         panel = 3 + TURNS * COLUMN_W + 6
         self.fill(panel - 4, 0, 1, self.h, MID)
         for symbol in range(SYMBOLS):
             px = panel + (symbol % 2) * 34
-            py = 2 + (symbol // 2) * 11
+            py = 2 + (symbol // 2) * 13
             self.text(str(symbol + 1), px, py + 1, MID)
             self.sprite(SHAPES[symbol], px + 8, py + 1)
         if self.state == "playing":
-            self.text("Enter: guess", panel, 37, MID)
-            self.text("1-6 or arrows", panel, 48, MID)
+            self.text("Enter: guess", panel, 46, MID)
+            self.text("1-6 or arrows", panel, 60, MID)
         else:
-            self.text("You cracked it" if self.state == "won" else "Code was", panel, 37)
+            self.text("You cracked it" if self.state == "won" else "Code was", panel, 46)
             for slot, symbol in enumerate(self.secret):
-                self.sprite(SHAPES[symbol], panel + slot * 9, 50)
+                self.sprite(SHAPES[symbol], panel + slot * 9, 60)
 
 
 def launch():
