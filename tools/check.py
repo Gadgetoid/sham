@@ -147,7 +147,7 @@ def check_smoke(problems, binary):
     with tempfile.TemporaryDirectory() as data:
         for app in apps:
             result = subprocess.run(
-                [binary, "--no-watch", "--data=" + data, "--exec=shell.launch({!r}); ui.invalidate()".format(app),
+                [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=shell.launch({!r}); ui.invalidate()".format(app),
                  "--screenshot=" + os.path.join(data, "shot.bmp"), "--frames=20"],
                 capture_output=True, text=True, timeout=60)
             output = result.stdout + result.stderr

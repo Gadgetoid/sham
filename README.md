@@ -19,14 +19,16 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 ## Run
 
 ```
-./pocket                      # boots os/main.py, data in ./data
-./pocket --root=DIR --data=DIR
+./pocket                      # boots a per-user copy of os/
+./pocket --root=os --data=data # the repo's os/ and data/, as make run does
 ./pocket --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
 ./pocket --exec="ui.alert('hi')"
 ./pocket --no-repl --fps=10 --response=2 --menu=dead-columns
 ```
 
 Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
+
+On first run, the bundled `os/` is copied to `os/` in the per-user directory: `$XDG_DATA_HOME/pocket`, else `~/Library/Application Support/Pocket` on macOS or `~/.local/share/pocket` elsewhere. It's never updated after that, so delete it to pick up a newer OS. Writable data and settings live in `data/` beside it. `--root` and `--data` override both.
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 

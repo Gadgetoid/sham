@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -87,8 +88,8 @@ extern "C" uint32_t host_ticks_ms(void) {
 }
 
 struct Options {
-    std::string root = "os";
-    std::string data = "data";
+    std::string root;
+    std::string data;
     std::string main = "/main.py";
     std::string screenshot;
     std::string keys;
@@ -173,8 +174,58 @@ static void save_settings(const std::string &data, const Settings &settings) {
     rename(temporary.c_str(), path.c_str());
 }
 
+static std::string user_directory() {
+    const char *xdg = getenv("XDG_DATA_HOME");
+    if (xdg && xdg[0] == '/') return std::string(xdg) + "/pocket";
+    const char *home = getenv("HOME");
+    std::string base = home && home[0] ? home : ".";
+#ifdef __APPLE__
+    return base + "/Library/Application Support/Pocket";
+#else
+    return base + "/.local/share/pocket";
+#endif
+}
+
+static bool skip_bundled(const std::filesystem::path &path) {
+    std::string name = path.filename().string();
+    return name == "__pycache__" || name == ".DS_Store";
+}
+
+static bool prime_root(const std::string &root) {
+    namespace fs = std::filesystem;
+    std::error_code error;
+    if (fs::exists(root, error)) return true;
+    const char *base = SDL_GetBasePath();
+    fs::path bundled = fs::path(base ? base : "") / "os";
+    if (!fs::is_directory(bundled, error)) {
+        SDL_Log("no OS at %s to copy to %s, pass --root", bundled.c_str(), root.c_str());
+        return false;
+    }
+    fs::path staging = root + ".tmp";
+    fs::remove_all(staging, error);
+    fs::create_directories(staging, error);
+    for (auto it = fs::recursive_directory_iterator(bundled, error); !error && it != fs::recursive_directory_iterator(); it.increment(error)) {
+        if (skip_bundled(it->path())) {
+            it.disable_recursion_pending();
+            continue;
+        }
+        fs::path target = staging / fs::relative(it->path(), bundled, error);
+        if (it->is_directory(error)) fs::create_directories(target, error);
+        else fs::copy_file(it->path(), target, fs::copy_options::overwrite_existing, error);
+        if (error) break;
+    }
+    if (!error) fs::rename(staging, root, error);
+    if (error) {
+        SDL_Log("could not copy %s to %s: %s", bundled.c_str(), root.c_str(), error.message().c_str());
+        fs::remove_all(staging, error);
+        return false;
+    }
+    SDL_Log("copied %s to %s", bundled.c_str(), root.c_str());
+    return true;
+}
+
 static std::string data_argument(int argc, char **argv) {
-    std::string data = "data";
+    std::string data = user_directory() + "/data";
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--data=", 7) == 0) data = argv[i] + 7;
     }
@@ -197,8 +248,8 @@ static int menu_item_named(const std::string &name) {
 static void usage() {
     printf(
         "usage: pocket [options]\n"
-        "  --root=DIR          OS directory, mounted as / (default os)\n"
-        "  --data=DIR          writable directory, mounted as /data (default data)\n"
+        "  --root=DIR          OS directory, mounted as / (default: a per-user copy of the bundled os/)\n"
+        "  --data=DIR          writable directory, mounted as /data (default: per-user)\n"
         "  --main=PATH         entry point within root (default /main.py)\n"
         "  --size=WxH          window size (default 1400x900)\n"
         "  --no-watch          do not reload when files in root change\n"
@@ -565,10 +616,18 @@ int main(int argc, char **argv) {
     load_settings(absolute(data_argument(argc, argv)), options);
     if (!parse_options(argc, argv, options)) return 1;
 
+    if (options.root.empty()) {
+        options.root = user_directory() + "/os";
+        std::error_code error;
+        std::filesystem::create_directories(user_directory(), error);
+        if (!prime_root(options.root)) return 1;
+    }
+    if (options.data.empty()) options.data = user_directory() + "/data";
     options.root = absolute(options.root);
     options.data = absolute(options.data);
     options.screenshot = absolute(options.screenshot);
-    mkdir(options.data.c_str(), 0755);
+    std::error_code data_error;
+    std::filesystem::create_directories(options.data, data_error);
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {

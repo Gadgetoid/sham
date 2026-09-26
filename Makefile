@@ -81,10 +81,10 @@ embed-clean:
 	rm -rf build-embed $(EMBED_DIR)
 
 run: $(PROG)
-	./$(PROG)
+	./$(PROG) --root=os --data=data
 
 screenshot: $(PROG)
-	./$(PROG) --screenshot=$(BUILD)/screenshot.bmp
+	./$(PROG) --root=os --data=data --screenshot=$(BUILD)/screenshot.bmp
 
 WORLD_GEOJSON ?= ../../badgeware/tufty2350/firmware/assets/world.geo.json
 
