@@ -41,20 +41,20 @@ Saving anything under the root restarts the VM and drops you back into the last 
 | Esc | Back |
 | Ctrl-C | Interrupt the running app, or cancel the REPL line |
 | Cmd-R | Reload (Run menu) |
-| Cmd-J | Show or hide the REPL (Run menu) |
-| Cmd-L | Focus the REPL, Esc to return to the device |
-| Cmd-B | Backlight (System menu) |
-| Cmd-D | Dead LCD columns, re-rolled each time (System > Realism) |
+| Cmd-J | Show or hide the REPL (View menu) |
+| Cmd-L | Focus the REPL, Esc to return to the device (View menu) |
+| Cmd-B | Backlight (Simulation menu) |
+| Cmd-D | Dead LCD columns, re-rolled each time (View > Realism) |
 
-The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. System > Layout picks Screen Only, Screen & Frame, Screen & Buttons or Screen & Keyboard (Cmd-K cycles, `--layout=0..3`).
+The bezel carries clickable ZQ-770 keys: MAIN/TEL/CAL/MEMO/PROG and the backlight on the left, MENU, POWER, up/down and ESC/ENTER on the right. The View menu picks Screen Only, Screen & Frame, Screen & Buttons or Screen & Keyboard (Cmd-K cycles, `--layout=0..3`).
 
 The Screen & Keyboard layout adds the ZQ-770 keyboard below the lid. Click keys to type. 2nd and Shift latch for one keypress, 2nd then Shift toggles CAPS, and 2nd sends each key's purple function. The layout lives in `tools/keyboard_layout.json`, and `make keyboard` regenerates `src/keyboard_layout.h`.
 
-The System menu also has Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
+The Simulation menu has Backlight, Sound, Key Click, Frame Rate (unlimited, or 60 down to 10 fps for the device while the window stays smooth) and Response Time (LCD ghosting, instant to very slow). `--fps=N` and `--response=N` set them at launch.
 
-System > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
+View > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
 
-System > Layout > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal.
+View > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal.
 
 Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `pocket.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
