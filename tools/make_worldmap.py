@@ -1,8 +1,8 @@
 import json
 import sys
 
-WIDTH = 176
-HEIGHT = 66
+WIDTH = 229
+HEIGHT = 86
 LAT_TOP = 74.0
 LAT_BOTTOM = -48.0
 SUPERSAMPLE = 4

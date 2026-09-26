@@ -141,9 +141,9 @@ class World(ui.View):
         self.text(name, panel, 1)
         days, hour, minute = worldtime.local(self.city, utc)
         clock = timefmt.clock_label(hour, minute, suffix=False)
-        self.text(clock, panel + (panel_w - large.measure(clock)) // 2, 14, INK, large)
+        self.text(clock, panel + (panel_w - large.measure(clock)) // 2, 18, INK, large)
         date = "{} {}  {}".format(DAYS[dates.weekday(days)], dates.from_days(days)[2], timefmt.meridiem(hour))
-        self.text(date, panel, 36, MID)
+        self.text(date, panel, 44, MID)
         offset = worldtime.city_offset(self.city, utc)
         home_offset = worldtime.city_offset(worldtime.CITIES[self.home], utc)
         if self.index == self.home:
@@ -151,8 +151,8 @@ class World(ui.View):
         else:
             relative = worldtime.format_offset(offset - home_offset) + "h"
         dst = " DST" if worldtime.dst_active(self.city[4], self.city[3], utc) else ""
-        self.text(small.fit(relative + dst, panel_w - 2), panel, 47)
-        self.text("UTC" + worldtime.format_offset(offset), panel, 57, MID)
+        self.text(small.fit(relative + dst, panel_w - 2), panel, 60)
+        self.text("UTC" + worldtime.format_offset(offset), panel, 72, MID)
 
 
 def launch():
