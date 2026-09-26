@@ -1,7 +1,7 @@
 import json
 import sys
 
-CURSOR_GAP = 5.0
+CURSOR_GAP = 7.0
 CURSOR_WELL_MARGIN = 0.0
 CURSOR_WELL_SCALE = 1.0
 CURSOR_WELL_DROP = 0.0

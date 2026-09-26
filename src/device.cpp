@@ -598,7 +598,7 @@ const RecessPalette KEYBED_WELL = { IM_COL32(68, 76, 82, 255), IM_COL32(238, 242
                                     IM_COL32(172, 180, 184, 255), IM_COL32(160, 168, 172, 255) };
 const RecessPalette FINGER_SCOOP = { IM_COL32(66, 76, 84, 255), IM_COL32(214, 224, 230, 255), IM_COL32(84, 96, 104, 255),
                                      IM_COL32(138, 150, 158, 255), IM_COL32(120, 132, 140, 255) };
-const RecessStyle CURSOR_WELL = { 1.4f, 7.0f, 0.1f };
+const RecessStyle CURSOR_WELL = { 0.5f, 2.2f, 1.0f };
 const RecessStyle KEY_HOLE = { 0.6f, 1.4f, 1.0f };
 const RecessPalette KEY_HOLE_PALETTE = { IM_COL32(112, 120, 124, 255), IM_COL32(236, 240, 242, 255), IM_COL32(150, 158, 160, 255),
                                          IM_COL32(160, 166, 166, 255), IM_COL32(152, 160, 160, 255) };
@@ -1302,7 +1302,9 @@ void draw_keybed(ImDrawList *draw, const KeyboardFrame &frame, bool wear) {
             float angle = 2 * IM_PI * i / 64;
             well.push_back(centre + ImVec2(cosf(angle) * KB_WELL_R, sinf(angle) * KB_WELL_R * WELL_SQUASH) * k);
         }
-        draw_recess(draw, well, CURSOR_WELL, k, Mask(), KEYBED_WELL);
+        ImU32 shell = mix(lighten(KB_KEYBED, 10), mix(KB_KEYBED, IM_COL32(156, 164, 166, 255), 0.35f), 0.8f);
+        RecessPalette palette = { KEYBED_WELL.shade, KEYBED_WELL.lit, shell, shell, shell };
+        draw_recess(draw, well, CURSOR_WELL, k, Mask(), palette);
         Shape floor = translated(inset(well, WELL_DEPTH * 1.3f * k), ImVec2(0, WELL_DEPTH * k));
         const int rings = 5;
         for (int ring = 0; ring < rings; ring++) {
