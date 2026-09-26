@@ -28,6 +28,11 @@
 #include "runtime.h"
 #include "watch.h"
 
+static const int IDLE_WAIT_MS = 16;
+static const int REDRAW_TAIL_MS = 500;
+static const int STARTUP_FRAMES = 150;
+static const int TOUCH_RETRY_MS = 2000;
+
 static uint64_t start_ticks = 0;
 static SDL_WindowID main_window_id = 0;
 
@@ -600,9 +605,16 @@ int main(int argc, char **argv) {
     uint64_t last_device_ms = 0;
     int frame = 0;
 
+    bool idle = false;
+    uint64_t redraw_until_ms = 0;
+    uint64_t touch_retry_ms = 0;
+    bool was_runtime_idle = runtime_idle();
     while (running) {
+        if (idle) SDL_WaitEventTimeout(nullptr, IDLE_WAIT_MS);
+        bool had_event = false;
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            had_event = true;
             bool device_tab = device_focused && (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) &&
                               event.key.key == SDLK_TAB;
             if (!device_tab) ImGui_ImplSDL3_ProcessEvent(&event);
@@ -633,6 +645,7 @@ int main(int argc, char **argv) {
         }
 
         for (int item = menu_poll(); item >= 0; item = menu_poll()) {
+            had_event = true;
             if (item >= MENU_FPS_FIRST && item < MENU_FPS_END) fps = MENU_FPS_VALUES[item - MENU_FPS_FIRST];
             if (item >= MENU_RESPONSE_FIRST && item < MENU_RESPONSE_END) {
                 response = MENU_RESPONSE_VALUES[item - MENU_RESPONSE_FIRST];
@@ -705,6 +718,7 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_TOUCHSCREEN, touch.active);
 
         if (options.watch && watch_poll()) {
+            had_event = true;
             console_notice("change detected");
             runtime_request_reload();
         }
@@ -713,7 +727,10 @@ int main(int argc, char **argv) {
         script.window_w = io.DisplaySize.x;
         script.window_h = io.DisplaySize.y;
         script.step(frame);
-        if (want_touchscreen && !touch.active && frame % 120 == 1) set_touchscreen(window, touch, true, options.touch_display);
+        if (want_touchscreen && !touch.active && SDL_GetTicks() >= touch_retry_ms) {
+            touch_retry_ms = SDL_GetTicks() + TOUCH_RETRY_MS;
+            set_touchscreen(window, touch, true, options.touch_display);
+        }
         if (const char *probe = getenv("POCKET_TOUCH_PROBE"); probe && touch.active && (frame == 80 || frame == 82)) {
             float x = 0, y = 0;
             sscanf(probe, "%f,%f", &x, &y);
@@ -733,6 +750,14 @@ int main(int argc, char **argv) {
             last_device_ms = now_ms;
             if (device.powered) runtime_step();
         }
+        bool runtime_idle_changed = runtime_idle() != was_runtime_idle;
+        was_runtime_idle = runtime_idle();
+        bool mouse_held = SDL_GetMouseState(nullptr, nullptr) != 0;
+        bool busy = had_event || frame < STARTUP_FRAMES || !options.screenshot.empty() || script.next < script.steps.size() ||
+                    mouse_held || runtime_idle_changed || lcd_needs_compose() || console_take_changed();
+        if (busy) redraw_until_ms = now_ms + REDRAW_TAIL_MS;
+        idle = now_ms >= redraw_until_ms;
+        if (idle) continue;
 
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
