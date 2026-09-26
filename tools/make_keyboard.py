@@ -1,9 +1,10 @@
 import json
 import sys
 
-CURSOR_GAP = 10.0
+CURSOR_GAP = 5.0
 CURSOR_WELL_MARGIN = 0.0
-CURSOR_WELL_DROP = 4.0
+CURSOR_WELL_SCALE = 1.0
+CURSOR_WELL_DROP = 0.0
 
 KEY_BACKSPACE = 8
 KEY_ENTER = 13
@@ -77,7 +78,7 @@ def respace_cursor(keys, layout):
     well = layout["recesses"][0]
     well["x"] = down["x"]
     well["y"] = down["y"] - pitch / 2 + CURSOR_WELL_DROP
-    well["r"] = down["w"] + CURSOR_GAP / 2 + CURSOR_WELL_MARGIN
+    well["r"] = down["w"] * CURSOR_WELL_SCALE + CURSOR_WELL_MARGIN
 
 
 def key_codes(key):
