@@ -1269,7 +1269,7 @@ def statement_kill(interp):
     try:
         os.remove(path)
     except OSError:
-        raise BasicError(94)
+        pass
 
 
 def statement_call(interp):
