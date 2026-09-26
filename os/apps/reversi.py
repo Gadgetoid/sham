@@ -8,7 +8,7 @@ CATEGORY = "Games"
 ORDER = 74
 
 SIZE = 8
-CELL = 8
+CELL = 10
 EMPTY, BLACK, WHITE = 0, 1, 2
 CPU_DELAY_MS = 450
 
@@ -26,21 +26,23 @@ WEIGHTS = (
 )
 
 DISC = (
-    ".####.",
-    "######",
-    "######",
-    "######",
-    "######",
-    ".####.",
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###..",
 )
 
 RING = (
-    ".####.",
-    "#....#",
-    "#....#",
-    "#....#",
-    "#....#",
-    ".####.",
+    "..###..",
+    ".#...#.",
+    "#.....#",
+    "#.....#",
+    "#.....#",
+    ".#...#.",
+    "..###..",
 )
 
 
@@ -189,21 +191,21 @@ class Reversi(ui.View):
                     self.sprite(DISC, px + 1, py + 1, CLEAR)
                     self.sprite(RING, px + 1, py + 1, INK)
                 elif (x, y) in hints:
-                    self.fill(px + 3, py + 3, 1, 1, MID)
+                    self.fill(px + 4, py + 4, 1, 1, MID)
         if not self.over:
             cx, cy = self.cursor
             self.rect(self.left + cx * CELL - 1, self.top + cy * CELL - 1, CELL + 1, CELL + 1, INK)
 
         panel = self.left + board_px + 16
-        self.sprite(DISC, panel, 6, INK)
-        self.text("You  {}".format(count(self.board, BLACK)), panel + 10, 5)
-        self.sprite(RING, panel, 18, INK)
-        self.text("CPU  {}".format(count(self.board, WHITE)), panel + 10, 17)
+        self.sprite(DISC, panel, 8, INK)
+        self.text("You  {}".format(count(self.board, BLACK)), panel + 11, 8)
+        self.sprite(RING, panel, 22, INK)
+        self.text("CPU  {}".format(count(self.board, WHITE)), panel + 11, 22)
         if self.turn == WHITE and not self.over:
-            self.text("Thinking...", panel, 35, MID)
+            self.text("Thinking...", panel, 44, MID)
         else:
-            self.text(self.message, panel, 35)
-        self.text("Enter: new game" if self.over else "Enter: place", panel, 54, MID)
+            self.text(self.message, panel, 44)
+        self.text("Enter: new game" if self.over else "Enter: place", panel, 70, MID)
 
 
 def launch():
