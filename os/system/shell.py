@@ -105,7 +105,7 @@ class Shell:
         self.grid = self.make_grid(self.entries)
         self.launcher = ui.Screen(lambda: timefmt.date_label(host.localtime()), self.grid,
                                   status=lambda: "{}  {}".format(timefmt.time_label(host.localtime()),
-                                                                 self.grid.page_label()))
+                                                                 self.grid.page_label()), exit=False)
 
     def make_grid(self, entries):
         return ui.Grid(entries, on_select=lambda entry, index: self.open(entry),

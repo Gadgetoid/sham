@@ -71,6 +71,9 @@ class View:
     def tick(self, now):
         pass
 
+    def pause(self):
+        pass
+
     def refresh(self):
         invalidate()
 
@@ -152,14 +155,25 @@ class Label(View):
 class Screen(View):
     modal = False
 
-    def __init__(self, title="", body=None, status=None, menu=None, on_close=None):
+    def __init__(self, title="", body=None, status=None, menu=None, on_close=None, exit=True):
         super().__init__()
         self.title = title
         self.body = body
         self.status = status
         self.menu = menu
+        self.menu_extra = []
+        self.exit = exit
         self.on_close = on_close
         self.place(0, 0, WIDTH, HEIGHT)
+
+    def add_menu(self, label, action):
+        self.menu_extra.append((label, action))
+
+    def menu_entries(self):
+        entries = list(_call(self.menu) or []) + self.menu_extra
+        if self.exit:
+            entries.append(("Exit", home))
+        return entries
 
     def layout(self):
         if self.body:
@@ -187,11 +201,16 @@ class Screen(View):
     def key(self, key):
         if self.body and self.body.key(key):
             return True
-        if key.code == keys.MENU and self.menu:
-            open_menu(_call(self.menu))
+        if key.code == keys.MENU:
+            entries = self.menu_entries()
+            if not entries:
+                return False
+            if self.body:
+                self.body.pause()
+            open_menu(entries)
             return True
-        if key.code in MENU_SHORTCUTS and self.menu:
-            for label, action in _call(self.menu):
+        if key.code in MENU_SHORTCUTS:
+            for label, action in self.menu_entries():
                 if label.lower().startswith(MENU_SHORTCUTS[key.code]):
                     action()
                     return True
@@ -211,6 +230,8 @@ class Dialog(Screen):
         self.body = body
         self.status = None
         self.menu = None
+        self.menu_extra = []
+        self.exit = False
         self.on_close = on_close
         height = height or HEADER_H + (body.preferred_height or 40) + 4
         height = min(HEIGHT - 4, height)
@@ -1269,6 +1290,12 @@ class _Choose(Dialog):
         pop()
         self.on_pick(option, index)
 
+    def key(self, key):
+        if key.code == keys.MENU:
+            pop()
+            return True
+        return super().key(key)
+
 
 def alert(text, title="Note", on_close=None):
     push(_Alert(text, title, on_close))
@@ -1304,6 +1331,8 @@ class CalendarPopup(Screen):
         self.body = None
         self.status = None
         self.menu = None
+        self.menu_extra = []
+        self.exit = False
         self.on_close = None
         self.place(WIDTH - self.POPUP_W, 0, self.POPUP_W, HEIGHT)
 

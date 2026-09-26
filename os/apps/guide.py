@@ -63,7 +63,10 @@ Keep a reference to the screen if a view needs to swap itself out."""),
     ("SDK reference", "window_button", (
         ("Screens", """ui.Screen(title, body, status=, menu=, on_close=) is a header over one body view.
 status and title can be callables.
-menu is a list of (label, function) pairs shown on MENU."""),
+menu is a list of (label, function) pairs, or a function returning one, shown on MENU.
+screen.add_menu(label, function) adds an entry later.
+MENU always ends with Exit, back to the launcher.
+Opening MENU calls body.pause(), so a game can stop its clock."""),
         ("Bodies", """ui.List(items, label=, detail=, icon=, on_select=, on_change=)
 ui.TextView(text)
 ui.TextEdit(text, multiline=)

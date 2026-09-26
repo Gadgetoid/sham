@@ -153,6 +153,11 @@ class Breakout(ui.View):
         else:
             self.serve()
 
+    def pause(self):
+        if self.state == "playing":
+            self.state = "paused"
+            self.refresh()
+
     def tick(self, now):
         if self.state != "playing":
             self.last = None

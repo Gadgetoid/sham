@@ -95,6 +95,11 @@ class Snake(ui.View):
         else:
             self.body.pop()
 
+    def pause(self):
+        if self.state == "playing":
+            self.state = "paused"
+            self.refresh()
+
     def tick(self, now):
         if self.state != "playing" or now - self.last_step < self.interval:
             return
