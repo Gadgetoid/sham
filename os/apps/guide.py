@@ -54,7 +54,8 @@ key.char is the typed character, or None.
 Example:
   if key.char == "d": ...
   elif key.code == keys.LEFT: ...
-For smooth movement, check keys.held(keys.LEFT) in tick()."""),
+For smooth movement, check keys.held(keys.LEFT) in tick().
+The lid's cross and tick keys arrive as ESC and ENTER, with key.button set to keys.LID_ESC or keys.LID_ENTER, so a game can read the lid as a d-pad: keys.held(keys.LID_ESC) for left, keys.held(keys.LID_ENTER) for right."""),
         ("Switching views", """ui.push(screen) shows a new screen on top. Esc or ui.pop() returns.
 screen.set_body(view) swaps the content of a screen in place.
 Keep a reference to the screen if a view needs to swap itself out."""),

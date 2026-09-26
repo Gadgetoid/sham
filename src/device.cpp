@@ -883,9 +883,11 @@ void input_lid_keys(const Frame &frame, DeviceState &state, uint8_t *down) {
         }
         down[LID_UP + index] = pressed;
     }
-    if (hit("key-esc", lid.esc, pressed) && live) keys_push(HOST_KEY_ESC, 0);
+    if (hit("key-esc", lid.esc, pressed) && live) keys_push(HOST_KEY_LID_ESC, HOST_MOD_LID);
+    keys_set_held(HOST_KEY_LID_ESC, pressed && live);
     down[LID_ESC] = pressed;
-    if (hit("key-enter", lid.enter, pressed) && live) keys_push(HOST_KEY_ENTER, 0);
+    if (hit("key-enter", lid.enter, pressed) && live) keys_push(HOST_KEY_LID_ENTER, HOST_MOD_LID);
+    keys_set_held(HOST_KEY_LID_ENTER, pressed && live);
     down[LID_ENTER] = pressed;
 }
 

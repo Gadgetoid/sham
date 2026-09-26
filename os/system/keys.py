@@ -40,6 +40,10 @@ PASTE = host.KEY_PASTE
 EDIT = host.KEY_EDIT
 SYNC = host.KEY_SYNC
 PICK = host.KEY_PICK
+LID_ESC = host.KEY_LID_ESC
+LID_ENTER = host.KEY_LID_ENTER
+
+LID_BUTTONS = {LID_ESC: ESC, LID_ENTER: ENTER}
 
 SHIFT = host.MOD_SHIFT
 CTRL = host.MOD_CTRL
@@ -49,10 +53,11 @@ SECOND = host.MOD_SECOND
 
 
 class Key:
-    __slots__ = ("code", "mods")
+    __slots__ = ("code", "mods", "button")
 
     def __init__(self, code, mods=0):
-        self.code = code
+        self.button = code
+        self.code = LID_BUTTONS.get(code, code)
         self.mods = mods
 
     @property
