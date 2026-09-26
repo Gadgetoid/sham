@@ -23,6 +23,7 @@ DIRECTIONS = {
 class Snake(ui.View):
     def __init__(self):
         super().__init__()
+        self.menu_paused = False
         self.best = store.load("snake", {}).get("best", 0)
         self.state = "ready"
 
@@ -52,10 +53,11 @@ class Snake(ui.View):
                 return
 
     def key(self, key):
-        if key.code in DIRECTIONS:
+        code = keys.pad(key) if self.state == "playing" else key.code
+        if code in DIRECTIONS:
             if self.state == "ready":
                 self.state = "playing"
-            self.queued.append(DIRECTIONS[key.code])
+            self.queued.append(DIRECTIONS[code])
             return True
         if key.code == keys.ENTER or key.char == " ":
             if self.state == "over":
@@ -96,9 +98,16 @@ class Snake(ui.View):
             self.body.pop()
 
     def pause(self):
-        if self.state == "playing":
+        self.menu_paused = self.state == "playing"
+        if self.menu_paused:
             self.state = "paused"
             self.refresh()
+
+    def resume(self):
+        if self.menu_paused and self.state == "paused":
+            self.state = "playing"
+            self.refresh()
+        self.menu_paused = False
 
     def tick(self, now):
         if self.state != "playing" or now - self.last_step < self.interval:

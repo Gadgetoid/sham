@@ -44,6 +44,7 @@ LID_ESC = host.KEY_LID_ESC
 LID_ENTER = host.KEY_LID_ENTER
 
 LID_BUTTONS = {LID_ESC: ESC, LID_ENTER: ENTER}
+PAD = {LID_ESC: LEFT, LID_ENTER: RIGHT}
 
 SHIFT = host.MOD_SHIFT
 CTRL = host.MOD_CTRL
@@ -105,3 +106,11 @@ def held(code):
     if isinstance(code, str):
         code = ord(code.lower())
     return host.held(code)
+
+
+def pad(key):
+    return PAD.get(key.button, key.code)
+
+
+def pad_held(code):
+    return held(code) or any(held(button) for button, direction in PAD.items() if direction == code)

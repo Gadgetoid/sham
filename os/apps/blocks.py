@@ -59,6 +59,7 @@ class Piece:
 class Blocks(ui.View):
     def __init__(self):
         super().__init__()
+        self.menu_paused = False
         self.best = store.load("blocks", {}).get("best", 0)
         self.new_game()
 
@@ -179,6 +180,7 @@ class Blocks(ui.View):
                 self.refresh()
                 return True
             return False
+        code = keys.pad(key)
         if code == keys.LEFT:
             self.move(-1, 0)
         elif code == keys.RIGHT:
@@ -202,9 +204,16 @@ class Blocks(ui.View):
         return True
 
     def pause(self):
-        if self.state == "playing":
+        self.menu_paused = self.state == "playing"
+        if self.menu_paused:
             self.state = "paused"
             self.refresh()
+
+    def resume(self):
+        if self.menu_paused and self.state == "paused":
+            self.state = "playing"
+            self.refresh()
+        self.menu_paused = False
 
     def tick(self, now):
         if self.state != "playing":

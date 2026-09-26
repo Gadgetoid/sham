@@ -74,6 +74,9 @@ class View:
     def pause(self):
         pass
 
+    def resume(self):
+        pass
+
     def refresh(self):
         invalidate()
 
@@ -207,7 +210,7 @@ class Screen(View):
                 return False
             if self.body:
                 self.body.pause()
-            open_menu(entries)
+            open_menu(entries, on_close=self.body.resume if self.body else None)
             return True
         if key.code in MENU_SHORTCUTS:
             for label, action in self.menu_entries():
@@ -1280,10 +1283,10 @@ class _Prompt(Dialog):
 
 
 class _Choose(Dialog):
-    def __init__(self, title, options, on_pick, label):
+    def __init__(self, title, options, on_pick, label, on_close=None):
         self.listing = List(options, on_select=self.pick, label=label)
         self.listing.preferred_height = min(len(options), 4) * ROW_H + 1
-        super().__init__(title, self.listing, width=140)
+        super().__init__(title, self.listing, width=140, on_close=on_close)
         self.on_pick = on_pick
 
     def pick(self, option, index):
@@ -1309,12 +1312,12 @@ def prompt(title, on_done, text=""):
     push(_Prompt(title, text, on_done))
 
 
-def choose(title, options, on_pick, label=str):
-    push(_Choose(title, options, on_pick, label))
+def choose(title, options, on_pick, label=str, on_close=None):
+    push(_Choose(title, options, on_pick, label, on_close))
 
 
-def open_menu(entries):
-    choose("Menu", entries, lambda entry, index: entry[1](), label=lambda entry: entry[0])
+def open_menu(entries, on_close=None):
+    choose("Menu", entries, lambda entry, index: entry[1](), label=lambda entry: entry[0], on_close=on_close)
 
 
 class CalendarPopup(Screen):

@@ -55,7 +55,8 @@ Example:
   if key.char == "d": ...
   elif key.code == keys.LEFT: ...
 For smooth movement, check keys.held(keys.LEFT) in tick().
-The lid's cross and tick keys arrive as ESC and ENTER, with key.button set to keys.LID_ESC or keys.LID_ENTER, so a game can read the lid as a d-pad: keys.held(keys.LID_ESC) for left, keys.held(keys.LID_ENTER) for right."""),
+The lid's cross and tick keys arrive as ESC and ENTER, with key.button set to keys.LID_ESC or keys.LID_ENTER.
+To use the lid as a d-pad, keys.pad(key) turns them into LEFT and RIGHT, and keys.pad_held(keys.LEFT) also checks the cross."""),
         ("Switching views", """ui.push(screen) shows a new screen on top. Esc or ui.pop() returns.
 screen.set_body(view) swaps the content of a screen in place.
 Keep a reference to the screen if a view needs to swap itself out."""),
@@ -66,7 +67,7 @@ status and title can be callables.
 menu is a list of (label, function) pairs, or a function returning one, shown on MENU.
 screen.add_menu(label, function) adds an entry later.
 MENU always ends with Exit, back to the launcher.
-Opening MENU calls body.pause(), so a game can stop its clock."""),
+Opening MENU calls body.pause() and closing it calls body.resume(), so a game can stop its clock."""),
         ("Bodies", """ui.List(items, label=, detail=, icon=, on_select=, on_change=)
 ui.TextView(text)
 ui.TextEdit(text, multiline=)

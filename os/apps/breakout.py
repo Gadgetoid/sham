@@ -24,6 +24,7 @@ ROW_POINTS = (7, 5, 3, 1)
 class Breakout(ui.View):
     def __init__(self):
         super().__init__()
+        self.menu_paused = False
         self.best = store.load("breakout", {}).get("best", 0)
         self.score = 0
         self.lives = 3
@@ -69,9 +70,9 @@ class Breakout(ui.View):
         self.vy = -self.speed * math.sin(angle)
 
     def key(self, key):
-        code = key.code
+        code = keys.pad(key) if self.state == "playing" else key.code
         if code in (keys.LEFT, keys.RIGHT):
-            if not keys.held(code):
+            if not keys.pad_held(code):
                 self.paddle_x += PADDLE_NUDGE if code == keys.RIGHT else -PADDLE_NUDGE
                 self.clamp_paddle()
             if self.state == "ready":
@@ -154,9 +155,16 @@ class Breakout(ui.View):
             self.serve()
 
     def pause(self):
-        if self.state == "playing":
+        self.menu_paused = self.state == "playing"
+        if self.menu_paused:
             self.state = "paused"
             self.refresh()
+
+    def resume(self):
+        if self.menu_paused and self.state == "paused":
+            self.state = "playing"
+            self.refresh()
+        self.menu_paused = False
 
     def tick(self, now):
         if self.state != "playing":
@@ -164,7 +172,7 @@ class Breakout(ui.View):
             return
         dt = 0 if self.last is None else min(0.15, (now - self.last) / 1000)
         self.last = now
-        direction = keys.held(keys.RIGHT) - keys.held(keys.LEFT)
+        direction = keys.pad_held(keys.RIGHT) - keys.pad_held(keys.LEFT)
         if direction:
             self.paddle_x += direction * PADDLE_SPEED * dt
             self.clamp_paddle()
