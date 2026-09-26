@@ -303,6 +303,7 @@ static void push_mouse(uint8_t kind, float x, float y) {
 
 struct Touchscreen {
     bool active = false;
+    bool reported_missing = false;
     SDL_Rect windowed = {};
 };
 
@@ -324,9 +325,11 @@ static bool set_touchscreen(SDL_Window *window, Touchscreen &touch, bool enable,
     if (enable) {
         SDL_DisplayID display = find_display(name);
         if (!display) {
-            SDL_Log("touchscreen: no display matching %s", name.c_str());
+            if (!touch.reported_missing) SDL_Log("touchscreen: no display matching %s, waiting for it", name.c_str());
+            touch.reported_missing = true;
             return false;
         }
+        touch.reported_missing = false;
         SDL_Rect bounds;
         SDL_GetDisplayBounds(display, &bounds);
         SDL_GetWindowPosition(window, &touch.windowed.x, &touch.windowed.y);
@@ -676,6 +679,7 @@ int main(int argc, char **argv) {
                 case MENU_WEAR:         device.wear = !device.wear; break;
                 case MENU_TOUCHSCREEN:
                     want_touchscreen = !touch.active;
+                    touch.reported_missing = false;
                     set_touchscreen(window, touch, want_touchscreen, options.touch_display);
                     break;
                 case MENU_LAYOUT_NEXT:
