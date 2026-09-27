@@ -39,6 +39,7 @@ const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 70);
 const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 75);
 const float WELL_MARGIN = 4.0f;
 const float KEY_ICON_SCALE = 0.8f;
+const float SIDE_ICON_SCALE = 0.95f;
 const float LID_NOTCH_DEPTH = 12.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
@@ -598,7 +599,7 @@ void paint_lid_keys(ImDrawList *draw, const Frame &frame, const uint8_t *down) {
         draw_key(draw, lid.side[index], DARK_KEY, pressed, u);
         ImVec2 at = bounds(lid.side[index]).GetCenter() + ImVec2(2 * u, 0) + dip(pressed);
         if (side_text[index]) centred_text(draw, at, 17.0f * u, LABEL, side_text[index]);
-        else icon(draw, at, 44.0f * u, ICON_BLUE, side_glyph[index]);
+        else icon(draw, at, lid.side_boxes[index].GetHeight() * SIDE_ICON_SCALE, ICON_BLUE, side_glyph[index]);
     }
 
     draw_key(draw, lid.light, TEAL_KEY, down[LID_LIGHT], u);
