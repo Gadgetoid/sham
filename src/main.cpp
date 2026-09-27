@@ -692,10 +692,23 @@ static void set_repl_visible(SDL_Window *window, bool visible, const DeviceState
     snap_window(window, device, visible);
 }
 
+static bool menu_open = false;
+
 static SDL_HitTestResult SDLCALL drag_by_case(SDL_Window *window, const SDL_Point *area, void *data) {
     (void)window;
     (void)data;
+    if (menu_open) return SDL_HITTEST_NORMAL;
     return device_draggable((float)area->x, (float)area->y) ? SDL_HITTEST_DRAGGABLE : SDL_HITTEST_NORMAL;
+}
+
+static void apply_ui_scale(SDL_Window *window, const ImGuiStyle &base) {
+    float density = SDL_GetWindowPixelDensity(window);
+    float display_scale = SDL_GetWindowDisplayScale(window);
+    float ui_scale = density > 0 && display_scale > 0 ? display_scale / density : 1.0f;
+    ImGuiStyle &style = ImGui::GetStyle();
+    style = base;
+    style.ScaleAllSizes(ui_scale);
+    style.FontScaleDpi = ui_scale;
 }
 
 static void set_transparent(SDL_Window *window, SDL_Renderer *renderer, bool transparent) {
@@ -819,6 +832,8 @@ int main(int argc, char **argv) {
     ImGuiStyle &style = ImGui::GetStyle();
     style.FontSizeBase = 14.0f;
     style.Colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.11f, 0.12f, 1.0f);
+    const ImGuiStyle base_style = style;
+    apply_ui_scale(window, base_style);
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
@@ -899,6 +914,7 @@ int main(int argc, char **argv) {
             if (!device_tab) ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT) running = false;
             bool resized = event.type == SDL_EVENT_WINDOW_RESIZED || event.type == SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
+            if (event.type == SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) apply_ui_scale(window, base_style);
             if (resized) refit_window();
             if (event.type == SDL_EVENT_KEY_DOWN) {
                 SDL_Keycode key = event.key.key;
@@ -1115,7 +1131,8 @@ int main(int argc, char **argv) {
         menu_draw();
 
         ImGui::Render();
-        bool device_keys = !io.WantTextInput && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId);
+        menu_open = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId);
+        bool device_keys = !io.WantTextInput && !menu_open;
         if (device_focused && !device_keys) keys_release_all();
         device_focused = device_keys;
         if (device_focused && !SDL_TextInputActive(window)) SDL_StartTextInput(window);
