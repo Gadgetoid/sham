@@ -365,6 +365,21 @@ void draw_key(ImDrawList *draw, const Shape &shape, const ButtonStyle &style, bo
 ImVec2 hit_pad(0, 0);
 
 
+struct Region {
+    ImRect box;
+    float rounding;
+
+    bool contains(ImVec2 point) const {
+        if (!box.Contains(point)) return false;
+        float radius = std::min(rounding, std::min(box.GetWidth(), box.GetHeight()) * 0.5f);
+        ImVec2 nearest(ImClamp(point.x, box.Min.x + radius, box.Max.x - radius), ImClamp(point.y, box.Min.y + radius, box.Max.y - radius));
+        return ImLengthSqr(point - nearest) <= radius * radius;
+    }
+};
+
+std::vector<Region> case_regions;
+std::vector<ImRect> control_regions;
+
 bool hit(const char *id, const Shape &shape, bool &pressed) {
     pressed = false;
     if (shape.size() < 3) return false;
@@ -372,6 +387,7 @@ bool hit(const char *id, const Shape &shape, bool &pressed) {
     box.Min -= hit_pad;
     box.Max += hit_pad;
     ImGui::SetCursorScreenPos(box.Min);
+    control_regions.push_back(box);
     ImGui::InvisibleButton(id, box.GetSize());
     pressed = ImGui::IsItemActive();
     return ImGui::IsItemActivated();
@@ -1566,7 +1582,7 @@ CaseScene case_scene(const DeviceLayout &layout, const DeviceState &state, float
     scene.origin = ImVec2(floorf((box.Min.x - margin.x) * scale), floorf((box.Min.y - margin.y) * scale)) / scale;
     scene.width = (int)ceilf((box.Max.x + margin.x - scene.origin.x) * scale);
     scene.height = (int)ceilf((box.Max.y + margin.y - scene.origin.y) * scale);
-    scene.ring = state.focused;
+    scene.ring = state.focused && !state.borderless;
     scene.ring_colour = FOCUS_RING;
     scene.ring_margin = RING_MARGIN;
     scene.ring_width = RING_WIDTH;
@@ -1603,6 +1619,21 @@ void show_case(ImDrawList *draw) {
     if (!case_texture) return;
     draw->AddImage((ImTextureID)(intptr_t)case_texture, case_texture_min,
                    case_texture_min + ImVec2((float)case_texture->w, (float)case_texture->h) / case_texture_scale);
+}
+
+void record_case(const DeviceLayout &layout) {
+    case_regions.push_back({ ImRect(layout.device_min, layout.device_max), layout.rounding });
+    if (!layout.has_keyboard) return;
+    Frame frame{ layout.image_min, layout.image_max, layout.u };
+    if (!layout.compact) {
+        ImRect hinge = bounds(lid_shape(frame, LID_SHAPE_KEYBOARD_HINGE));
+        hinge.Add(bounds(lid_shape(frame, LID_SHAPE_HINGE_LEFT)));
+        hinge.Add(bounds(lid_shape(frame, LID_SHAPE_HINGE_RIGHT)));
+        case_regions.push_back({ hinge, hinge.GetHeight() * 0.5f });
+    }
+    ImRect keyboard = bounds(keyboard_body(layout));
+    keyboard.Max.y += KB_FRONT_DEPTH * keyboard_frame(layout).kbu;
+    case_regions.push_back({ keyboard, (KB_TOP_RADIUS + 3) * keyboard_frame(layout).kbu });
 }
 
 void paint_overlay(ImDrawList *draw, const DeviceLayout &layout, const DeviceState &state, const uint8_t *down) {
@@ -1663,7 +1694,9 @@ float device_fit_height(float width, const DeviceState &state) {
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state) {
     ImVec2 origin = ImGui::GetCursorScreenPos();
     float avail_w = ImGui::GetContentRegionAvail().x;
-    bool ring = state.focused;
+    bool ring = state.focused && !state.borderless;
+    case_regions.clear();
+    control_regions.clear();
     int cell = device_fit_cell(ImVec2(avail_w, height), framebuffer_scale, state);
     if (state.screen_only) {
         lcd_compose_setup(cell);
@@ -1672,6 +1705,7 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
         ImVec2 min = origin + ImVec2((avail_w - size.x) * 0.5f, (height - size.y) * 0.5f);
         ImDrawList *draw = ImGui::GetWindowDrawList();
         if (ring) draw->AddRect(min - ImVec2(3, 3), min + size + ImVec2(3, 3), IM_COL32(90, 200, 180, 160), 4.0f, 0, 2.0f);
+        case_regions.push_back({ ImRect(min, min + size), 0.0f });
         if (lcd_texture) draw->AddImage((ImTextureID)(intptr_t)lcd_texture, min, min + size);
         load_scratches(renderer);
         if (scratch_texture && state.scratches) {
@@ -1704,6 +1738,7 @@ float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height,
     float rounding = state.show_keys ? 34.0f * u : 18.0f;
 
     DeviceLayout layout = { device_min, device_max, image_min, image_max, u, rounding, has_keyboard, has_keyboard && state.compact };
+    record_case(layout);
     ImGui::SetCursorScreenPos(image_min);
     ImGui::InvisibleButton("device", image_size);
     std::vector<uint8_t> down(LID_KEY_COUNT + KEYBOARD_KEY_COUNT, 0);
@@ -1747,6 +1782,17 @@ void device_flush_bake(SDL_Renderer *renderer) {
         flush_bake(overlay_bake, renderer);
         baked_overlay = pending_overlay;
     }
+}
+
+bool device_draggable(float x, float y) {
+    ImVec2 point(x, y);
+    for (const ImRect &control : control_regions) {
+        if (control.Contains(point)) return false;
+    }
+    for (const Region &region : case_regions) {
+        if (region.contains(point)) return true;
+    }
+    return false;
 }
 
 void device_set_label_font(ImFont *font) {

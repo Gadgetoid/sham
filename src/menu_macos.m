@@ -78,6 +78,7 @@ void menu_install(void) {
     for (int i = 0; i < MENU_LAYOUT_END - MENU_LAYOUT_FIRST; i++) add_item(view, MENU_LAYOUT_FIRST + i, layouts[i], @"", 0);
     add_item(view, MENU_LAYOUT_NEXT, @"Next Layout", @"k", NSEventModifierFlagCommand);
     [view addItem:[NSMenuItem separatorItem]];
+    add_item(view, MENU_BORDERLESS, @"Borderless", @"b", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     add_item(view, MENU_COMPACT, @"Compact", @"", 0);
     add_item(view, MENU_TOUCHSCREEN, @"Touchscreen Mode", @"t", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     [view addItem:[NSMenuItem separatorItem]];
@@ -125,6 +126,16 @@ void menu_set_checked(int item, bool checked) {
     if (item < 0 || item >= MENU_COUNT || !items[item]) return;
     NSControlStateValue state = checked ? NSControlStateValueOn : NSControlStateValueOff;
     if (items[item].state != state) items[item].state = state;
+}
+
+void window_set_transparent(void *handle, void *layer_handle, bool transparent) {
+    NSWindow *window = (__bridge NSWindow *)handle;
+    CALayer *layer = (__bridge CALayer *)layer_handle;
+    if (!window) return;
+    window.opaque = !transparent;
+    window.backgroundColor = transparent ? NSColor.clearColor : NSColor.windowBackgroundColor;
+    window.hasShadow = !transparent;
+    layer.opaque = !transparent;
 }
 
 bool window_cover_display(void *handle, bool cover) {

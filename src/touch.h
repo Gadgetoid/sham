@@ -21,6 +21,7 @@ bool touch_attached(void);
 void touch_stop(void);
 
 bool window_cover_display(void *nswindow, bool cover);
+void window_set_transparent(void *nswindow, void *layer, bool transparent);
 
 #ifdef __cplusplus
 }

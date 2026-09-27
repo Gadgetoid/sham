@@ -17,10 +17,12 @@ struct DeviceState {
     bool touch = false;
     bool select = false;
     bool compact = false;
+    bool borderless = false;
 };
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state);
 float device_fit_height(float width, const DeviceState &state);
+bool  device_draggable(float x, float y);
 void  device_shutdown(void);
 void  device_flush_bake(SDL_Renderer *renderer);
 void  device_set_label_font(ImFont *font);
