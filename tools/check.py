@@ -1,4 +1,5 @@
 import ast
+import json
 import os
 import subprocess
 import sys
@@ -9,6 +10,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OS_DIR = os.path.join(ROOT, "os")
 APPS_DIR = os.path.join(OS_DIR, "apps")
 BINARY = os.path.join(ROOT, "sham.exe" if os.path.exists(os.path.join(ROOT, "sham.exe")) else "sham")
+SILENCE = "host.sound(False); host.key_click(False); "
+SILENT_ENVIRONMENT = dict(os.environ, SDL_AUDIO_DRIVER="dummy")
 FRAMEWORK_METHODS = {"layout", "draw", "key", "tick", "pause", "resume", "focus", "paint", "step"}
 
 
@@ -143,14 +146,20 @@ def check_crates(problems):
                     problems.append("crates: level {} is unsolvable".format(index + 1))
 
 
+def silent_data(data):
+    with open(os.path.join(data, "prefs.json"), "w") as output:
+        json.dump({"sound": False, "click": False}, output)
+
+
 def check_smoke(problems, binary):
     apps = sorted(n[:-3] for n in os.listdir(APPS_DIR) if n.endswith(".py") and not n.startswith("_"))
     with tempfile.TemporaryDirectory() as data:
+        silent_data(data)
         for app in apps:
             result = subprocess.run(
-                [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=shell.launch({!r}); ui.invalidate()".format(app),
+                [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=" + SILENCE + "shell.launch({!r}); ui.invalidate()".format(app),
                  "--screenshot=" + os.path.join(data, "shot.bmp"), "--frames=20"],
-                capture_output=True, text=True, timeout=60)
+                capture_output=True, text=True, timeout=60, env=SILENT_ENVIRONMENT)
             output = result.stdout + result.stderr
             if "Traceback" in output or "stopped" in output or result.returncode != 0:
                 problems.append("smoke: {} failed to launch\n{}".format(app, output.strip()))
@@ -163,10 +172,11 @@ LAUNCHER_MOST = 10
 
 def check_launcher(problems, binary):
     with tempfile.TemporaryDirectory() as data:
+        silent_data(data)
         result = subprocess.run(
-            [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=" + LAUNCHER_PROBE,
+            [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=" + SILENCE + LAUNCHER_PROBE,
              "--screenshot=" + os.path.join(data, "shot.bmp"), "--frames=20"],
-            capture_output=True, text=True, timeout=60)
+            capture_output=True, text=True, timeout=60, env=SILENT_ENVIRONMENT)
         output = result.stdout + result.stderr
         found = [line.split()[-1] for line in output.splitlines() if line.startswith("launcher pages ")]
         if not found or not found[0].isdigit():
