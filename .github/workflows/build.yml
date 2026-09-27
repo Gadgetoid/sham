@@ -17,6 +17,8 @@ jobs:
         run: make embed
       - name: Build
         run: make -k -j3
+      - name: Rebuild is a no-op
+        run: make -q
       - name: Check
         run: make check
       - name: Build with Touchscreen Mode
@@ -35,6 +37,8 @@ jobs:
         run: make embed
       - name: Build
         run: make -k -j4
+      - name: Rebuild is a no-op
+        run: make -q
       - name: Check
         run: make check
         env:
@@ -51,7 +55,6 @@ jobs:
           msystem: UCRT64
           install: >-
             make
-            diffutils
             git
             python
             mingw-w64-ucrt-x86_64-gcc
@@ -64,6 +67,8 @@ jobs:
         run: make embed
       - name: Build
         run: make -k -j4
+      - name: Rebuild is a no-op
+        run: make -q
       - name: Check
         run: make check
         env:
