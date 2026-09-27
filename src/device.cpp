@@ -1091,13 +1091,15 @@ void square_corners(Shape &shape, bool top, float y_edge, float reach) {
 }
 
 Shape lid_body(const DeviceLayout &layout) {
-    Shape body = lid_shape(Frame{ layout.image_min, layout.image_max, layout.u }, LID_SHAPE_BODY);
-    if (!layout.compact) return body;
+    Frame frame{ layout.image_min, layout.image_max, layout.u };
+    Shape body = lid_shape(frame, LID_SHAPE_BODY);
     ImRect box = bounds(body);
-    square_corners(body, false, box.Max.y, LID_BODY_RADIUS * layout.u);
+    ImRect barrel = bounds(lid_shape(frame, LID_SHAPE_KEYBOARD_HINGE));
     for (ImVec2 &point : body) {
-        if (point.y > box.Max.y - LID_NOTCH_DEPTH * layout.u) point.y = box.Max.y;
+        bool in_notch = point.x > barrel.Min.x && point.x < barrel.Max.x;
+        if ((layout.compact || in_notch) && point.y > box.Max.y - LID_NOTCH_DEPTH * layout.u) point.y = box.Max.y;
     }
+    if (layout.compact) square_corners(body, false, box.Max.y, LID_BODY_RADIUS * layout.u);
     return body;
 }
 
@@ -1285,6 +1287,9 @@ const float LID_RELIEF = 1.0f;
 const float LID_DISH_WIDTH = 60.0f;
 const float LID_DISH_DEPTH = 28.0f;
 const float LID_DISH_CLEARANCE = 4.0f;
+const float LID_CONTACT_WIDTH = 1.4f;
+const float LID_CONTACT_DEPTH = 1.0f;
+const float LID_CONTACT_SHADE = 0.55f;
 const float LID_SHEEN = 0.12f;
 const float LID_SHEEN_REACH = 0.45f;
 const float PLAIN_EDGE = 2.0f;
@@ -1292,7 +1297,6 @@ const float PLAIN_RELIEF = 0.8f;
 const float SCREEN_WALL = 6.0f;
 const float SCREEN_DEPTH = 3.0f;
 const ImU32 LCD_SURROUND = IM_COL32(58, 64, 68, 255);
-const ImU32 HINGE_GAP = IM_COL32(24, 28, 30, 255);
 const float FLUTE_WALL = 0.5f;
 const float FLUTE_DEPTH = 7.0f;
 const float KEY_WELL_WALL = 5.5f;
@@ -1485,17 +1489,14 @@ void add_lid(CaseScene &scene, const DeviceLayout &layout) {
     dish.radius = LID_DISH_WIDTH * u;
     dish.height = LID_DISH_DEPTH * u;
     scene.layers.push_back(dish);
-}
-
-void add_gap(CaseScene &scene, const DeviceLayout &layout) {
-    Shape left, right, middle;
-    ImRect span;
-    hinge_span(layout, left, right, middle, span);
-    ImRect notch = bounds(lid_body(layout));
-    float top = notch.Max.y - LID_NOTCH_DEPTH * layout.u;
-    CaseLayer gap = case_layer(CASE_SOLID, rounded_rect(ImVec2(bounds(middle).Min.x, top), ImVec2(bounds(middle).Max.x, span.Min.y + 4.0f * layout.u), 0.5f), HINGE_GAP);
-    gap.grime = false;
-    scene.layers.push_back(gap);
+    if (!layout.has_keyboard || layout.compact) return;
+    ImRect barrel = bounds(lid_shape(Frame{ layout.image_min, layout.image_max, u }, LID_SHAPE_KEYBOARD_HINGE));
+    CaseLayer contact = case_layer(CASE_GROOVE, body);
+    contact.edges = ImRect(barrel.Min.x, box.Max.y - u, barrel.Max.x, FLT_MAX);
+    contact.radius = LID_CONTACT_WIDTH * u;
+    contact.height = LID_CONTACT_DEPTH * u;
+    contact.tint = LID_CONTACT_SHADE;
+    scene.layers.push_back(contact);
 }
 
 CaseLayer recess_layer(const Shape &outline, CaseRecessShape shape, float wall, float depth, ImU32 top, ImU32 bottom, float tint) {
@@ -1564,7 +1565,6 @@ CaseScene case_scene(const DeviceLayout &layout, const DeviceState &state, float
     CaseScene scene;
     scene.scale = scale;
     if (state.show_keys) {
-        if (layout.has_keyboard && !layout.compact) add_gap(scene, layout);
         if (layout.has_keyboard && !layout.compact) add_hinge(scene, layout);
         if (layout.has_keyboard) add_keyboard(scene, layout);
         if (layout.has_keyboard) add_keyboard_wells(scene, layout);
