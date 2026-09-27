@@ -2,9 +2,9 @@ import json
 import sys
 
 WIDTH = 229
-HEIGHT = 86
-LAT_TOP = 74.0
-LAT_BOTTOM = -48.0
+HEIGHT = 108
+LAT_TOP = 82.0
+LAT_BOTTOM = -71.0
 SUPERSAMPLE = 4
 
 
@@ -43,7 +43,7 @@ def main():
             if len(ring) >= 3:
                 fill_ring(bitmap, ring, big_w, big_h)
     area = SUPERSAMPLE * SUPERSAMPLE
-    levels = bytearray([WIDTH, HEIGHT])
+    levels = bytearray([WIDTH, HEIGHT, int(LAT_TOP) + 128, int(LAT_BOTTOM) + 128])
     for y in range(HEIGHT):
         for x in range(WIDTH):
             covered = 0
@@ -53,7 +53,7 @@ def main():
             levels.append(min(3, (covered * 3 + area // 2) // area))
     with open(target, "wb") as f:
         f.write(levels)
-    land = sum(1 for level in levels[2:] if level == 3)
+    land = sum(1 for level in levels[4:] if level == 3)
     print("{}: {}x{}, {} land pixels".format(target, WIDTH, HEIGHT, land))
 
 

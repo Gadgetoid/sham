@@ -11,8 +11,6 @@ TITLE = "World"
 ICON = "software:planet_2"
 ORDER = 25
 
-LAT_TOP = 74.0
-LAT_BOTTOM = -48.0
 TWILIGHT = -0.105
 
 DAY_LEVELS = (CLEAR, LIGHT, LIGHT, MID)
@@ -22,13 +20,13 @@ NIGHT_LEVELS = (LIGHT, MID, MID, INK)
 def load_map():
     with open("/assets/worldmap.bin", "rb") as f:
         data = f.read()
-    return data[0], data[1], data[2:]
+    return data[0], data[1], data[2] - 128.0, data[3] - 128.0, data[4:]
 
 
 class World(ui.View):
     def __init__(self):
         super().__init__()
-        self.map_w, self.map_h, self.coverage = load_map()
+        self.map_w, self.map_h, self.lat_top, self.lat_bottom, self.coverage = load_map()
         names = [city[0] for city in worldtime.CITIES]
         self.home = names.index(prefs.get("home_city", "London")) if prefs.get("home_city", "London") in names else names.index("London")
         self.index = self.home
@@ -43,7 +41,7 @@ class World(ui.View):
 
     def to_map(self, lat, lon):
         x = int((lon + 180.0) / 360.0 * self.map_w)
-        y = int((LAT_TOP - lat) / (LAT_TOP - LAT_BOTTOM) * self.map_h)
+        y = int((self.lat_top - lat) / (self.lat_top - self.lat_bottom) * self.map_h)
         return x, y
 
     def shade(self, utc):
@@ -51,11 +49,11 @@ class World(ui.View):
         sin_d = math.sin(math.radians(declination))
         cos_d = math.cos(math.radians(declination))
         cos_lon = [math.cos(math.radians(-180.0 + (x + 0.5) * 360.0 / self.map_w - sun_lon)) for x in range(self.map_w)]
-        span = LAT_TOP - LAT_BOTTOM
+        span = self.lat_top - self.lat_bottom
         pixels = bytearray(self.map_w * self.map_h)
         coverage = self.coverage
         for y in range(self.map_h):
-            lat = math.radians(LAT_TOP - (y + 0.5) * span / self.map_h)
+            lat = math.radians(self.lat_top - (y + 0.5) * span / self.map_h)
             sin_part = math.sin(lat) * sin_d
             cos_part = math.cos(lat) * cos_d
             row = y * self.map_w
@@ -137,13 +135,14 @@ class World(ui.View):
         panel = self.map_w + 4
         panel_w = self.w - panel
         self.fill(panel - 2, 0, 1, self.h, MID)
+        spacing = self.h // 9
         name = small.fit(self.city[0], panel_w - 2)
-        self.text(name, panel, 1)
+        self.text(name, panel, spacing - small.height)
         days, hour, minute = worldtime.local(self.city, utc)
         clock = timefmt.clock_label(hour, minute, suffix=False)
-        self.text(clock, panel + (panel_w - large.measure(clock)) // 2, 18, INK, large)
+        self.text(clock, panel + (panel_w - large.measure(clock)) // 2, spacing * 2, INK, large)
         date = "{} {}  {}".format(DAYS[dates.weekday(days)], dates.from_days(days)[2], timefmt.meridiem(hour))
-        self.text(date, panel, 44, MID)
+        self.text(date, panel, spacing * 2 + large.height + spacing // 2 + 2, MID)
         offset = worldtime.city_offset(self.city, utc)
         home_offset = worldtime.city_offset(worldtime.CITIES[self.home], utc)
         if self.index == self.home:
@@ -151,8 +150,11 @@ class World(ui.View):
         else:
             relative = worldtime.format_offset(offset - home_offset) + "h"
         dst = " DST" if worldtime.dst_active(self.city[4], self.city[3], utc) else ""
-        self.text(small.fit(relative + dst, panel_w - 2), panel, 60)
-        self.text("UTC" + worldtime.format_offset(offset), panel, 72, MID)
+        self.text(small.fit(relative + dst, panel_w - 2), panel, spacing * 6)
+        self.text("UTC" + worldtime.format_offset(offset), panel, spacing * 7 + 2, MID)
+        coordinates = "{:.0f}{} {:.0f}{}".format(abs(self.city[1]), "N" if self.city[1] >= 0 else "S",
+                                                  abs(self.city[2]), "E" if self.city[2] >= 0 else "W")
+        self.text(small.fit(coordinates, panel_w - 2), panel, spacing * 8 + 2, MID)
 
 
 def launch():
