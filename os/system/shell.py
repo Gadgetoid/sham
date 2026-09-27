@@ -3,7 +3,8 @@ import sys
 
 import host
 import lcd
-from system import alarms, keys, prefs, sound, timefmt, ui
+from system import alarms, gfx, icons, keys, prefs, sound, timefmt, ui
+from system.gfx import CLEAR, MID, INK, small, large, huge
 
 HOTKEY_BUTTONS = (
     ("TEL", keys.TEL, "tel"),
@@ -87,11 +88,49 @@ def indicators():
     return shown
 
 
+CARD_BORDER = 6
+CARD_BORDER_PATTERN = 6
+CARD_PADDING = 6
+CARD_HEADING = "IF FOUND, PLEASE RETURN TO"
+
+
+class OwnerCard(ui.View):
+    def __init__(self, owner, hint=None):
+        super().__init__()
+        self.owner = owner
+        self.hint = hint
+
+    def draw(self):
+        self.fill(0, 0, self.w, self.h, MID, CARD_BORDER_PATTERN)
+        inner_x, inner_y = CARD_BORDER, CARD_BORDER
+        inner_w, inner_h = self.w - 2 * CARD_BORDER, self.h - 2 * CARD_BORDER
+        self.fill(inner_x, inner_y, inner_w, inner_h, CLEAR)
+        self.rect(inner_x, inner_y, inner_w, inner_h, INK)
+        left = inner_x + CARD_PADDING
+        top = inner_y + CARD_PADDING
+        self.icon("sign_property", left, top)
+        self.text(CARD_HEADING, left + icons.SIZE + 4, top + (icons.SIZE - small.height) // 2, MID)
+        rule_y = top + icons.SIZE + 3
+        self.fill(left, rule_y, inner_w - 2 * CARD_PADDING, 1, MID)
+        text_w = inner_w - 2 * CARD_PADDING
+        name = self.owner.get("name") or "Your name"
+        name_type = next((type for type in (huge, large) if type.measure(name) <= text_w), large)
+        y = rule_y + 6
+        self.text(name_type.fit(name, text_w), left, y, INK, name_type)
+        y += name_type.height + 6
+        for line in (self.owner.get("number"), self.owner.get("address")):
+            if line:
+                for part in gfx.wrap(line, small, text_w)[:2]:
+                    self.text(part, left, y)
+                    y += small.line_height
+        if self.hint:
+            hint_x = inner_x + inner_w - CARD_PADDING - small.measure(self.hint)
+            self.text(self.hint, hint_x, inner_y + inner_h - CARD_PADDING - small.height, MID)
+
+
 class OwnerSplash(ui.Screen):
     def __init__(self, owner):
-        body = ui.Message("\n".join(line for line in (owner.get("name"), owner.get("number"), owner.get("address")) if line),
-                          "Press any key")
-        super().__init__("OWNER INFORMATION", body)
+        super().__init__("OWNER INFORMATION", OwnerCard(owner, "Press any key"))
         self.started = host.ticks_ms()
 
     def tick(self, now):

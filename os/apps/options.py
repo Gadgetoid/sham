@@ -152,7 +152,12 @@ def owner_screen():
         save()
         ui.pop()
 
-    return ui.Screen("OWNER INFORMATION", ui.Form(fields, on_submit=done), on_close=save)
+    def preview():
+        from system import shell
+        save()
+        ui.push(shell.OwnerSplash(prefs.get("owner", {})))
+
+    return ui.Screen("OWNER INFORMATION", ui.Form(fields, on_submit=done), on_close=save, menu=[("Preview card", preview)])
 
 
 def key_assignment_screen():
