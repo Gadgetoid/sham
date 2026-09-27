@@ -10,7 +10,7 @@ ORDER = 73
 
 COLUMNS = 10
 ROWS = 20
-CELL = 4
+BOARD_MARGIN = 4
 KICKS = ((0, 0), (-1, 0), (1, 0), (0, -1), (-2, 0), (2, 0))
 LINE_POINTS = (0, 100, 300, 500, 800)
 SOFT_DROP_MS = 40
@@ -64,8 +64,9 @@ class Blocks(ui.View):
         self.new_game()
 
     def layout(self):
-        self.board_x = (self.w - COLUMNS * CELL) // 2
-        self.board_y = (self.h - ROWS * CELL) // 2
+        self.cell = max(3, (self.h - BOARD_MARGIN) // ROWS)
+        self.board_x = (self.w - COLUMNS * self.cell) // 2
+        self.board_y = (self.h - ROWS * self.cell) // 2
 
     def new_game(self):
         self.board = [[0] * COLUMNS for _ in range(ROWS)]
@@ -230,22 +231,22 @@ class Blocks(ui.View):
 
     def block(self, x, y, colour=INK):
         if colour == INK:
-            self.fill(x, y, CELL, CELL, MID)
-            self.fill(x, y, CELL - 1, CELL - 1, INK)
+            self.fill(x, y, self.cell, self.cell, MID)
+            self.fill(x, y, self.cell - 1, self.cell - 1, INK)
         else:
-            self.fill(x, y, CELL, CELL, colour)
+            self.fill(x, y, self.cell, self.cell, colour)
 
     def board_block(self, column, row, colour=INK):
         if row >= 0:
-            self.block(self.board_x + column * CELL, self.board_y + row * CELL, colour)
+            self.block(self.board_x + column * self.cell, self.board_y + row * self.cell, colour)
 
     def preview(self, name, x, y):
         for cx, cy in SHAPES[name]:
-            self.block(x + cx * CELL, y + cy * CELL)
+            self.block(x + cx * self.cell, y + cy * self.cell)
 
     def draw(self):
-        board_w = COLUMNS * CELL
-        self.rect(self.board_x - 2, self.board_y - 2, board_w + 4, ROWS * CELL + 4, INK)
+        board_w = COLUMNS * self.cell
+        self.rect(self.board_x - 2, self.board_y - 2, board_w + 4, ROWS * self.cell + 4, INK)
         for row in range(ROWS):
             for column in range(COLUMNS):
                 if self.board[row][column]:
@@ -258,18 +259,20 @@ class Blocks(ui.View):
                 self.board_block(x, y)
 
         left = self.board_x - 60
-        self.text("HOLD", left, 2, MID)
+        preview_y = self.board_y + 14
+        stats_y = preview_y + 3 * self.cell + 14
+        self.text("HOLD", left, self.board_y, MID)
         if self.held_piece:
-            self.preview(self.held_piece, left, 16)
-        self.text("LINES {}".format(self.lines), left, 44, MID)
-        self.text("LEVEL {}".format(self.level), left, 58, MID)
+            self.preview(self.held_piece, left, preview_y)
+        self.text("LINES {}".format(self.lines), left, stats_y, MID)
+        self.text("LEVEL {}".format(self.level), left, stats_y + 14, MID)
 
         right = self.board_x + board_w + 12
-        self.text("NEXT", right, 2, MID)
+        self.text("NEXT", right, self.board_y, MID)
         for index, name in enumerate(self.queue[:2]):
-            self.preview(name, right + index * (4 * CELL + 4), 16)
-        self.text("BEST {}".format(self.best), right, 44, MID)
-        self.text("P pause", right, 58, MID)
+            self.preview(name, right + index * (4 * self.cell + 4), preview_y)
+        self.text("BEST {}".format(self.best), right, stats_y, MID)
+        self.text("P pause", right, stats_y + 14, MID)
 
         if self.state == "ready":
             self.banner("Enter to start", "Up/X Z rotate", "Space drop C hold")
