@@ -26,6 +26,12 @@
 #define PREEMPT_MS        20
 #define ABORT_GRACE_STEPS 30
 
+#ifdef __APPLE__
+#define RELOAD_SHORTCUT "Cmd-R"
+#else
+#define RELOAD_SHORTCUT "Alt-R"
+#endif
+
 static mco_coro *fiber = NULL;
 static char *gc_heap = NULL;
 static const host_config_t *config = NULL;
@@ -141,7 +147,7 @@ static void fiber_entry(mco_coro *co) {
         mount_filesystems();
         exec_main(config->main_path);
         idle = true;
-        console_notice("main exited; REPL still live. Save a file or Cmd-R to restart.");
+        console_notice("main exited; REPL still live. Save a file or " RELOAD_SHORTCUT " to restart.");
         while (!reload_requested) {
             runtime_service();
             host_yield_to_main();

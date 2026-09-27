@@ -41,6 +41,14 @@ static const int TOUCH_RETRY_MS = 2000;
 static const int REPL_MIN_HEIGHT = 200;
 static const int TITLE_BAR_HEIGHT = 32;
 
+#ifdef __APPLE__
+static const SDL_Keymod SHORTCUT_MODIFIER = SDL_KMOD_GUI;
+static const char *const SHORTCUT_NAME = "Cmd";
+#else
+static const SDL_Keymod SHORTCUT_MODIFIER = SDL_KMOD_ALT;
+static const char *const SHORTCUT_NAME = "Alt";
+#endif
+
 static uint64_t start_ticks = 0;
 static std::mutex install_lock;
 static std::vector<std::string> pending_installs;
@@ -852,7 +860,7 @@ int main(int argc, char **argv) {
                     else console_cancel();
                     continue;
                 }
-                if (!device_focused || !device.powered || (mod & SDL_KMOD_GUI)) continue;
+                if (!device_focused || !device.powered || (mod & SHORTCUT_MODIFIER)) continue;
                 if (uint32_t code = held_code(key)) keys_set_held(code, true);
                 if (uint32_t code = special_key(key)) {
                     keys_push(code, modifiers(mod));
@@ -865,7 +873,7 @@ int main(int argc, char **argv) {
             }
             if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) keys_release_all();
             if (event.type == SDL_EVENT_TEXT_INPUT && device_focused && device.powered) {
-                if (!(SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_GUI))) push_text(event.text.text);
+                if (!(SDL_GetModState() & (SDL_KMOD_CTRL | SHORTCUT_MODIFIER))) push_text(event.text.text);
             }
         }
 
@@ -1044,7 +1052,8 @@ int main(int argc, char **argv) {
         device_draw(renderer, io.DisplayFramebufferScale.x, device_height, compose_seconds, device);
 
         if (repl_visible) {
-            ImGui::TextDisabled("%s", device_focused ? "keys -> device  (Cmd-L: REPL)" : "keys -> REPL  (Esc: device)");
+            if (device_focused) ImGui::TextDisabled("keys -> device  (%s-L: REPL)", SHORTCUT_NAME);
+            else ImGui::TextDisabled("keys -> REPL  (Esc: device)");
             ImGui::SameLine(ImGui::GetContentRegionMax().x - 200);
             if (fps > 0) {
                 ImGui::TextDisabled("%s  %.0f fps  LCD %d fps", runtime_idle() ? "idle" : "running", io.Framerate, fps);
@@ -1055,10 +1064,12 @@ int main(int argc, char **argv) {
             console_draw();
         }
         ImGui::End();
+        menu_draw();
 
         ImGui::Render();
-        if (device_focused && io.WantTextInput) keys_release_all();
-        device_focused = !io.WantTextInput;
+        bool device_keys = !io.WantTextInput && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId);
+        if (device_focused && !device_keys) keys_release_all();
+        device_focused = device_keys;
         if (device_focused && !SDL_TextInputActive(window)) SDL_StartTextInput(window);
 
         SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
