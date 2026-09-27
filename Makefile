@@ -30,6 +30,7 @@ SRC_OBJC = src/menu_macos.m
 SRC_APP_CXX = \
 	src/main.cpp \
 	src/device.cpp \
+	src/case_raster.cpp \
 	src/console.cpp
 
 SRC_IMGUI = $(addprefix $(IMGUI)/, \
@@ -90,7 +91,8 @@ WORLD_GEOJSON ?= ../../badgeware/tufty2350/firmware/assets/world.geo.json
 MATERIAL_SYMBOLS ?= ../tetra-command/py/fonts/MaterialSymbolsOutlined.ttf
 
 keyboard:
-	python3 tools/make_keyboard.py tools/keyboard_layout.json src/keyboard_layout.h
+	python3 tools/make_keyboard.py tools/keyboard_layout.json src/keyboard_layout.h tools/sham_layout.svg
+	python3 tools/make_lid.py tools/sham_layout.svg src/lid_layout.h
 
 scratches:
 	python3 tools/make_surface_scratches.py assets/lcd_scratches.bin
