@@ -697,7 +697,7 @@ static bool menu_open = false;
 static SDL_HitTestResult SDLCALL drag_by_case(SDL_Window *window, const SDL_Point *area, void *data) {
     (void)window;
     (void)data;
-    if (menu_open) return SDL_HITTEST_NORMAL;
+    if (menu_open || (SDL_GetGlobalMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)) return SDL_HITTEST_NORMAL;
     return device_draggable((float)area->x, (float)area->y) ? SDL_HITTEST_DRAGGABLE : SDL_HITTEST_NORMAL;
 }
 
