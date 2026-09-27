@@ -64,6 +64,9 @@ Keep a reference to the screen if a view needs to swap itself out."""),
     ("SDK reference", "window_button", (
         ("Screens", """ui.Screen(title, body, status=, menu=, on_close=) is a header over one body view.
 status and title can be callables.
+footer= and footer_status= add a status bar under the body, text on the left and right.
+indicators= lists small symbols for the status bar, "alarm" or "mute". All three can be callables.
+Without them the body gets the full height below the header.
 menu is a list of (label, function) pairs, or a function returning one, shown on MENU.
 screen.add_menu(label, function) adds an entry later.
 MENU always ends with Exit, back to the launcher.
@@ -91,7 +94,7 @@ Char Map browses every icon."""),
 sound.play("C5 E5 G5:2") plays notes, :2 doubles a note's length.
 sound.dtmf("555") dials tones."""),
         ("REPL", """The REPL shares main.py's globals.
-Try shell.stack, ui.alert("hi") or lcd.invert(0, 0, 299, 100)."""),
+Try shell.stack, ui.alert("hi") or lcd.invert(0, 0, lcd.WIDTH, lcd.HEIGHT)."""),
     )),
 )
 

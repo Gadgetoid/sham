@@ -17,6 +17,9 @@ def hotkeys():
     assigned = prefs.get("hotkeys", {})
     return {code: assigned.get(label, default) for label, code, default in HOTKEY_BUTTONS}
 
+LAUNCH_COLUMNS = 2
+LAUNCH_ROWS = 5
+
 FOLDER_ICONS = {
     "Games": "controller:gamepad",
     "System": "options_mechanics",
@@ -75,6 +78,15 @@ def group(apps):
     return entries, folders
 
 
+def indicators():
+    shown = []
+    if prefs.get("daily_alarm", True) and alarms.next_clock_alarm() is not None:
+        shown.append("alarm")
+    if not sound.enabled():
+        shown.append("mute")
+    return shown
+
+
 class OwnerSplash(ui.Screen):
     def __init__(self, owner):
         body = ui.Message("\n".join(line for line in (owner.get("name"), owner.get("number"), owner.get("address")) if line),
@@ -104,12 +116,12 @@ class Shell:
         self.minute = None
         self.grid = self.make_grid(self.entries)
         self.launcher = ui.Screen(lambda: timefmt.date_label(host.localtime()), self.grid,
-                                  status=lambda: "{}  {}".format(timefmt.time_label(host.localtime()),
-                                                                 self.grid.page_label()), exit=False)
+                                  status=lambda: timefmt.time_label(host.localtime()), exit=False,
+                                  footer=lambda: self.hint(self.grid), footer_status=self.grid.page_label, indicators=indicators)
 
     def make_grid(self, entries):
         return ui.Grid(entries, on_select=lambda entry, index: self.open(entry),
-                       label=lambda entry: entry.title, icon=lambda entry: entry.icon)
+                       label=lambda entry: entry.title, icon=lambda entry: entry.icon, columns=LAUNCH_COLUMNS, max_rows=LAUNCH_ROWS)
 
     def open(self, entry):
         if isinstance(entry, Folder):
@@ -117,11 +129,20 @@ class Shell:
         else:
             self.launch(entry.name)
 
+    def hint(self, grid):
+        if not grid.items:
+            return ""
+        entry = grid.items[grid.index]
+        if isinstance(entry, Folder):
+            return "ENTER: open {} ({})".format(entry.title, len(entry.apps))
+        return "ENTER: open {}".format(entry.title)
+
     def folder_screen(self, folder, selected=None):
         grid = self.make_grid(folder.apps)
         if selected in folder.apps:
             grid.select(folder.apps.index(selected))
-        return ui.Screen(folder.title, grid, status=grid.page_label)
+        return ui.Screen(folder.title, grid, status=lambda: timefmt.time_label(host.localtime()),
+                         footer=lambda: self.hint(grid), footer_status=grid.page_label, indicators=indicators)
 
     def open_folder(self, title):
         folder = self.folders.get(title)

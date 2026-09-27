@@ -155,6 +155,25 @@ def check_smoke(problems, binary):
                 problems.append("smoke: {} failed to launch\n{}".format(app, output.strip()))
 
 
+LAUNCHER_PROBE = ("print('launcher pages', max((screen.layout(), screen.body.per_page)[1] for screen in "
+                  "[shell.launcher] + [shell.folder_screen(folder) for folder in shell.folders.values()]))")
+LAUNCHER_MOST = 10
+
+
+def check_launcher(problems, binary):
+    with tempfile.TemporaryDirectory() as data:
+        result = subprocess.run(
+            [binary, "--no-watch", "--root=" + os.path.join(ROOT, "os"), "--data=" + data, "--exec=" + LAUNCHER_PROBE,
+             "--screenshot=" + os.path.join(data, "shot.bmp"), "--frames=20"],
+            capture_output=True, text=True, timeout=60)
+        output = result.stdout + result.stderr
+        found = [line.split()[-1] for line in output.splitlines() if line.startswith("launcher pages ")]
+        if not found or not found[0].isdigit():
+            problems.append("launcher: could not measure launch pages\n{}".format(output.strip()))
+        elif int(found[0]) > LAUNCHER_MOST:
+            problems.append("launcher: {} entries per page, the number keys only reach {}".format(found[0], LAUNCHER_MOST))
+
+
 def main():
     problems = []
     check_syntax(problems)
@@ -163,6 +182,7 @@ def main():
     check_crates(problems)
     if "--smoke" in sys.argv:
         check_smoke(problems, os.path.join(ROOT, "sham"))
+        check_launcher(problems, os.path.join(ROOT, "sham"))
     for problem in problems:
         print(problem)
     print("{} problem(s)".format(len(problems)))

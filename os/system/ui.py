@@ -4,6 +4,12 @@ from system import gfx, icons, keys
 from system.gfx import CLEAR, LIGHT, MID, INK, WIDTH, HEIGHT, small, large
 
 HEADER_H = 12
+FOOTER_H = 12
+INDICATOR_GAP = 3
+INDICATORS = {
+    "alarm": ("..#..", ".###.", ".###.", ".###.", "#####", "..#.."),
+    "mute": ("..#..#...#", ".##...#.#.", "###....#..", "###...#.#.", ".##..#...#", "..#......."),
+}
 ROW_H = small.height + 2
 ICON_ROW_H = icons.SIZE + 1
 BLINK_MS = 500
@@ -158,11 +164,15 @@ class Label(View):
 class Screen(View):
     modal = False
 
-    def __init__(self, title="", body=None, status=None, menu=None, on_close=None, exit=True):
+    def __init__(self, title="", body=None, status=None, menu=None, on_close=None, exit=True, footer=None, footer_status=None,
+                 indicators=None):
         super().__init__()
         self.title = title
         self.body = body
         self.status = status
+        self.footer = footer
+        self.footer_status = footer_status
+        self.indicators = indicators
         self.menu = menu
         self.menu_extra = []
         self.exit = exit
@@ -178,9 +188,13 @@ class Screen(View):
             entries.append(("Exit", home))
         return entries
 
+    def has_footer(self):
+        return self.footer is not None or self.footer_status is not None or self.indicators is not None
+
     def layout(self):
         if self.body:
-            self.body.place(self.x, self.y + HEADER_H, self.w, self.h - HEADER_H)
+            footer_h = FOOTER_H if self.has_footer() else 0
+            self.body.place(self.x, self.y + HEADER_H, self.w, self.h - HEADER_H - footer_h)
             self.body.focus(True)
 
     def set_body(self, body):
@@ -196,8 +210,33 @@ class Screen(View):
             small.draw(status, self.x + self.w - 2 - status_w, self.y)
         lcd.hline(self.x, self.y + HEADER_H - 2, self.w)
 
+    def draw_footer(self):
+        top = self.y + self.h - FOOTER_H
+        lcd.hline(self.x, top, self.w)
+        text_y = top + 2
+        right = self.x + self.w - 2
+        status = _call(self.footer_status) or ""
+        if status:
+            right -= small.measure(status)
+            small.draw(status, right, text_y)
+            right -= INDICATOR_GAP * 2
+        for name in reversed(list(_call(self.indicators) or [])):
+            rows = INDICATORS.get(name)
+            if not rows:
+                continue
+            right -= len(rows[0])
+            top_y = text_y + small.height - len(rows)
+            for dy, row in enumerate(rows):
+                for dx, char in enumerate(row):
+                    if char == "#":
+                        lcd.pixel(right + dx, top_y + dy, INK)
+            right -= INDICATOR_GAP
+        small.draw(small.fit(_call(self.footer) or "", right - self.x - 2 - INDICATOR_GAP), self.x + 2, text_y)
+
     def draw(self):
         self.draw_header()
+        if self.has_footer():
+            self.draw_footer()
         if self.body:
             self.body.render()
 
@@ -412,18 +451,20 @@ class List(View):
 
 
 class Grid(View):
-    def __init__(self, items=(), on_select=None, label=str, icon=None, columns=2):
+    def __init__(self, items=(), on_select=None, label=str, icon=None, columns=2, max_rows=None):
         super().__init__()
         self.items = list(items)
         self.on_select = on_select
         self.label = label
         self.icon_for = icon
         self.columns = columns
+        self.max_rows = max_rows
         self.index = 0
 
     @property
     def rows(self):
-        return max(1, self.h // ICON_ROW_H)
+        rows = max(1, self.h // ICON_ROW_H)
+        return min(rows, self.max_rows) if self.max_rows else rows
 
     @property
     def per_page(self):
