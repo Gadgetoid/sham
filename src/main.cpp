@@ -688,6 +688,45 @@ static void set_transparent(SDL_Window *window, SDL_Renderer *renderer, bool tra
     SDL_SetWindowHitTest(window, transparent ? drag_by_case : nullptr, nullptr);
 }
 
+struct FontFile {
+    const char *path;
+    int number;
+};
+
+static const FontFile LABEL_FONTS[] = {
+    { "/System/Library/Fonts/Supplemental/Arial Bold.ttf", 0 },
+    { "C:/Windows/Fonts/arialbd.ttf", 0 },
+    { "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", 0 },
+    { "/usr/share/fonts/opentype/urw-base35/NimbusSans-Bold.otf", 0 },
+    { "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 0 },
+};
+
+static const FontFile LEGEND_FONTS[] = {
+    { "/System/Library/Fonts/HelveticaNeue.ttc", 10 },
+    { "C:/Windows/Fonts/seguisb.ttf", 0 },
+    { "/usr/share/fonts/opentype/urw-base35/NimbusSans-Bold.otf", 0 },
+    { "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", 0 },
+    { "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 0 },
+};
+
+static const FontFile KEY_LABEL_FONTS[] = {
+    { "/System/Library/Fonts/HelveticaNeue.ttc", 0 },
+    { "C:/Windows/Fonts/segoeui.ttf", 0 },
+    { "/usr/share/fonts/opentype/urw-base35/NimbusSans-Regular.otf", 0 },
+    { "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", 0 },
+    { "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0 },
+};
+
+static ImFont *load_font(const FontFile *files, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (access(files[i].path, R_OK) != 0) continue;
+        ImFontConfig config;
+        config.FontNo = files[i].number;
+        return ImGui::GetIO().Fonts->AddFontFromFileTTF(files[i].path, 16.0f, &config);
+    }
+    return nullptr;
+}
+
 static void save_lcd(const std::string &path, int cell) {
     lcd_compose_setup(cell);
     lcd_compose(60.0f);
@@ -755,17 +794,9 @@ int main(int argc, char **argv) {
     io.IniFilename = nullptr;
     ImGui::StyleColorsDark();
     io.Fonts->AddFontDefault();
-    const char *label_font = "/System/Library/Fonts/Supplemental/Arial Bold.ttf";
-    if (access(label_font, R_OK) == 0) device_set_label_font(io.Fonts->AddFontFromFileTTF(label_font, 16.0f));
-    const char *keyboard_font = "/System/Library/Fonts/HelveticaNeue.ttc";
-    if (access(keyboard_font, R_OK) == 0) {
-        ImFontConfig medium;
-        medium.FontNo = 10;
-        ImFontConfig regular;
-        regular.FontNo = 0;
-        device_set_keyboard_fonts(io.Fonts->AddFontFromFileTTF(keyboard_font, 16.0f, &medium),
-                                  io.Fonts->AddFontFromFileTTF(keyboard_font, 16.0f, &regular));
-    }
+    device_set_label_font(load_font(LABEL_FONTS, sizeof LABEL_FONTS / sizeof LABEL_FONTS[0]));
+    device_set_keyboard_fonts(load_font(LEGEND_FONTS, sizeof LEGEND_FONTS / sizeof LEGEND_FONTS[0]),
+                              load_font(KEY_LABEL_FONTS, sizeof KEY_LABEL_FONTS / sizeof KEY_LABEL_FONTS[0]));
     std::string icon_font = std::string(SDL_GetBasePath() ? SDL_GetBasePath() : "") + "assets/MaterialSymbolsKeys.ttf";
     if (access(icon_font.c_str(), R_OK) == 0) device_set_icon_font(io.Fonts->AddFontFromFileTTF(icon_font.c_str(), 24.0f));
     ImGuiStyle &style = ImGui::GetStyle();
