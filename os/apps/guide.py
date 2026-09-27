@@ -77,6 +77,16 @@ ui.TextEdit(text, multiline=)
 ui.Form([ui.Field(label, value, choices=)], on_submit=)
 ui.Grid(items, label=, icon=)
 ui.Canvas(paint=, step=), or subclass it."""),
+        ("Drawing", """Views draw with self.fill, self.rect, self.line, self.pixel, self.text, self.icon, self.sprite and self.invert, in local coordinates.
+lcd.fill, lcd.rect, lcd.hline, lcd.vline and friends take screen coordinates.
+Colours are CLEAR, LIGHT, MID and INK from system.gfx."""),
+        ("Patterns", """fill, rect, hline and vline take an optional pattern after the colour:
+  self.fill(x, y, w, h, INK, pattern=11)
+  lcd.fill(x, y, w, h, MID, 3)
+A pattern is 0 to lcd.PATTERNS - 1, or 8 bytes, one per row, high bit on the left.
+Set bits paint the colour and clear bits leave the screen alone. Fill a background first for two colours.
+Patterns line up with the screen, not the shape, so neighbouring fills tile seamlessly.
+Char Map's Patterns set shows every one."""),
         ("Layout", """ui.Split(first, second, ratio=, vertical=) puts two views side by side or stacked.
 Arrows cross between panes when the focused pane doesn't use them.
 ui.Stack(a, b, c) stacks views top to bottom, sized by preferred_height."""),

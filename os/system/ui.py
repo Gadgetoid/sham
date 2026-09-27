@@ -107,11 +107,11 @@ class View:
     def icon(self, name, x, y, outline=INK, fill=CLEAR):
         icons.draw(name, self.x + x, self.y + y, outline, fill)
 
-    def fill(self, x, y, w, h, colour=INK):
-        lcd.fill(self.x + x, self.y + y, w, h, colour)
+    def fill(self, x, y, w, h, colour=INK, pattern=None):
+        lcd.fill(self.x + x, self.y + y, w, h, colour, pattern)
 
-    def rect(self, x, y, w, h, colour=INK):
-        lcd.rect(self.x + x, self.y + y, w, h, colour)
+    def rect(self, x, y, w, h, colour=INK, pattern=None):
+        lcd.rect(self.x + x, self.y + y, w, h, colour, pattern)
 
     def pixel(self, x, y, colour=INK):
         lcd.pixel(self.x + x, self.y + y, colour)
