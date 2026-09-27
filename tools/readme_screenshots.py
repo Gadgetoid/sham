@@ -12,7 +12,7 @@ import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT = os.path.join(ROOT, "docs", "screenshots")
-BINARY = os.path.join(ROOT, "sham")
+BINARY = os.path.join(ROOT, "sham.exe" if os.path.exists(os.path.join(ROOT, "sham.exe")) else "sham")
 OS_DIR = os.path.join(ROOT, "os")
 SAMPLE_WZD = os.path.join(OS_DIR, "samples", "wzd", "Sierpinski.wzd")
 
@@ -218,7 +218,7 @@ def lcd_shot(shot, work, wzd):
         arguments.append("--keys=" + shot["keys"])
     run(arguments, data)
     png = os.path.join(work, shot["name"] + ".png")
-    subprocess.run(["sips", "-s", "format", "png", bmp, "--out", png], capture_output=True, check=True)
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", bmp, png], check=True)
     quantise(png, os.path.join(OUTPUT, shot["name"] + ".png"), LCD_COLOURS, dither=False)
 
 

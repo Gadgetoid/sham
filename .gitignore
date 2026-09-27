@@ -2,6 +2,7 @@ build/
 build-embed/
 micropython_embed/
 /sham
+/sham.exe
 /data/
 imgui.ini
 __pycache__/

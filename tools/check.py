@@ -8,6 +8,7 @@ from collections import deque
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OS_DIR = os.path.join(ROOT, "os")
 APPS_DIR = os.path.join(OS_DIR, "apps")
+BINARY = os.path.join(ROOT, "sham.exe" if os.path.exists(os.path.join(ROOT, "sham.exe")) else "sham")
 FRAMEWORK_METHODS = {"layout", "draw", "key", "tick", "pause", "resume", "focus", "paint", "step"}
 
 
@@ -181,8 +182,8 @@ def main():
     check_icons(problems)
     check_crates(problems)
     if "--smoke" in sys.argv:
-        check_smoke(problems, os.path.join(ROOT, "sham"))
-        check_launcher(problems, os.path.join(ROOT, "sham"))
+        check_smoke(problems, BINARY)
+        check_launcher(problems, BINARY)
     for problem in problems:
         print(problem)
     print("{} problem(s)".format(len(problems)))

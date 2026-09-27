@@ -1,4 +1,7 @@
-PROG      = sham
+ifeq ($(OS),Windows_NT)
+EXE       = .exe
+endif
+PROG      = sham$(EXE)
 
 .DEFAULT_GOAL := $(PROG)
 MPY_TOP   = micropython
@@ -10,7 +13,24 @@ CFLAGS  += -I. -Isrc -Ilib -I$(IMGUI) -I$(IMGUI)/backends -I$(EMBED_DIR) -I$(EMB
 CFLAGS  += -Wall -O2 -fno-common -MMD -MP
 CFLAGS  += $(shell pkg-config --cflags sdl3)
 
-LDFLAGS += $(shell pkg-config --libs sdl3) -framework CoreServices -framework Cocoa
+LDFLAGS += $(shell pkg-config --libs sdl3)
+
+UNAME := $(shell uname -s)
+ifeq ($(OS),Windows_NT)
+SRC_OBJC    =
+SRC_MENU    = src/menu_imgui.cpp
+SYSTEM_LIBS = -lpthread
+else ifeq ($(UNAME),Darwin)
+LDFLAGS    += -framework CoreServices -framework Cocoa
+SRC_OBJC    = src/menu_macos.m
+SRC_MENU    =
+SYSTEM_LIBS =
+else
+SRC_OBJC    =
+SRC_MENU    = src/menu_imgui.cpp
+SYSTEM_LIBS = -lutil -lm -lpthread
+endif
+LDFLAGS += $(SYSTEM_LIBS)
 
 CXXFLAGS = $(filter-out -std=c99,$(CFLAGS)) -std=c++17
 
@@ -26,7 +46,7 @@ SRC_APP = \
 
 TOUCHSCREEN ?= 0
 ifeq ($(TOUCHSCREEN),1)
-ifneq ($(shell uname -s),Darwin)
+ifneq ($(UNAME),Darwin)
 $(error TOUCHSCREEN=1 is macOS only)
 endif
 BUILD   := $(BUILD)/touchscreen
@@ -38,13 +58,12 @@ endif
 CONFIG = build/config
 $(shell mkdir -p build; echo "TOUCHSCREEN=$(TOUCHSCREEN)" | cmp -s - $(CONFIG) || { echo "TOUCHSCREEN=$(TOUCHSCREEN)" > $(CONFIG); rm -f $(PROG); })
 
-SRC_OBJC = src/menu_macos.m
-
 SRC_APP_CXX = \
 	src/main.cpp \
 	src/device.cpp \
 	src/case_raster.cpp \
-	src/console.cpp
+	src/console.cpp \
+	$(SRC_MENU)
 
 SRC_IMGUI = $(addprefix $(IMGUI)/, \
 	imgui.cpp imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp \
@@ -126,7 +145,7 @@ check: $(PROG)
 	python3 tools/check.py --smoke
 
 clean:
-	rm -rf $(BUILD) $(PROG)
+	rm -rf build $(PROG)
 
 rebuild: embed-clean embed clean $(PROG)
 
