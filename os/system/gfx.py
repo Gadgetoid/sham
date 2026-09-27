@@ -52,6 +52,7 @@ sins = load_font("/fonts/sins.ppf")
 
 small = Type(sins)
 large = Type(sins, 2)
+huge = Type(sins, 4)
 
 
 def wrap_spans(text, type, width):

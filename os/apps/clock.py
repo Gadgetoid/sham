@@ -1,6 +1,6 @@
 import host
 from system import alarms, dates, store, timefmt, ui
-from system.gfx import LIGHT, MID, INK, small, large
+from system.gfx import LIGHT, MID, INK, small, large, huge
 
 TITLE = "Clock"
 ICON = "clock_1"
@@ -29,23 +29,27 @@ class Clock(ui.View):
         t = host.localtime()
         digits = "{}:{:02d}".format(timefmt.clock_label(t[3], t[4], suffix=False), t[5])
         suffix = timefmt.meridiem(t[3])
-        width = large.measure(digits) + (4 + small.measure(suffix) if suffix else 0)
+        width = huge.measure(digits) + (6 + large.measure(suffix) if suffix else 0)
+        time_y = 8
         x = (self.w - width) // 2
-        x += self.text(digits, x, 5, INK, large) + 4
+        x += self.text(digits, x, time_y, INK, huge) + 6
         if suffix:
-            self.text(suffix, x, 5 + large.height - small.height)
+            self.text(suffix, x, time_y + huge.height - large.height, INK, large)
         date = timefmt.date_label(t)
-        self.text(date, (self.w - small.measure(date)) // 2, 29, MID)
+        date_y = time_y + huge.height + 8
+        self.text(date, (self.w - small.measure(date)) // 2, date_y, MID)
+        bar_y = self.h - 10
         upcoming = alarms.next_clock_alarm()
         if upcoming is not None:
             label = "Alarm " + timefmt.clock_label(upcoming // 60, upcoming % 60)
             label_w = small.measure(label) + 19
             left = (self.w - label_w) // 2
-            self.icon("clock_up", left, 39)
-            self.text(label, left + 19, 43)
+            alarm_y = (date_y + small.height + bar_y) // 2 - 8
+            self.icon("clock_up", left, alarm_y)
+            self.text(label, left + 19, alarm_y + 4)
         bar_w = self.w - 40
-        self.fill(20, 62, bar_w, 3, LIGHT)
-        self.fill(20, 62, bar_w * t[5] // 59, 3, INK)
+        self.fill(20, bar_y, bar_w, 3, LIGHT)
+        self.fill(20, bar_y, bar_w * t[5] // 59, 3, INK)
 
 
 def alarm_screen():
