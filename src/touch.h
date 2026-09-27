@@ -22,6 +22,7 @@ void touch_stop(void);
 
 bool window_cover_display(void *nswindow, bool cover);
 void window_set_transparent(void *nswindow, void *layer, bool transparent);
+void window_set_aspect(void *nswindow, float width, float height);
 
 #ifdef __cplusplus
 }

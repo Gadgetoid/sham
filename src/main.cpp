@@ -4,6 +4,8 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cfloat>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -34,6 +36,8 @@ static const int IDLE_WAIT_MS = 16;
 static const int REDRAW_TAIL_MS = 500;
 static const int STARTUP_FRAMES = 150;
 static const int TOUCH_RETRY_MS = 2000;
+static const int REPL_MIN_HEIGHT = 200;
+static const int TITLE_BAR_HEIGHT = 32;
 
 static uint64_t start_ticks = 0;
 static std::mutex install_lock;
@@ -605,16 +609,43 @@ struct KeyScript {
     }
 };
 
+static ImVec2 window_for_cell(int cell, float scale, const DeviceState &device, bool repl) {
+    ImVec2 size = device_content_size(cell, scale, device) + ImGui::GetStyle().WindowPadding * 2.0f;
+    return ImVec2(ceilf(size.x), ceilf(size.y) + (repl ? REPL_MIN_HEIGHT : 0));
+}
+
+static void snap_window(SDL_Window *window, const DeviceState &device, bool repl) {
+    float scale = SDL_GetWindowPixelDensity(window);
+    if (scale <= 0) return;
+    int width = 0, height = 0;
+    SDL_GetWindowSize(window, &width, &height);
+    SDL_Rect usable = { 0, 0, INT_MAX, INT_MAX };
+    SDL_GetDisplayUsableBounds(SDL_GetDisplayForWindow(window), &usable);
+    if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_BORDERLESS)) usable.h -= TITLE_BAR_HEIGHT;
+    ImVec2 smallest = window_for_cell(DEVICE_MIN_CELL, scale, device, repl);
+    ImVec2 best = smallest;
+    float best_distance = FLT_MAX;
+    for (int cell = DEVICE_MIN_CELL;; cell++) {
+        ImVec2 size = window_for_cell(cell, scale, device, repl);
+        if (cell > DEVICE_MIN_CELL && (size.x > usable.w || size.y > usable.h)) break;
+        float distance = fabsf(size.x - width) + (repl ? 0.0f : fabsf(size.y - height));
+        if (distance >= best_distance) break;
+        best_distance = distance;
+        best = size;
+    }
+    int target_w = (int)best.x, target_h = repl ? std::max(height, (int)best.y) : (int)best.y;
+    void *native = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
+    SDL_SetWindowMinimumSize(window, (int)smallest.x, (int)smallest.y);
+    window_set_aspect(native, repl ? 0.0f : best.x, repl ? 0.0f : best.y);
+    if (target_w != width || target_h != height) SDL_SetWindowSize(window, target_w, target_h);
+}
+
 static void set_repl_visible(SDL_Window *window, bool visible, const DeviceState &device, int &restore_height) {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
-    int device_height = (int)device_fit_height((float)width, device);
-    if (visible) {
-        SDL_SetWindowSize(window, width, std::max(restore_height, device_height + 200));
-    } else {
-        restore_height = height;
-        SDL_SetWindowSize(window, width, device_height);
-    }
+    if (visible) SDL_SetWindowSize(window, width, std::max(restore_height, height));
+    else restore_height = height;
+    snap_window(window, device, visible);
 }
 
 static SDL_HitTestResult SDLCALL drag_by_case(SDL_Window *window, const SDL_Point *area, void *data) {
@@ -675,6 +706,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     SDL_SetRenderVSync(renderer, 1);
+    set_transparent(window, renderer, false);
     main_window_id = SDL_GetWindowID(window);
     beeper_init();
 
@@ -746,6 +778,7 @@ int main(int argc, char **argv) {
     bool borderless = options.borderless;
     bool frameless = false;
     if (!show_repl || borderless) set_repl_visible(window, false, device, restore_height);
+    else snap_window(window, device, true);
     if (borderless) SDL_SetWindowBordered(window, false);
     auto set_borderless = [&](bool enable) {
         if (enable == borderless) return;
@@ -754,7 +787,7 @@ int main(int argc, char **argv) {
         if (show_repl) set_repl_visible(window, !borderless, device, restore_height);
     };
     auto refit_window = [&]() {
-        if (!show_repl || borderless) set_repl_visible(window, false, device, restore_height);
+        if (!touch.active) snap_window(window, device, show_repl && !borderless);
     };
     int fps = options.fps;
     float response = options.response;
@@ -776,6 +809,8 @@ int main(int argc, char **argv) {
                               event.key.key == SDLK_TAB;
             if (!device_tab) ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT) running = false;
+            bool resized = event.type == SDL_EVENT_WINDOW_RESIZED || event.type == SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
+            if (resized) refit_window();
             if (event.type == SDL_EVENT_KEY_DOWN) {
                 SDL_Keycode key = event.key.key;
                 SDL_Keymod mod = event.key.mod;
@@ -867,7 +902,7 @@ int main(int argc, char **argv) {
             SDL_GetWindowSize(window, &window_w, &window_h);
             Settings current = { show_repl, layout, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, want_touchscreen, options.compact, borderless, fps, response,
                                  touch.active ? touch.windowed.w : window_w,
-                                 touch.active ? touch.windowed.h : show_repl ? window_h : restore_height };
+                                 touch.active ? touch.windowed.h : show_repl && !borderless ? window_h : restore_height };
             if (!have_saved) {
                 saved = current;
                 have_saved = true;
@@ -927,6 +962,7 @@ int main(int argc, char **argv) {
         if ((borderless && !touch.active) != frameless) {
             frameless = !frameless;
             set_transparent(window, renderer, frameless);
+            refit_window();
         }
         device.borderless = frameless;
         if (frame == 45) {
@@ -961,9 +997,13 @@ int main(int argc, char **argv) {
         ImGui::PopStyleVar();
 
         float total_height = ImGui::GetContentRegionAvail().y;
-        float device_share = device.show_keys && device.show_keyboard ? 0.72f : 0.52f;
         bool repl_visible = show_repl && !touch.active && !borderless;
-        float device_height = repl_visible ? std::max(220.0f, total_height * device_share) : total_height;
+        float device_height = total_height;
+        if (repl_visible) {
+            float scale = io.DisplayFramebufferScale.x;
+            int cell = device_fit_cell(ImVec2(ImGui::GetContentRegionAvail().x, FLT_MAX), scale, device);
+            device_height = std::min(device_content_size(cell, scale, device).y, total_height - REPL_MIN_HEIGHT);
+        }
         device_draw(renderer, io.DisplayFramebufferScale.x, device_height, compose_seconds, device);
 
         if (repl_visible) {

@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 
 struct ImFont;
+struct ImVec2;
 
 struct DeviceState {
     bool show_keys = true;
@@ -21,7 +22,10 @@ struct DeviceState {
 };
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state);
-float device_fit_height(float width, const DeviceState &state);
+const int DEVICE_MIN_CELL = 2;
+
+int    device_fit_cell(ImVec2 content, float framebuffer_scale, const DeviceState &state);
+ImVec2 device_content_size(int cell, float framebuffer_scale, const DeviceState &state);
 bool  device_draggable(float x, float y);
 void  device_shutdown(void);
 void  device_flush_bake(SDL_Renderer *renderer);

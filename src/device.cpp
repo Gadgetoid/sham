@@ -33,8 +33,6 @@ const float BOTTOM_EXTENT = LID_BOTTOM_EXTENT;
 const float PLAIN_BEZEL = 30.0f;
 const float SCREEN_MARGIN = 8.0f;
 const float DEVICE_MARGIN = 8.0f;
-const float WINDOW_PADDING = 8.0f;
-const int MINIMUM_CELL = 2;
 const ImU32 SCRATCH_TINT = IM_COL32(214, 232, 224, 70);
 const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 75);
 const float WELL_MARGIN = 4.0f;
@@ -1667,7 +1665,7 @@ static float extra_lid_units(const DeviceState &state) {
     return state.show_keys && state.show_keyboard ? keyboard_extra_units(state.compact) : 0.0f;
 }
 
-static int device_fit_cell(ImVec2 content, float framebuffer_scale, const DeviceState &state) {
+int device_fit_cell(ImVec2 content, float framebuffer_scale, const DeviceState &state) {
     content -= ImVec2(2 * DEVICE_MARGIN, 2 * DEVICE_MARGIN);
     float image_h;
     if (state.screen_only) {
@@ -1679,16 +1677,16 @@ static int device_fit_cell(ImVec2 content, float framebuffer_scale, const Device
     } else {
         image_h = std::min((content.x - 2 * PLAIN_BEZEL) * GRID_H / GRID_W, content.y - 2 * PLAIN_BEZEL);
     }
-    return std::max(MINIMUM_CELL, (int)floorf(image_h * framebuffer_scale / GRID_H + 0.001f));
+    return std::max(DEVICE_MIN_CELL, (int)floorf(image_h * framebuffer_scale / GRID_H + 0.001f));
 }
 
-float device_fit_height(float width, const DeviceState &state) {
-    float usable = width - 2 * DEVICE_MARGIN - 2 * WINDOW_PADDING;
-    float margin = 2 * DEVICE_MARGIN + 2 * WINDOW_PADDING;
-    if (state.screen_only) return (usable - 2 * SCREEN_MARGIN) * GRID_H / GRID_W + 2 * SCREEN_MARGIN + margin;
-    if (!state.show_keys) return (usable - 2 * PLAIN_BEZEL) * GRID_H / GRID_W + 2 * PLAIN_BEZEL + margin;
-    float image_h = usable / (GRID_W / GRID_H + (LEFT_EXTENT + RIGHT_EXTENT) / REFERENCE_LCD_H);
-    return image_h * (1.0f + (TOP_EXTENT + BOTTOM_EXTENT + extra_lid_units(state)) / REFERENCE_LCD_H) + margin;
+ImVec2 device_content_size(int cell, float framebuffer_scale, const DeviceState &state) {
+    ImVec2 image(cell * GRID_W / framebuffer_scale, cell * GRID_H / framebuffer_scale);
+    ImVec2 margin(2 * DEVICE_MARGIN, 2 * DEVICE_MARGIN);
+    if (state.screen_only) return image + ImVec2(2 * SCREEN_MARGIN, 2 * SCREEN_MARGIN) + margin;
+    if (!state.show_keys) return image + ImVec2(2 * PLAIN_BEZEL, 2 * PLAIN_BEZEL) + margin;
+    float u = image.y / REFERENCE_LCD_H;
+    return ImVec2(image.x + (LEFT_EXTENT + RIGHT_EXTENT) * u, image.y + (TOP_EXTENT + BOTTOM_EXTENT + extra_lid_units(state)) * u) + margin;
 }
 
 float device_draw(SDL_Renderer *renderer, float framebuffer_scale, float height, float compose_seconds, DeviceState &state) {

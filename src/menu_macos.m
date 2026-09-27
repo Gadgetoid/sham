@@ -138,6 +138,13 @@ void window_set_transparent(void *handle, void *layer_handle, bool transparent) 
     layer.opaque = !transparent;
 }
 
+void window_set_aspect(void *handle, float width, float height) {
+    NSWindow *window = (__bridge NSWindow *)handle;
+    if (!window) return;
+    if (width > 0 && height > 0) window.contentAspectRatio = NSMakeSize(width, height);
+    else window.contentResizeIncrements = NSMakeSize(1, 1);
+}
+
 bool window_cover_display(void *handle, bool cover) {
     NSWindow *window = (__bridge NSWindow *)handle;
     if (!window) return false;
