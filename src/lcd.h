@@ -9,7 +9,7 @@ extern "C" {
 
 #define LCD_WIDTH  299
 #define LCD_HEIGHT 120
-#define LCD_MARGIN_X 3
+#define LCD_MARGIN_X 2
 #define LCD_MARGIN_Y 3
 
 typedef struct {

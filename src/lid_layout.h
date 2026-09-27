@@ -10,10 +10,10 @@ struct LidShape {
     int index_count;
 };
 
-static const int LID_LCD_MARGIN_X = 3;
+static const int LID_LCD_MARGIN_X = 2;
 static const int LID_LCD_MARGIN_Y = 3;
-static const float LID_LEFT_EXTENT = 131.23f;
-static const float LID_RIGHT_EXTENT = 136.13f;
+static const float LID_LEFT_EXTENT = 133.47f;
+static const float LID_RIGHT_EXTENT = 138.37f;
 static const float LID_TOP_EXTENT = 58.67f;
 static const float LID_BOTTOM_EXTENT = 22.35f;
 static const float LID_BODY_RADIUS = 43.27f;

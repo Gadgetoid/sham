@@ -102,9 +102,11 @@ def main():
     def unit(point):
         return (point[0] - centre_x) * scale, (point[1] - gy0) * scale
 
-    grid_w = LCD_COLUMNS + 2 * MARGIN_X
-    grid_h = round(grid_w * (gy1 - gy0) / (gx1 - gx0))
+    glass_aspect = (gx1 - gx0) / (gy1 - gy0)
+    grid_h = round((LCD_COLUMNS + 2 * MARGIN_X) / glass_aspect)
     margin_y = (grid_h - LCD_ROWS) // 2
+    margin_x = int((glass_aspect * (LCD_ROWS + 2 * margin_y) - LCD_COLUMNS) // 2)
+    grid_w = LCD_COLUMNS + 2 * margin_x
     body = [unit(p) for p in named["body"]["points"]]
     half_width = GLASS_UNITS * grid_w / (LCD_ROWS + 2 * margin_y) / 2
     outline = body + [unit(p) for name in ("hinge_left", "hinge_right", "keyboard_body") if name in named for p in named[name]["points"]]
@@ -128,7 +130,7 @@ def main():
         "    int index_count;",
         "};",
         "",
-        "static const int LID_LCD_MARGIN_X = {};".format(MARGIN_X),
+        "static const int LID_LCD_MARGIN_X = {};".format(margin_x),
         "static const int LID_LCD_MARGIN_Y = {};".format(margin_y),
         "static const float LID_LEFT_EXTENT = {:.2f}f;".format(-half_width - min_x),
         "static const float LID_RIGHT_EXTENT = {:.2f}f;".format(max_x - half_width),
@@ -175,7 +177,7 @@ def main():
         lines.append("static const LidShape LID_SHAPE_{} = {{ LID_SHAPE_{}_POINTS, LID_SHAPE_{}_COUNTS, {}, {}, {}, {}, {} }};".format(
             upper, upper, upper, len(polygons), triangle_array, len(triangles) // 3, index_array, len(indices)))
     open(sys.argv[2], "w").write("\n".join(lines) + "\n")
-    print("{}: glass {:.1f}x{:.1f} mm, LCD margin {}x{}".format(sys.argv[2], gx1 - gx0, gy1 - gy0, MARGIN_X, margin_y))
+    print("{}: glass {:.1f}x{:.1f} mm, LCD margin {}x{}".format(sys.argv[2], gx1 - gx0, gy1 - gy0, margin_x, margin_y))
 
 
 if __name__ == "__main__":
