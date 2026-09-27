@@ -1,6 +1,6 @@
 # SHAM
 
-Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x100 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
+Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x120 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
 
 ## Build
 
@@ -10,7 +10,7 @@ macOS, SDL3 and the two submodules.
 git submodule update --init
 brew install sdl3
 
-make embed     # once, and after any mpconfigport.h change
+make embed     # once, and after any mpconfigport.h change or new qstr (such as a new lcd constant)
 make
 make run
 make check     # syntax, View shadowing, icons, Crates solvability, launch every app
