@@ -40,7 +40,10 @@ make embed     # once, and after any mpconfigport.h change or new qstr (such as 
 make
 make run
 make check     # syntax, View shadowing, icons, Crates solvability, launch every app
+make dist      # dist/sham-<os>-<arch>.zip with the binary, os/, assets, licences and, on macOS and Windows, SDL3
 ```
+
+The Linux package uses the system SDL3 (`libsdl3-0`). The packaged binary finds `os/` and `assets/` beside itself, so it runs from any directory. GitHub Actions builds all three packages as artifacts.
 
 On macOS the menus are in the menu bar with Cmd shortcuts. On Linux and Windows, right-click the window (or press the Menu key) for the same menus, and use Alt where this README says Cmd. `SDL_VIDEO_DRIVER=dummy make check` runs the checks without a display.
 

@@ -110,6 +110,45 @@ $(PROG): $(OBJ)
 
 -include $(DEPS)
 
+ARCH        := $(shell uname -m)
+SDL_PREFIX  := $(shell pkg-config --variable=prefix sdl3)
+SDL_LICENCE := $(firstword $(wildcard $(SDL_PREFIX)/share/licenses/SDL3/LICENSE.txt $(SDL_PREFIX)/share/licenses/sdl3/LICENSE.txt))
+ifeq ($(OS),Windows_NT)
+DIST_OS     = windows
+else ifeq ($(UNAME),Darwin)
+DIST_OS     = macos
+else
+DIST_OS     = linux
+endif
+DIST_NAME   = sham-$(DIST_OS)-$(ARCH)
+DIST_DIR    = dist/$(DIST_NAME)
+
+dist: $(PROG)
+	rm -rf $(DIST_DIR) dist/$(DIST_NAME).zip
+	mkdir -p $(DIST_DIR)/licences
+	cp $(PROG) README.md $(DIST_DIR)/
+	cp -R assets os $(DIST_DIR)/
+	find $(DIST_DIR)/os -name __pycache__ -prune -exec rm -rf {} +
+	find $(DIST_DIR)/os -name .DS_Store -exec rm -f {} +
+	cp licences/* $(DIST_DIR)/licences/
+	cp lib/imgui/LICENSE.txt $(DIST_DIR)/licences/imgui.txt
+	cp $(MPY_TOP)/LICENSE $(DIST_DIR)/licences/micropython.txt
+ifeq ($(DIST_OS),macos)
+	cp $(shell pkg-config --variable=libdir sdl3)/libSDL3.0.dylib $(DIST_DIR)/
+	install_name_tool -id @executable_path/libSDL3.0.dylib $(DIST_DIR)/libSDL3.0.dylib
+	install_name_tool -change "$$(otool -L $(PROG) | awk '/libSDL3/ { print $$1 }')" @executable_path/libSDL3.0.dylib $(DIST_DIR)/$(PROG)
+	codesign --force --sign - $(DIST_DIR)/libSDL3.0.dylib $(DIST_DIR)/$(PROG)
+endif
+ifeq ($(DIST_OS),windows)
+	cp $$(ldd $(PROG) | awk '$$3 ~ /^\/(ucrt64|mingw64|clang64)\// { print $$3 }' | sort -u) $(DIST_DIR)/
+endif
+ifneq ($(DIST_OS),linux)
+ifneq ($(SDL_LICENCE),)
+	cp $(SDL_LICENCE) $(DIST_DIR)/licences/SDL3.txt
+endif
+endif
+	cd dist && zip -qry $(DIST_NAME).zip $(DIST_NAME)
+
 embed:
 	$(MAKE) -f micropython_embed.mk
 
@@ -148,8 +187,8 @@ check: $(PROG)
 	python3 tools/check.py --smoke
 
 clean:
-	rm -rf build $(PROG)
+	rm -rf build dist $(PROG)
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot screenshots keyboard scratches worldmap samples keyicons check clean rebuild
+.PHONY: embed embed-clean run screenshot screenshots keyboard scratches worldmap samples keyicons check dist clean rebuild
