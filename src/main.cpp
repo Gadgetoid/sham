@@ -99,6 +99,8 @@ struct Options {
     std::string data;
     std::string main = "/main.py";
     std::string screenshot;
+    std::string lcd_shot;
+    int lcd_cell = 3;
     std::string keys;
     std::vector<std::string> exec;
     std::vector<std::string> install;
@@ -287,7 +289,9 @@ static void usage() {
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --install=FILE      copy a .py into My Programs or a .wzd into Sharp BASIC, repeatable\n"
         "  --screenshot=FILE   save the window as BMP after --frames and exit\n"
-        "  --frames=N          frames before the screenshot (default 120)\n");
+        "  --frames=N          frames before the screenshot (default 120)\n"
+        "  --lcd=FILE          save only the LCD as BMP after --frames and exit\n"
+        "  --lcd-cell=N        LCD pixel size for --lcd (default 3)\n");
 }
 
 static std::string absolute(const std::string &path) {
@@ -308,6 +312,8 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (const char *v = value("--data=")) options.data = v;
         else if (const char *v = value("--main=")) options.main = v;
         else if (const char *v = value("--screenshot=")) options.screenshot = v;
+        else if (const char *v = value("--lcd=")) options.lcd_shot = v;
+        else if (const char *v = value("--lcd-cell=")) options.lcd_cell = atoi(v);
         else if (const char *v = value("--frames=")) options.frames = atoi(v);
         else if (const char *v = value("--keys=")) options.keys = v;
         else if (const char *v = value("--exec=")) options.exec.push_back(v);
@@ -661,6 +667,16 @@ static void set_transparent(SDL_Window *window, SDL_Renderer *renderer, bool tra
     SDL_SetWindowHitTest(window, transparent ? drag_by_case : nullptr, nullptr);
 }
 
+static void save_lcd(const std::string &path, int cell) {
+    lcd_compose_setup(cell);
+    lcd_compose(60.0f);
+    SDL_Surface *surface = SDL_CreateSurfaceFrom(lcd_compose_width(), lcd_compose_height(), SDL_PIXELFORMAT_RGBA32, lcd_compose_pixels(),
+                                                 lcd_compose_width() * 4);
+    if (surface && SDL_SaveBMP(surface, path.c_str())) SDL_Log("lcd: %s", path.c_str());
+    else SDL_Log("lcd failed: %s", SDL_GetError());
+    SDL_DestroySurface(surface);
+}
+
 static void save_screenshot(SDL_Renderer *renderer, const std::string &path) {
     SDL_Surface *surface = SDL_RenderReadPixels(renderer, nullptr);
     if (!surface) {
@@ -687,6 +703,8 @@ int main(int argc, char **argv) {
     options.root = absolute(options.root);
     options.data = absolute(options.data);
     options.screenshot = absolute(options.screenshot);
+    options.lcd_shot = absolute(options.lcd_shot);
+    bool capturing = !options.screenshot.empty() || !options.lcd_shot.empty();
     std::error_code data_error;
     std::filesystem::create_directories(options.data, data_error);
     setvbuf(stdout, nullptr, _IONBF, 0);
@@ -699,7 +717,7 @@ int main(int argc, char **argv) {
 
     SDL_Window *window = SDL_CreateWindow("SHAM", options.width, options.height,
                                           SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_TRANSPARENT |
-                                          (options.screenshot.empty() ? 0 : SDL_WINDOW_HIDDEN));
+                                          (capturing ? SDL_WINDOW_HIDDEN : 0));
     SDL_Renderer *renderer = window ? SDL_CreateRenderer(window, nullptr) : nullptr;
     if (!renderer) {
         SDL_Log("window/renderer failed: %s", SDL_GetError());
@@ -895,7 +913,7 @@ int main(int argc, char **argv) {
                 default: break;
             }
         }
-        if (options.screenshot.empty() || getenv("POCKET_PERSIST")) {
+        if (!capturing || getenv("POCKET_PERSIST")) {
             static Settings saved = {};
             static bool have_saved = false;
             int window_w = 0, window_h = 0;
@@ -978,7 +996,7 @@ int main(int argc, char **argv) {
         bool runtime_idle_changed = runtime_idle() != was_runtime_idle;
         was_runtime_idle = runtime_idle();
         bool mouse_held = SDL_GetMouseState(nullptr, nullptr) != 0;
-        bool busy = had_event || frame < STARTUP_FRAMES || !options.screenshot.empty() || script.next < script.steps.size() ||
+        bool busy = had_event || frame < STARTUP_FRAMES || capturing || script.next < script.steps.size() ||
                     mouse_held || runtime_idle_changed || lcd_needs_compose() || console_take_changed();
         if (busy) redraw_until_ms = now_ms + REDRAW_TAIL_MS;
         idle = now_ms >= redraw_until_ms;
@@ -1032,6 +1050,10 @@ int main(int argc, char **argv) {
         device_flush_bake(renderer);
 
         frame++;
+        if (!options.lcd_shot.empty() && frame >= options.frames) {
+            save_lcd(options.lcd_shot, options.lcd_cell);
+            running = false;
+        }
         if (!options.screenshot.empty() && frame >= options.frames) {
             save_screenshot(renderer, options.screenshot);
             running = false;
