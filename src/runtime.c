@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <unistd.h>
+#endif
 
 #define MINICORO_IMPL
 #include "minicoro.h"
@@ -174,13 +177,26 @@ static bool start_fiber(void) {
     return mco_create(&fiber, &desc) == MCO_SUCCESS;
 }
 
+static bool resolve_path(const char *path, char *resolved, size_t size) {
+#ifdef _WIN32
+    if (access(path, R_OK) != 0 || !_fullpath(resolved, path, size)) return false;
+    for (char *c = resolved; *c; c++) {
+        if (*c == '\\') *c = '/';
+    }
+    return true;
+#else
+    (void)size;
+    return realpath(path, resolved) != NULL;
+#endif
+}
+
 bool runtime_init(const host_config_t *cfg) {
     config = cfg;
-    if (!realpath(cfg->root_path, root_abs)) {
+    if (!resolve_path(cfg->root_path, root_abs, sizeof root_abs)) {
         fprintf(stderr, "sham: cannot resolve root %s\n", cfg->root_path);
         return false;
     }
-    if (!realpath(cfg->data_path, data_abs)) {
+    if (!resolve_path(cfg->data_path, data_abs, sizeof data_abs)) {
         fprintf(stderr, "sham: cannot resolve data %s\n", cfg->data_path);
         return false;
     }

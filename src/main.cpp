@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <climits>
 #include <cmath>
@@ -62,7 +63,7 @@ static void SDLCALL install_chosen(void *userdata, const char *const *files, int
 }
 
 static bool install_program(const std::string &data, const std::string &source) {
-    size_t slash = source.find_last_of('/');
+    size_t slash = source.find_last_of("/\\");
     std::string name = slash == std::string::npos ? source : source.substr(slash + 1);
     std::string message;
     std::string extension = name.size() > 4 ? name.substr(name.size() - 4) : "";
@@ -74,7 +75,7 @@ static bool install_program(const std::string &data, const std::string &source) 
         return false;
     }
     std::string folder = data + (sharp ? "/wzd" : "/programs");
-    mkdir(folder.c_str(), 0755);
+    SDL_CreateDirectory(folder.c_str());
     std::string destination = folder + "/" + name;
     std::string temporary = destination + ".tmp";
     FILE *in = fopen(source.c_str(), "rb");
@@ -87,7 +88,7 @@ static bool install_program(const std::string &data, const std::string &source) 
     if (out) ok = fclose(out) == 0 && ok;
     struct stat existing;
     bool replaced = stat(destination.c_str(), &existing) == 0;
-    if (ok) ok = rename(temporary.c_str(), destination.c_str()) == 0;
+    if (ok) ok = SDL_RenamePath(temporary.c_str(), destination.c_str());
     if (!ok) {
         unlink(temporary.c_str());
         message = "install: could not copy " + source;
@@ -196,12 +197,21 @@ static void save_settings(const std::string &data, const Settings &settings) {
             settings.show_repl, settings.layout, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.touchscreen, settings.compact, settings.borderless, settings.fps,
             settings.response, settings.width, settings.height);
     fclose(file);
-    rename(temporary.c_str(), path.c_str());
+    SDL_RenamePath(temporary.c_str(), path.c_str());
+}
+
+static bool is_absolute(const std::string &path) {
+    if (!path.empty() && (path[0] == '/' || path[0] == '\\')) return true;
+    return path.size() > 2 && isalpha((unsigned char)path[0]) && path[1] == ':' && (path[2] == '/' || path[2] == '\\');
 }
 
 static std::string user_directory() {
+#ifdef _WIN32
+    const char *windows = getenv("LOCALAPPDATA");
+    if (windows && is_absolute(windows)) return std::string(windows) + "/SHAM";
+#endif
     const char *xdg = getenv("XDG_DATA_HOME");
-    if (xdg && xdg[0] == '/') return std::string(xdg) + "/sham";
+    if (xdg && is_absolute(xdg)) return std::string(xdg) + "/sham";
     const char *home = getenv("HOME");
     std::string base = home && home[0] ? home : ".";
 #ifdef __APPLE__
@@ -223,7 +233,7 @@ static bool prime_root(const std::string &root) {
     const char *base = SDL_GetBasePath();
     fs::path bundled = fs::path(base ? base : "") / "os";
     if (!fs::is_directory(bundled, error)) {
-        SDL_Log("no OS at %s to copy to %s, pass --root", bundled.c_str(), root.c_str());
+        SDL_Log("no OS at %s to copy to %s, pass --root", bundled.string().c_str(), root.c_str());
         return false;
     }
     fs::path staging = root + ".tmp";
@@ -241,11 +251,11 @@ static bool prime_root(const std::string &root) {
     }
     if (!error) fs::rename(staging, root, error);
     if (error) {
-        SDL_Log("could not copy %s to %s: %s", bundled.c_str(), root.c_str(), error.message().c_str());
+        SDL_Log("could not copy %s to %s: %s", bundled.string().c_str(), root.c_str(), error.message().c_str());
         fs::remove_all(staging, error);
         return false;
     }
-    SDL_Log("copied %s to %s", bundled.c_str(), root.c_str());
+    SDL_Log("copied %s to %s", bundled.string().c_str(), root.c_str());
     return true;
 }
 
@@ -310,10 +320,12 @@ static void usage() {
 }
 
 static std::string absolute(const std::string &path) {
-    if (path.empty() || path[0] == '/') return path;
-    char cwd[PATH_MAX];
-    if (!getcwd(cwd, sizeof cwd)) return path;
-    return std::string(cwd) + "/" + path;
+    if (path.empty() || is_absolute(path)) return path;
+    char *cwd = SDL_GetCurrentDirectory();
+    if (!cwd) return path;
+    std::string joined = std::string(cwd) + path;
+    SDL_free(cwd);
+    return joined;
 }
 
 static bool parse_options(int argc, char **argv, Options &options) {
@@ -815,7 +827,7 @@ int main(int argc, char **argv) {
         watch_start(options.root.c_str());
         for (const char *folder : { "/programs", "/wzd" }) {
             std::string path = options.data + folder;
-            mkdir(path.c_str(), 0755);
+            SDL_CreateDirectory(path.c_str());
             watch_add(path.c_str());
         }
     }
