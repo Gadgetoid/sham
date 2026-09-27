@@ -28,17 +28,21 @@ Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spi
 
 ## Build
 
-macOS, SDL3 and the two submodules.
+SDL3 and the two submodules, on macOS, Linux or Windows (MSYS2 UCRT64).
 
 ```
 git submodule update --init
-brew install sdl3
+brew install sdl3                  # macOS
+sudo apt install libsdl3-dev       # Ubuntu 25.04 or later
+pacman -S make git python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-sdl3   # MSYS2 UCRT64
 
 make embed     # once, and after any mpconfigport.h change or new qstr (such as a new lcd constant)
 make
 make run
 make check     # syntax, View shadowing, icons, Crates solvability, launch every app
 ```
+
+On macOS the menus are in the menu bar with Cmd shortcuts. On Linux and Windows, right-click the window (or press the Menu key) for the same menus, and use Alt where this README says Cmd. `SDL_VIDEO_DRIVER=dummy make check` runs the checks without a display.
 
 ## Run
 
@@ -53,7 +57,7 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 
 Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
 
-On first run, the bundled `os/` is copied to `os/` in the per-user directory: `$XDG_DATA_HOME/sham`, else `~/Library/Application Support/SHAM` on macOS or `~/.local/share/sham` elsewhere. It's never updated after that, so delete it to pick up a newer OS. Writable data and settings live in `data/` beside it. `--root` and `--data` override both.
+On first run, the bundled `os/` is copied to `os/` in the per-user directory: `%LOCALAPPDATA%\SHAM` on Windows, otherwise `$XDG_DATA_HOME/sham`, else `~/Library/Application Support/SHAM` on macOS or `~/.local/share/sham` elsewhere. It's never updated after that, so delete it to pick up a newer OS. Writable data and settings live in `data/` beside it. `--root` and `--data` override both.
 
 Saving anything under the root restarts the VM and drops you back into the last app.
 
