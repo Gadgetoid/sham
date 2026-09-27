@@ -100,6 +100,9 @@ scratches:
 worldmap:
 	python3 tools/make_worldmap.py $(WORLD_GEOJSON) os/assets/worldmap.bin
 
+samples:
+	python3 tools/make_wzd.py tools/basic/sierpinski.bas os/samples/wzd/Sierpinski.wzd Sierpinski "Chaos game: plots the Sierpinski triangle one point at a time. Press any key to finish."
+
 keyicons:
 	python3 tools/make_key_icons.py $(MATERIAL_SYMBOLS) assets/MaterialSymbolsKeys.ttf
 
@@ -114,4 +117,4 @@ clean:
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot screenshots keyboard scratches worldmap keyicons check clean rebuild
+.PHONY: embed embed-clean run screenshot screenshots keyboard scratches worldmap samples keyicons check clean rebuild

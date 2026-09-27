@@ -14,7 +14,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT = os.path.join(ROOT, "docs", "screenshots")
 BINARY = os.path.join(ROOT, "sham")
 OS_DIR = os.path.join(ROOT, "os")
-SAMPLE_WZD = os.path.join(ROOT, "..", "zq77x-emu", "apps", "basic", "Biorhythm.wzd")
+SAMPLE_WZD = os.path.join(OS_DIR, "samples", "wzd", "Sierpinski.wzd")
 
 TIMEZONE = "Europe/London"
 MOMENT = (2026, 6, 12, 9, 41, 20)
@@ -132,8 +132,8 @@ LCD_SHOTS = [
     {"name": "mines", "exec": launch("mines", seed=5), "keys": "{ENTER}"},
     {"name": "blocks", "exec": launch("blocks", seed=2, extra=BLOCKS_SETUP), "keys": "{LEFT}{LEFT}{UP}"},
     {"name": "snake", "exec": launch("snake", seed=4, extra=SNAKE_SETUP)},
-    {"name": "sharp_basic", "exec": SILENCE + "; import apps.sharp; apps.sharp.run('/data/wzd/Biorhythm.wzd'); ui.invalidate()",
-     "keys": "1990/05/17{ENTER}{ENTER}{ENTER}", "frames": 400, "needs_wzd": True},
+    {"name": "sharp_basic", "exec": SILENCE + "; import apps.sharp; apps.sharp.run('/data/wzd/Sierpinski.wzd'); ui.invalidate()",
+     "frames": 1500},
 ]
 
 DEVICE_SHOTS = [
@@ -238,16 +238,12 @@ def device_shot(shot, work):
 def main():
     parser = argparse.ArgumentParser(description="Render the README screenshots into docs/screenshots.")
     parser.add_argument("names", nargs="*", help="only these shots")
-    parser.add_argument("--wzd", default=SAMPLE_WZD, help="Sharp BASIC program for the sharp_basic shot")
     options = parser.parse_args()
     os.makedirs(OUTPUT, exist_ok=True)
     work = tempfile.mkdtemp()
     try:
-        wzd = options.wzd if os.path.exists(options.wzd) else None
+        wzd = SAMPLE_WZD
         for shot in LCD_SHOTS:
-            if shot.get("needs_wzd") and not wzd:
-                print("{}: no {}, skipped".format(shot["name"], options.wzd))
-                continue
             if not options.names or shot["name"] in options.names:
                 lcd_shot(shot, work, wzd)
                 print(shot["name"])

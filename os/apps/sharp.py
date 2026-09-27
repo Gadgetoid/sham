@@ -1,6 +1,6 @@
 import os
 
-from system import keys, ui
+from system import keys, store, ui
 from system.gfx import MID
 from system.sharpbasic import program, screen
 from system.sharpbasic.interpreter import Interpreter
@@ -11,6 +11,7 @@ ORDER = 66
 
 FOLDER = "/data/wzd"
 FILES = "/data/sharp"
+SAMPLES = "/samples/wzd"
 
 KEY_CODES = {
     keys.LEFT: 15, keys.RIGHT: 14, keys.ENTER: 10, keys.ESC: 27, keys.BACKSPACE: 12, keys.DELETE: 12,
@@ -103,8 +104,21 @@ def run(path):
     ui.push(ui.Screen(loaded.title or "Sharp BASIC", BasicView(loaded, finished)))
 
 
+def seed_samples():
+    seeded = store.load("wzd_seeded", [])
+    existing = os.listdir(FOLDER)
+    for name in os.listdir(SAMPLES):
+        if name not in seeded:
+            if name not in existing:
+                with open(SAMPLES + "/" + name, "rb") as source, open(FOLDER + "/" + name, "wb") as target:
+                    target.write(source.read())
+            seeded.append(name)
+    store.save("wzd_seeded", seeded)
+
+
 def programs():
     ensure(FOLDER)
+    seed_samples()
     return sorted(name for name in os.listdir(FOLDER) if name.lower().endswith(".wzd"))
 
 

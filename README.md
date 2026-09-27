@@ -18,13 +18,13 @@ Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spi
 | ![Options](docs/screenshots/options.png) | ![Owner card](docs/screenshots/owner.png) | ![Guide](docs/screenshots/guide.png) |
 | Options | Owner information at start-up | Guide, with the SDK reference |
 | ![Char Map](docs/screenshots/charmap.png) | ![Patterns](docs/screenshots/patterns.png) | ![Sharp BASIC](docs/screenshots/sharp_basic.png) |
-| Char Map | Patterns | Sharp BASIC running Biorhythm.wzd |
+| Char Map | Patterns | Sharp BASIC running Sierpinski.wzd |
 | ![Dungeon](docs/screenshots/dungeon.png) | ![Solitaire](docs/screenshots/solitaire.png) | ![Mines](docs/screenshots/mines.png) |
 | Dungeon | Solitaire | Mines |
 | ![Blocks](docs/screenshots/blocks.png) | ![Snake](docs/screenshots/snake.png) | ![Compact layout](docs/screenshots/device_compact.png) |
 | Blocks | Snake | View > Compact |
 
-`make screenshots` regenerates these into `docs/screenshots/` (`tools/readme_screenshots.py`, needs ffmpeg and pngquant): a fixed date and time, sound off, seeded demo data and fixed game seeds. `--lcd=FILE` saves just the LCD, `--lcd-cell=N` sets its pixel size. The Sharp BASIC shot needs a `.wzd`, passed with `--wzd=FILE`.
+`make screenshots` regenerates these into `docs/screenshots/` (`tools/readme_screenshots.py`, needs ffmpeg and pngquant): a fixed date and time, sound off, seeded demo data and fixed game seeds. `--lcd=FILE` saves just the LCD, `--lcd-cell=N` sets its pixel size.
 
 ## Build
 
@@ -91,7 +91,7 @@ Menu settings (REPL, layout, borderless, compact, backlight, dead columns, scrat
 
 ## Sharp BASIC
 
-The Sharp BASIC app runs BASIC programs for the Sharp OZ-7xx and ZQ-7xx organisers straight from their `.wzd` files, without the Sharp firmware. The interpreter (`os/system/sharpbasic/`) reads the tokenised listing and draws into a 239x70 area in the Sharp's own font (`os/fonts/sharp.ppf`, captured from the firmware's output). Files opened as `E:NAME` live in `sharp/` in the data directory. Machine code programs (a `CALL` stub followed by Z80 code) are refused.
+The Sharp BASIC app runs BASIC programs for the Sharp OZ-7xx and ZQ-7xx organisers straight from their `.wzd` files, without the Sharp firmware. The interpreter (`os/system/sharpbasic/`) reads the tokenised listing and draws into a 239x70 area in the Sharp's own font (`os/fonts/sharp.ppf`, captured from the firmware's output). Files opened as `E:NAME` live in `sharp/` in the data directory. Machine code programs (a `CALL` stub followed by Z80 code) are refused. `os/samples/wzd/Sierpinski.wzd` is copied into `wzd/` on first use; `make samples` rebuilds it from `tools/basic/sierpinski.bas` with `tools/make_wzd.py`.
 
 It was checked against the firmware running in the zq77x-emu emulator: token names, key codes, error numbers, number formatting, `DATE$`/`TIME$` and text widths come from programs run there.
 
