@@ -1,3 +1,4 @@
+import lcd
 from system import gfx, icons, keys, ui
 from system.gfx import CLEAR, LIGHT, MID, INK, small
 from system.icondata import CATEGORIES
@@ -11,6 +12,8 @@ ICON_CELL = 18
 GLYPH_CELL = 12
 INFO_H = 11
 SINS = "sins"
+PATTERNS = "patterns"
+PATTERN_SWATCH = 16
 HUGE = gfx.Type(gfx.sins, 4)
 
 
@@ -24,12 +27,24 @@ def font_codepoints(path):
 def set_title(name):
     if name == SINS:
         return "Sins font"
+    if name == PATTERNS:
+        return "Patterns"
     return icons.icon_set(name).outline.name or name
+
+
+def set_entries(name):
+    if name == SINS:
+        return [(chr(cp), "U+{:04X} {}".format(cp, chr(cp))) for cp in font_codepoints("/fonts/sins.ppf") if cp > 32]
+    if name == PATTERNS:
+        return [(number, "pattern {}".format(number)) for number in range(lcd.PATTERNS)]
+    return sorted(((char, label) for label, char in CATEGORIES[name].items()), key=lambda entry: entry[0])
 
 
 def usage(set_name, entry):
     if set_name == SINS:
         return "gfx.small.draw({!r}, x, y)".format(entry[0])
+    if set_name == PATTERNS:
+        return "lcd.fill(x, y, w, h, INK, {})".format(entry[0])
     return 'icons.draw("{}:{}", x, y)'.format(set_name, entry[1])
 
 
@@ -44,6 +59,14 @@ class Enlarged(ui.View):
 
     def draw(self):
         char, label = self.entry
+        if self.set_name == PATTERNS:
+            self.fill(2, 2, 48, 48, INK, char)
+            self.rect(2, 2, 48, 48, INK)
+            self.text("lcd.fill(x, y, w, h,", 56, 4)
+            self.text("  INK, {})".format(char), 56, 14)
+            self.text("Usage printed", 56, 30, MID)
+            self.text("to the REPL", 56, 40, MID)
+            return
         if self.set_name == SINS:
             self.text(char, 4 + (48 - HUGE.measure(char)) // 2, 6, INK, HUGE)
         else:
@@ -59,7 +82,7 @@ class Enlarged(ui.View):
 class CharMap(ui.View):
     def __init__(self):
         super().__init__()
-        self.sets = list(icons.SEARCH_ORDER) + [SINS]
+        self.sets = list(icons.SEARCH_ORDER) + [SINS, PATTERNS]
         self.set_index = 0
         self.load()
 
@@ -68,13 +91,8 @@ class CharMap(ui.View):
         return self.sets[self.set_index]
 
     def load(self):
-        if self.set_name == SINS:
-            self.entries = [(chr(cp), "U+{:04X} {}".format(cp, chr(cp))) for cp in font_codepoints("/fonts/sins.ppf") if cp > 32]
-            self.cell = GLYPH_CELL
-        else:
-            self.entries = sorted(((char, name) for name, char in CATEGORIES[self.set_name].items()),
-                                  key=lambda entry: entry[0])
-            self.cell = ICON_CELL
+        self.entries = set_entries(self.set_name)
+        self.cell = GLYPH_CELL if self.set_name == SINS else ICON_CELL
         self.index = 0
         self.top = 0
         self.refresh()
@@ -106,7 +124,11 @@ class CharMap(ui.View):
 
     def set_size(self, index):
         name = self.sets[index]
-        return len(font_codepoints("/fonts/sins.ppf")) if name == SINS else len(CATEGORIES[name])
+        if name == SINS:
+            return len(font_codepoints("/fonts/sins.ppf"))
+        if name == PATTERNS:
+            return lcd.PATTERNS
+        return len(CATEGORIES[name])
 
     def search(self):
         def find(text):
@@ -116,10 +138,7 @@ class CharMap(ui.View):
             order = [(self.set_index + step) % len(self.sets) for step in range(len(self.sets) + 1)]
             for pass_index, set_index in enumerate(order):
                 name = self.sets[set_index]
-                if name == SINS:
-                    entries = [(chr(cp), "U+{:04X} {}".format(cp, chr(cp))) for cp in font_codepoints("/fonts/sins.ppf") if cp > 32]
-                else:
-                    entries = sorted(((char, label) for label, char in CATEGORIES[name].items()), key=lambda entry: entry[0])
+                entries = set_entries(name)
                 start = self.index + 1 if pass_index == 0 else 0
                 if pass_index == len(order) - 1:
                     entries, start = entries[:self.index + 1], 0
@@ -160,7 +179,7 @@ class CharMap(ui.View):
             self.search()
         elif code in (keys.SMBL, keys.PICK):
             self.choose_set()
-        elif char and char.isalpha() and self.set_name != SINS:
+        elif char and char.isalpha() and self.set_name not in (SINS, PATTERNS):
             for step in range(1, len(self.entries) + 1):
                 candidate = (self.index + step) % len(self.entries)
                 if self.entries[candidate][1][:1] == char.lower():
@@ -183,6 +202,9 @@ class CharMap(ui.View):
             y = (position // self.columns) * cell
             if self.set_name == SINS:
                 self.text(char, x + (cell - small.measure(char)) // 2, y + 2)
+            elif self.set_name == PATTERNS:
+                self.fill(x + 1, y + 1, PATTERN_SWATCH, PATTERN_SWATCH, INK, char)
+                self.rect(x + 1, y + 1, PATTERN_SWATCH, PATTERN_SWATCH, MID)
             else:
                 icons.draw("{}:{}".format(self.set_name, label), self.x + x + 1, self.y + y + 1)
             if index == self.index:

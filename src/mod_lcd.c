@@ -113,6 +113,24 @@ static uint8_t level_arg(size_t n_args, const mp_obj_t *args, size_t index, uint
     return n_args > index ? (uint8_t)mp_obj_get_int(args[index]) : fallback;
 }
 
+static const uint8_t *pattern_arg(size_t n_args, const mp_obj_t *args, size_t index) {
+    if (n_args <= index || args[index] == mp_const_none) return NULL;
+    if (mp_obj_is_int(args[index])) {
+        mp_int_t number = mp_obj_get_int(args[index]);
+        if (number < 0 || number >= LCD_PATTERN_COUNT) mp_raise_ValueError(MP_ERROR_TEXT("no such pattern"));
+        return lcd_patterns[number];
+    }
+    mp_buffer_info_t tile;
+    mp_get_buffer_raise(args[index], &tile, MP_BUFFER_READ);
+    if (tile.len != 8) mp_raise_ValueError(MP_ERROR_TEXT("pattern must be 8 bytes"));
+    return tile.buf;
+}
+
+static void fill_maybe_patterned(int x, int y, int w, int h, uint8_t level, const uint8_t *tile) {
+    if (tile) lcd_fill_pattern(x, y, w, h, level, tile);
+    else lcd_fill(x, y, w, h, level);
+}
+
 static mp_obj_t lcd_clear_fn(size_t n_args, const mp_obj_t *args) {
     lcd_clear(level_arg(n_args, args, 0, 0));
     return mp_const_none;
@@ -128,30 +146,36 @@ static mp_obj_t lcd_pixel_fn(size_t n_args, const mp_obj_t *args) {
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_pixel_obj, 2, 3, lcd_pixel_fn);
 
 static mp_obj_t lcd_fill_fn(size_t n_args, const mp_obj_t *args) {
-    lcd_fill(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]),
-             level_arg(n_args, args, 4, 3));
+    fill_maybe_patterned(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]),
+                         level_arg(n_args, args, 4, 3), pattern_arg(n_args, args, 5));
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_fill_obj, 4, 5, lcd_fill_fn);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_fill_obj, 4, 6, lcd_fill_fn);
 
 static mp_obj_t lcd_rect_fn(size_t n_args, const mp_obj_t *args) {
-    lcd_rect(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]),
-             level_arg(n_args, args, 4, 3));
+    int x = mp_obj_get_int(args[0]), y = mp_obj_get_int(args[1]);
+    int w = mp_obj_get_int(args[2]), h = mp_obj_get_int(args[3]);
+    uint8_t level = level_arg(n_args, args, 4, 3);
+    const uint8_t *tile = pattern_arg(n_args, args, 5);
+    if (tile) lcd_rect_pattern(x, y, w, h, level, tile);
+    else lcd_rect(x, y, w, h, level);
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_rect_obj, 4, 5, lcd_rect_fn);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_rect_obj, 4, 6, lcd_rect_fn);
 
 static mp_obj_t lcd_hline_fn(size_t n_args, const mp_obj_t *args) {
-    lcd_fill(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), 1, level_arg(n_args, args, 3, 3));
+    fill_maybe_patterned(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), 1,
+                         level_arg(n_args, args, 3, 3), pattern_arg(n_args, args, 4));
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_hline_obj, 3, 4, lcd_hline_fn);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_hline_obj, 3, 5, lcd_hline_fn);
 
 static mp_obj_t lcd_vline_fn(size_t n_args, const mp_obj_t *args) {
-    lcd_fill(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), 1, mp_obj_get_int(args[2]), level_arg(n_args, args, 3, 3));
+    fill_maybe_patterned(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), 1, mp_obj_get_int(args[2]),
+                         level_arg(n_args, args, 3, 3), pattern_arg(n_args, args, 4));
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_vline_obj, 3, 4, lcd_vline_fn);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lcd_vline_obj, 3, 5, lcd_vline_fn);
 
 static mp_obj_t lcd_line_fn(size_t n_args, const mp_obj_t *args) {
     lcd_line(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]),
@@ -260,6 +284,7 @@ static const mp_rom_map_elem_t lcd_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_buffer),   MP_ROM_PTR(&lcd_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_WIDTH),    MP_ROM_INT(LCD_WIDTH) },
     { MP_ROM_QSTR(MP_QSTR_HEIGHT),   MP_ROM_INT(LCD_HEIGHT) },
+    { MP_ROM_QSTR(MP_QSTR_PATTERNS), MP_ROM_INT(LCD_PATTERN_COUNT) },
 };
 static MP_DEFINE_CONST_DICT(lcd_module_globals, lcd_module_globals_table);
 

@@ -11,6 +11,7 @@ extern "C" {
 #define LCD_HEIGHT 120
 #define LCD_MARGIN_X 2
 #define LCD_MARGIN_Y 3
+#define LCD_PATTERN_COUNT 38
 
 typedef struct {
     uint32_t codepoint;
@@ -27,6 +28,7 @@ typedef struct {
 } lcd_font_t;
 
 extern uint8_t lcd_framebuffer[LCD_WIDTH * LCD_HEIGHT];
+extern const uint8_t lcd_patterns[LCD_PATTERN_COUNT][8];
 
 void lcd_clear(uint8_t level);
 void lcd_set_clip(int x, int y, int w, int h);
@@ -36,6 +38,8 @@ void lcd_pixel(int x, int y, uint8_t level);
 int  lcd_get_pixel(int x, int y);
 void lcd_fill(int x, int y, int w, int h, uint8_t level);
 void lcd_rect(int x, int y, int w, int h, uint8_t level);
+void lcd_fill_pattern(int x, int y, int w, int h, uint8_t level, const uint8_t *tile);
+void lcd_rect_pattern(int x, int y, int w, int h, uint8_t level, const uint8_t *tile);
 void lcd_line(int x0, int y0, int x1, int y1, uint8_t level);
 void lcd_invert(int x, int y, int w, int h);
 int  lcd_text(const lcd_font_t *font, const char *text, size_t len, int x, int y, uint8_t level, int scale);
