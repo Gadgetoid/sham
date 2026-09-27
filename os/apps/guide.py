@@ -33,6 +33,11 @@ Enter previews an icon and prints the code to use it."""),
         ("Hangman", "Type letters."),
         ("Crates", "Arrows push. U undoes, R restarts, N and P change level."),
         ("Solitaire", "Enter picks up and drops. Up and Down pick how many cards. Space sends a card home."),
+        ("Dungeon", """Arrows, the lid's keys, HJKL or 2468 move and attack. Walk into a monster to fight it.
+Enter or Space descends the stairs, or waits a turn. . or 5 waits, Q drinks a healing potion.
+I opens your pack, M the map. MENU has both, plus Descend and Messages.
+Every fourth level is a dark cavern. Beware gold that bites.
+Leaving saves the game. Your best depth and score are kept."""),
     )),
     ("Writing programs", "terminal", (
         ("Programs", """Programs live in /data/programs and run from the Programs app without a restart.
