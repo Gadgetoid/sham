@@ -165,7 +165,7 @@ def frames_for(shot):
 
 def run(arguments, data):
     environment = dict(os.environ, TZ=TIMEZONE)
-    result = subprocess.run([BINARY, "--root=" + OS_DIR, "--data=" + data, "--no-watch", "--no-repl", "--no-touchscreen", "--response=0"]
+    result = subprocess.run([BINARY, "--root=" + OS_DIR, "--data=" + data, "--no-watch", "--no-repl", "--response=0"]
                             + arguments, capture_output=True, text=True, env=environment, timeout=120)
     output = result.stdout + result.stderr
     if result.returncode != 0 or "Traceback" in output:

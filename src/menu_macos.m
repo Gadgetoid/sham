@@ -80,7 +80,9 @@ void menu_install(void) {
     [view addItem:[NSMenuItem separatorItem]];
     add_item(view, MENU_BORDERLESS, @"Borderless", @"b", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     add_item(view, MENU_COMPACT, @"Compact", @"", 0);
+#ifdef SHAM_TOUCHSCREEN
     add_item(view, MENU_TOUCHSCREEN, @"Touchscreen Mode", @"t", NSEventModifierFlagCommand | NSEventModifierFlagShift);
+#endif
     [view addItem:[NSMenuItem separatorItem]];
     add_item(view, MENU_SHOW_REPL, @"Show REPL", @"j", NSEventModifierFlagCommand);
     add_item(view, MENU_FOCUS_REPL, @"Focus REPL", @"l", NSEventModifierFlagCommand);
@@ -145,6 +147,7 @@ void window_set_aspect(void *handle, float width, float height) {
     else window.contentResizeIncrements = NSMakeSize(1, 1);
 }
 
+#ifdef SHAM_TOUCHSCREEN
 bool window_cover_display(void *handle, bool cover) {
     NSWindow *window = (__bridge NSWindow *)handle;
     if (!window) return false;
@@ -158,3 +161,4 @@ bool window_cover_display(void *handle, bool cover) {
     }
     return true;
 }
+#endif

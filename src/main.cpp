@@ -35,7 +35,9 @@
 static const int IDLE_WAIT_MS = 16;
 static const int REDRAW_TAIL_MS = 500;
 static const int STARTUP_FRAMES = 150;
+#ifdef SHAM_TOUCHSCREEN
 static const int TOUCH_RETRY_MS = 2000;
+#endif
 static const int REPL_MIN_HEIGHT = 200;
 static const int TITLE_BAR_HEIGHT = 32;
 
@@ -252,7 +254,10 @@ static int menu_item_named(const std::string &name) {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
         { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
-        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR }, { "touchscreen", MENU_TOUCHSCREEN }, { "compact", MENU_COMPACT }, { "borderless", MENU_BORDERLESS },
+        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR }, { "compact", MENU_COMPACT }, { "borderless", MENU_BORDERLESS },
+#ifdef SHAM_TOUCHSCREEN
+        { "touchscreen", MENU_TOUCHSCREEN },
+#endif
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -273,8 +278,10 @@ static void usage() {
         "  --no-keys           start without the device keys around the screen\n"
         "  --no-keyboard       start without the keyboard\n"
         "  --layout=N          0 screen only, 1 screen & frame, 2 screen & buttons, 3 screen & keyboard\n"
+#ifdef SHAM_TOUCHSCREEN
         "  --touchscreen[=NAME]  take over the named touch display (default TETRA)\n"
         "  --no-touchscreen    stay in a normal window\n"
+#endif
         "  --borderless        show only the device, on a transparent window without a frame\n"
         "  --no-borderless     use a normal window\n"
         "  --compact           join the lid and keyboard without the hinge\n"
@@ -324,16 +331,18 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (arg == "--no-repl") options.show_repl = false;
         else if (arg == "--no-keys") options.layout = 1;
         else if (arg == "--no-keyboard") options.layout = 2;
+#ifdef SHAM_TOUCHSCREEN
         else if (arg == "--touchscreen") options.touchscreen = true;
         else if (arg == "--no-touchscreen") options.touchscreen = false;
-        else if (arg == "--borderless") options.borderless = true;
-        else if (arg == "--no-borderless") options.borderless = false;
-        else if (arg == "--compact") options.compact = true;
-        else if (arg == "--no-compact") options.compact = false;
         else if (const char *v = value("--touchscreen=")) {
             options.touchscreen = true;
             options.touch_display = v;
         }
+#endif
+        else if (arg == "--borderless") options.borderless = true;
+        else if (arg == "--no-borderless") options.borderless = false;
+        else if (arg == "--compact") options.compact = true;
+        else if (arg == "--no-compact") options.compact = false;
         else if (const char *v = value("--layout=")) options.layout = atoi(v);
         else if (arg == "--period") options.fps = 10;
         else if (const char *v = value("--fps=")) options.fps = atoi(v);
@@ -408,6 +417,7 @@ static void push_sdl_key(SDL_Keycode key, bool down) {
     SDL_PushEvent(&event);
 }
 
+#ifdef SHAM_TOUCHSCREEN
 static void push_mouse(uint8_t kind, float x, float y) {
     SDL_Event event = {};
     event.type = SDL_EVENT_MOUSE_MOTION;
@@ -427,6 +437,7 @@ static void push_mouse(uint8_t kind, float x, float y) {
     event.button.windowID = main_window_id;
     SDL_PushEvent(&event);
 }
+#endif
 
 struct Touchscreen {
     bool active = false;
@@ -434,6 +445,7 @@ struct Touchscreen {
     SDL_Rect windowed = {};
 };
 
+#ifdef SHAM_TOUCHSCREEN
 static SDL_DisplayID find_display(const std::string &name) {
     int count = 0;
     SDL_DisplayID *ids = SDL_GetDisplays(&count);
@@ -480,6 +492,7 @@ static bool set_touchscreen(SDL_Window *window, Touchscreen &touch, bool enable,
     touch.active = enable;
     return true;
 }
+#endif
 
 static void push_click(float x, float y) {
     SDL_Event event = {};
@@ -815,7 +828,9 @@ int main(int argc, char **argv) {
 
     bool idle = false;
     uint64_t redraw_until_ms = 0;
+#ifdef SHAM_TOUCHSCREEN
     uint64_t touch_retry_ms = 0;
+#endif
     bool was_runtime_idle = runtime_idle();
     while (running) {
         if (idle) SDL_WaitEventTimeout(nullptr, IDLE_WAIT_MS);
@@ -895,11 +910,13 @@ int main(int argc, char **argv) {
                     refit_window();
                     break;
                 case MENU_BORDERLESS:   set_borderless(!borderless); break;
+#ifdef SHAM_TOUCHSCREEN
                 case MENU_TOUCHSCREEN:
                     want_touchscreen = !touch.active;
                     touch.reported_missing = false;
                     set_touchscreen(window, touch, want_touchscreen, options.touch_display, !borderless);
                     break;
+#endif
                 case MENU_INSTALL_PY: {
                     static const SDL_DialogFileFilter filters[] = { { "Programs", "py;wzd" } };
                     SDL_ShowOpenFileDialog(install_chosen, nullptr, window, filters, 1, nullptr, true);
@@ -963,6 +980,7 @@ int main(int argc, char **argv) {
         script.window_w = io.DisplaySize.x;
         script.window_h = io.DisplaySize.y;
         script.step(frame);
+#ifdef SHAM_TOUCHSCREEN
         if (want_touchscreen && !touch.active && SDL_GetTicks() >= touch_retry_ms) {
             touch_retry_ms = SDL_GetTicks() + TOUCH_RETRY_MS;
             set_touchscreen(window, touch, true, options.touch_display, !borderless);
@@ -975,6 +993,7 @@ int main(int argc, char **argv) {
         for (touch_event_t event; touch_pop(&event);) {
             if (touch.active) push_mouse(event.kind, event.x, event.y);
         }
+#endif
         device.touch = touch.active;
         device.compact = options.compact || touch.active;
         if ((borderless && !touch.active) != frameless) {
@@ -1061,8 +1080,10 @@ int main(int argc, char **argv) {
         SDL_RenderPresent(renderer);
     }
 
+#ifdef SHAM_TOUCHSCREEN
     set_touchscreen(window, touch, false, options.touch_display, !borderless);
     touch_stop();
+#endif
     watch_stop();
     runtime_deinit();
     beeper_deinit();
