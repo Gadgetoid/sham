@@ -91,7 +91,7 @@ Colours are CLEAR, LIGHT, MID and INK from system.gfx."""),
 A pattern is 0 to lcd.PATTERNS - 1, or 8 bytes, one per row, high bit on the left.
 Set bits paint the colour and clear bits leave the screen alone. Fill a background first for two colours.
 Patterns line up with the screen, not the shape, so neighbouring fills tile seamlessly.
-Char Map's Patterns set shows every one."""),
+The Patterns app shows every one."""),
         ("Layout", """ui.Split(first, second, ratio=, vertical=) puts two views side by side or stacked.
 Arrows cross between panes when the focused pane doesn't use them.
 ui.Stack(a, b, c) stacks views top to bottom, sized by preferred_height."""),
