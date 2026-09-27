@@ -21,4 +21,8 @@ def save(name, value):
     temporary = _path(name) + ".tmp"
     with open(temporary, "w") as f:
         json.dump(value, f)
-    os.rename(temporary, _path(name))
+    try:
+        os.rename(temporary, _path(name))
+    except OSError:
+        os.remove(_path(name))
+        os.rename(temporary, _path(name))

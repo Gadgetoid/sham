@@ -22,6 +22,14 @@
 #define MICROPY_ENABLE_FINALISER        (1)
 #define MICROPY_PY_OS                   (1)
 
+#ifdef _WIN32
+#define MICROPY_PY_OS_STATVFS           (0)
+#define MICROPY_GCREGS_SETJMP           (1)
+#if defined(__MINGW32__) && defined(_WIN64)
+#define MP_SSIZE_MAX                    __INT64_MAX__
+#endif
+#endif
+
 uint32_t host_random_seed(void);
 #define MICROPY_PY_RANDOM               (1)
 #define MICROPY_PY_RANDOM_SEED_INIT_FUNC (host_random_seed())

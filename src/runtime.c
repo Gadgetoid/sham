@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -192,6 +193,9 @@ static bool resolve_path(const char *path, char *resolved, size_t size) {
 
 bool runtime_init(const host_config_t *cfg) {
     config = cfg;
+#ifdef _WIN32
+    _fmode = _O_BINARY;
+#endif
     if (!resolve_path(cfg->root_path, root_abs, sizeof root_abs)) {
         fprintf(stderr, "sham: cannot resolve root %s\n", cfg->root_path);
         return false;
