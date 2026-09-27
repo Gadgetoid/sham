@@ -78,6 +78,7 @@ void menu_install(void) {
     for (int i = 0; i < MENU_LAYOUT_END - MENU_LAYOUT_FIRST; i++) add_item(view, MENU_LAYOUT_FIRST + i, layouts[i], @"", 0);
     add_item(view, MENU_LAYOUT_NEXT, @"Next Layout", @"k", NSEventModifierFlagCommand);
     [view addItem:[NSMenuItem separatorItem]];
+    add_item(view, MENU_COMPACT, @"Compact", @"", 0);
     add_item(view, MENU_TOUCHSCREEN, @"Touchscreen Mode", @"t", NSEventModifierFlagCommand | NSEventModifierFlagShift);
     [view addItem:[NSMenuItem separatorItem]];
     add_item(view, MENU_SHOW_REPL, @"Show REPL", @"j", NSEventModifierFlagCommand);

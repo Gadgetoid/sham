@@ -113,6 +113,7 @@ struct Options {
     bool scratches = true;
     bool wear = false;
     bool touchscreen = false;
+    bool compact = false;
     std::string touch_display = "TETRA";
     std::vector<int> menu_items;
 };
@@ -125,6 +126,7 @@ struct Settings {
     bool scratches;
     bool wear;
     bool touchscreen;
+    bool compact;
     int fps;
     float response;
     int width;
@@ -132,7 +134,7 @@ struct Settings {
 
     bool operator==(const Settings &other) const {
         return show_repl == other.show_repl && layout == other.layout && backlight == other.backlight &&
-               dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && touchscreen == other.touchscreen && fps == other.fps && response == other.response &&
+               dead_columns == other.dead_columns && scratches == other.scratches && wear == other.wear && touchscreen == other.touchscreen && compact == other.compact && fps == other.fps && response == other.response &&
                width == other.width && height == other.height;
     }
 };
@@ -157,6 +159,7 @@ static void load_settings(const std::string &data, Options &options) {
         else if (name == "scratches") options.scratches = atoi(value) != 0;
         else if (name == "wear") options.wear = atoi(value) != 0;
         else if (name == "touchscreen") options.touchscreen = atoi(value) != 0;
+        else if (name == "compact") options.compact = atoi(value) != 0;
         else if (name == "fps") options.fps = atoi(value);
         else if (name == "response") options.response = (float)atof(value);
         else if (name == "width") options.width = atoi(value);
@@ -170,8 +173,8 @@ static void save_settings(const std::string &data, const Settings &settings) {
     std::string temporary = path + ".tmp";
     FILE *file = fopen(temporary.c_str(), "w");
     if (!file) return;
-    fprintf(file, "show_repl=%d\nlayout=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\ntouchscreen=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
-            settings.show_repl, settings.layout, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.touchscreen, settings.fps,
+    fprintf(file, "show_repl=%d\nlayout=%d\nbacklight=%d\ndead_columns=%d\nscratches=%d\nwear=%d\ntouchscreen=%d\ncompact=%d\nfps=%d\nresponse=%g\nwidth=%d\nheight=%d\n",
+            settings.show_repl, settings.layout, settings.backlight, settings.dead_columns, settings.scratches, settings.wear, settings.touchscreen, settings.compact, settings.fps,
             settings.response, settings.width, settings.height);
     fclose(file);
     rename(temporary.c_str(), path.c_str());
@@ -240,7 +243,7 @@ static int menu_item_named(const std::string &name) {
         { "reload", MENU_RELOAD }, { "interrupt", MENU_INTERRUPT }, { "show-repl", MENU_SHOW_REPL },
         { "focus-repl", MENU_FOCUS_REPL }, { "backlight", MENU_BACKLIGHT }, { "dead-columns", MENU_DEAD_COLUMNS },
         { "period", MENU_FPS_FIRST + 5 }, { "sound", MENU_SOUND }, { "key-click", MENU_KEY_CLICK },
-        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR }, { "touchscreen", MENU_TOUCHSCREEN },
+        { "next-layout", MENU_LAYOUT_NEXT }, { "scratches", MENU_SCRATCHES }, { "wear", MENU_WEAR }, { "touchscreen", MENU_TOUCHSCREEN }, { "compact", MENU_COMPACT },
     };
     for (auto &entry : names) {
         if (name == entry.first) return entry.second;
@@ -263,12 +266,14 @@ static void usage() {
         "  --layout=N          0 screen only, 1 screen & frame, 2 screen & buttons, 3 screen & keyboard\n"
         "  --touchscreen[=NAME]  take over the named touch display (default TETRA)\n"
         "  --no-touchscreen    stay in a normal window\n"
+        "  --compact           join the lid and keyboard without the hinge\n"
+        "  --no-compact        show the hinge\n"
         "  --period            run the device at a period accurate 10 fps\n"
         "  --fps=N             device frame rate, 0 for unlimited (default 0)\n"
         "  --response=N        LCD response time scale, 0 instant, 1 normal, 4 very slow\n"
         "  --menu=ITEMS        trigger menu items after boot: reload, interrupt, show-repl,\n"
         "                      focus-repl, backlight, dead-columns, sound, key-click, period,\n"
-        "                      show-keys\n"
+        "                      show-keys, compact\n"
         "  --keys=SEQUENCE     type into the device after boot, {DOWN} {ENTER} {F1}, {+LEFT} holds, {-LEFT} releases\n"
         "  --exec=CODE         run a line at the REPL after boot, repeatable\n"
         "  --install=FILE      copy a .py into My Programs or a .wzd into Sharp BASIC, repeatable\n"
@@ -306,6 +311,8 @@ static bool parse_options(int argc, char **argv, Options &options) {
         else if (arg == "--no-keyboard") options.layout = 2;
         else if (arg == "--touchscreen") options.touchscreen = true;
         else if (arg == "--no-touchscreen") options.touchscreen = false;
+        else if (arg == "--compact") options.compact = true;
+        else if (arg == "--no-compact") options.compact = false;
         else if (const char *v = value("--touchscreen=")) {
             options.touchscreen = true;
             options.touch_display = v;
@@ -710,6 +717,7 @@ int main(int argc, char **argv) {
     apply_layout();
     device.scratches = options.scratches;
     device.wear = options.wear;
+    device.compact = options.compact;
     bool &device_focused = device.focused;
     bool show_repl = options.show_repl;
     Touchscreen touch;
@@ -791,6 +799,11 @@ int main(int argc, char **argv) {
                 case MENU_KEY_CLICK:    beeper_set_key_click(!beeper_key_click()); break;
                 case MENU_SCRATCHES:    device.scratches = !device.scratches; break;
                 case MENU_WEAR:         device.wear = !device.wear; break;
+                case MENU_COMPACT:
+                    options.compact = !options.compact;
+                    device.compact = options.compact || touch.active;
+                    if (!show_repl) set_repl_visible(window, false, device, restore_height);
+                    break;
                 case MENU_TOUCHSCREEN:
                     want_touchscreen = !touch.active;
                     touch.reported_missing = false;
@@ -814,7 +827,7 @@ int main(int argc, char **argv) {
             static bool have_saved = false;
             int window_w = 0, window_h = 0;
             SDL_GetWindowSize(window, &window_w, &window_h);
-            Settings current = { show_repl, layout, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, want_touchscreen, fps, response,
+            Settings current = { show_repl, layout, lcd_get_backlight(), lcd_get_dead_columns(), device.scratches, device.wear, want_touchscreen, options.compact, fps, response,
                                  touch.active ? touch.windowed.w : window_w,
                                  touch.active ? touch.windowed.h : show_repl ? window_h : restore_height };
             if (!have_saved) {
@@ -847,6 +860,7 @@ int main(int argc, char **argv) {
         menu_set_checked(MENU_SCRATCHES, device.scratches);
         menu_set_checked(MENU_WEAR, device.wear);
         menu_set_checked(MENU_TOUCHSCREEN, touch.active);
+        menu_set_checked(MENU_COMPACT, options.compact);
 
         if (options.watch && watch_poll()) {
             had_event = true;
@@ -871,6 +885,7 @@ int main(int argc, char **argv) {
             if (touch.active) push_mouse(event.kind, event.x, event.y);
         }
         device.touch = touch.active;
+        device.compact = options.compact || touch.active;
         if (frame == 45) {
             for (int item : options.menu_items) menu_perform(item);
         }
