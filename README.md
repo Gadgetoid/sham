@@ -2,6 +2,30 @@
 
 Sharp Handheld Approximation (MicroPython): a fantasy pocket computer in the spirit of the Sharp Wizard and Psion organisers. MicroPython's embed port drives a simulated 299x120 2-bit LCD with an EL backlight. The OS and its apps are plain Python in `os/`, reloaded on save.
 
+
+<p align="center"><img src="docs/screenshots/device.png" alt="SHAM in the Screen &amp; Keyboard layout" width="600"></p>
+
+## Screens
+
+| | | |
+|:-:|:-:|:-:|
+| ![Launcher](docs/screenshots/launcher.png) | ![Launcher, backlight off](docs/screenshots/launcher_unlit.png) | ![Games folder](docs/screenshots/games.png) |
+| Launcher, with its status bar | The same with the backlight off | Games folder |
+| ![Tel](docs/screenshots/tel.png) | ![Schedule](docs/screenshots/schedule.png) | ![Clock](docs/screenshots/clock.png) |
+| Tel | Schedule | Clock |
+| ![World](docs/screenshots/world.png) | ![Memo](docs/screenshots/memo.png) | ![Calc](docs/screenshots/calc.png) |
+| World, with day and night | Memo | Calc |
+| ![Options](docs/screenshots/options.png) | ![Owner card](docs/screenshots/owner.png) | ![Guide](docs/screenshots/guide.png) |
+| Options | Owner information at start-up | Guide, with the SDK reference |
+| ![Char Map](docs/screenshots/charmap.png) | ![Patterns](docs/screenshots/patterns.png) | ![Sharp BASIC](docs/screenshots/sharp_basic.png) |
+| Char Map | Patterns | Sharp BASIC running Biorhythm.wzd |
+| ![Dungeon](docs/screenshots/dungeon.png) | ![Solitaire](docs/screenshots/solitaire.png) | ![Mines](docs/screenshots/mines.png) |
+| Dungeon | Solitaire | Mines |
+| ![Blocks](docs/screenshots/blocks.png) | ![Snake](docs/screenshots/snake.png) | ![Compact layout](docs/screenshots/device_compact.png) |
+| Blocks | Snake | View > Compact |
+
+`make screenshots` regenerates these into `docs/screenshots/` (`tools/readme_screenshots.py`, needs ffmpeg and pngquant): a fixed date and time, sound off, seeded demo data and fixed game seeds. `--lcd=FILE` saves just the LCD, `--lcd-cell=N` sets its pixel size. The Sharp BASIC shot needs a `.wzd`, passed with `--wzd=FILE`.
+
 ## Build
 
 macOS, SDL3 and the two submodules.
@@ -24,6 +48,7 @@ make check     # syntax, View shadowing, icons, Crates solvability, launch every
 ./sham --keys="{CLICK}{F2}{DOWN}" --screenshot=shot.bmp --frames=120
 ./sham --exec="ui.alert('hi')"
 ./sham --no-repl --fps=10 --response=2 --menu=dead-columns
+./sham --borderless --compact
 ```
 
 Key scripts send special keys as real SDL events. `{+LEFT}`/`{-LEFT}` hold and release, `{CLICK}` clicks the device, `{CLICK:0.1,0.2}` clicks at a fraction of the window, `{WAIT}` skips a step.
@@ -58,9 +83,11 @@ The Simulation menu has Backlight, Sound, Key Click, Frame Rate (unlimited, or 6
 
 View > Realism groups Dead Columns, Scratches and Wear, which weathers the case and rubs away bits of printed labels.
 
+View > Borderless (Cmd-Shift-B, or `--borderless`) shows only the device on a transparent window, dragged by its case. View > Compact (`--compact`) joins the lid and keyboard without the hinge, and touchscreen mode always uses it.
+
 View > Touchscreen Mode (Cmd-Shift-T, or `--touchscreen[=NAME]`) takes over a touch display, TETRA by default: a borderless window covers it above the menu bar, the REPL hides, the Weida digitizer is read directly over IOHID (single touch, mapped to clicks), and touch targets grow into the gaps between keys. The mode is remembered and re-engages when the display appears. Reading the panel needs Input Monitoring permission for the app or terminal.
 
-Menu settings (REPL, layout, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `sham.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
+Menu settings (REPL, layout, borderless, compact, backlight, dead columns, scratches, wear, frame rate, response time, window size) are saved to `sham.ini` in the data directory. Command-line flags override them, and screenshot runs don't save.
 
 ## Sharp BASIC
 

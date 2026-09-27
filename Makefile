@@ -103,6 +103,9 @@ worldmap:
 keyicons:
 	python3 tools/make_key_icons.py $(MATERIAL_SYMBOLS) assets/MaterialSymbolsKeys.ttf
 
+screenshots: $(PROG)
+	python3 tools/readme_screenshots.py
+
 check: $(PROG)
 	python3 tools/check.py --smoke
 
@@ -111,4 +114,4 @@ clean:
 
 rebuild: embed-clean embed clean $(PROG)
 
-.PHONY: embed embed-clean run screenshot keyboard scratches worldmap keyicons check clean rebuild
+.PHONY: embed embed-clean run screenshot screenshots keyboard scratches worldmap keyicons check clean rebuild
