@@ -7,8 +7,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import svg_keyboard as svg
 
 GLASS_UNITS = 282.0
-LCD_COLUMNS = 299
-LCD_ROWS = 100
+LCD_HEADER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "lcd.h")
+
+
+def lcd_define(name):
+    match = re.search(r"#define\s+{}\s+(\d+)".format(name), open(LCD_HEADER).read())
+    return int(match.group(1))
+
+
+LCD_COLUMNS = lcd_define("LCD_WIDTH")
+LCD_ROWS = lcd_define("LCD_HEIGHT")
 MARGIN_X = 3
 REQUIRED = ("glass", "frame", "body")
 
