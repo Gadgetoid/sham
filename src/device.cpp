@@ -40,6 +40,8 @@ const ImU32 CASE_SCRATCH_TINT = IM_COL32(246, 249, 251, 75);
 const float WELL_MARGIN = 4.0f;
 const float KEY_ICON_SCALE = 0.8f;
 const float SIDE_ICON_SCALE = 0.95f;
+const float BRAND_BAND_POSITION = 0.32f;
+const float BRAND_CAP_MIDDLE = 0.62f;
 const float LID_NOTCH_DEPTH = 12.0f;
 const uint64_t REPEAT_DELAY_MS = 400;
 const uint64_t REPEAT_RATE_MS = 80;
@@ -1610,7 +1612,10 @@ void paint_overlay(ImDrawList *draw, const DeviceLayout &layout, const DeviceSta
     wear_grime = state.wear;
     if (state.show_keys) {
         float brand = 24.0f * u;
-        ImVec2 at = image_min + ImVec2(-4 * u, -50 * u);
+        Frame lid_frame{ image_min, image_max, u };
+        float frame_top = lid_frame.lid(0, LID_FRAME[1]).y, lid_top = lid_frame.lid(0, -TOP_EXTENT).y;
+        float brand_centre = frame_top - (frame_top - lid_top) * BRAND_BAND_POSITION;
+        ImVec2 at(image_min.x - 4 * u, brand_centre - brand * BRAND_CAP_MIDDLE);
         erase_colour = faded(BEZEL, 0.9f);
         rub_mode = false;
         draw->AddText(text_font(), brand, at, PRINT, "SHAM");
