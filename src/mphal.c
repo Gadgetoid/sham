@@ -1,3 +1,6 @@
+#ifdef _WIN32
+#define _CRT_RAND_S
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,5 +49,11 @@ void mp_hal_set_interrupt_char(int c) {
 }
 
 uint32_t host_random_seed(void) {
+#ifdef _WIN32
+    unsigned int seed = 0;
+    rand_s(&seed);
+    return seed;
+#else
     return arc4random();
+#endif
 }

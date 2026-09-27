@@ -27,6 +27,14 @@ static time_t device_time(void) {
     return time(NULL) + (time_t)clock_offset;
 }
 
+static void local_time(time_t when, struct tm *local) {
+#ifdef _WIN32
+    localtime_s(local, &when);
+#else
+    localtime_r(&when, local);
+#endif
+}
+
 static mp_obj_t host_clock_offset(size_t n_args, const mp_obj_t *args) {
     if (n_args == 1) clock_offset = mp_obj_get_int(args[0]);
     return mp_obj_new_int((mp_int_t)clock_offset);
@@ -42,7 +50,7 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(host_contrast_obj, 0, 1, host_contras
 static mp_obj_t host_localtime(void) {
     time_t now = device_time();
     struct tm local;
-    localtime_r(&now, &local);
+    local_time(now, &local);
     mp_obj_t fields[8] = {
         MP_OBJ_NEW_SMALL_INT(local.tm_year + 1900), MP_OBJ_NEW_SMALL_INT(local.tm_mon + 1),
         MP_OBJ_NEW_SMALL_INT(local.tm_mday),        MP_OBJ_NEW_SMALL_INT(local.tm_hour),
@@ -61,8 +69,12 @@ static MP_DEFINE_CONST_FUN_OBJ_0(host_epoch_obj, host_epoch);
 static mp_obj_t host_utc_offset(void) {
     time_t now = device_time();
     struct tm local;
-    localtime_r(&now, &local);
+    local_time(now, &local);
+#ifdef _WIN32
+    return mp_obj_new_int((mp_int_t)(_mkgmtime(&local) - now));
+#else
     return mp_obj_new_int((mp_int_t)local.tm_gmtoff);
+#endif
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(host_utc_offset_obj, host_utc_offset);
 
