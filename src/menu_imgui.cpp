@@ -37,6 +37,13 @@ std::string shortcut_label(const menu_entry_t &entry) {
     return label;
 }
 
+std::string plain_title(const char *title) {
+    std::string text = title;
+    const std::string ellipsis = "\xe2\x80\xa6";
+    for (size_t at = text.find(ellipsis); at != std::string::npos; at = text.find(ellipsis, at)) text.replace(at, ellipsis.size(), "...");
+    return text;
+}
+
 int skip_menu(int index) {
     for (int depth = 1; ++index < MENU_ENTRY_COUNT;) {
         menu_entry_kind_t kind = MENU_ENTRIES[index].kind;
@@ -62,7 +69,7 @@ int draw_entries(int index) {
                 }
                 break;
             case MENU_ENTRY_ITEM:
-                if (ImGui::MenuItem(entry.title, shortcut_label(entry).c_str(), checked[entry.tag])) push(entry.tag);
+                if (ImGui::MenuItem(plain_title(entry.title).c_str(), shortcut_label(entry).c_str(), checked[entry.tag])) push(entry.tag);
                 break;
         }
     }
